@@ -1,0 +1,15 @@
+{
+    "queues": "Queues",
+    "taskId": "#",
+    "objectType": "Object type",
+    "objectId": "Object ID",
+    "methods": {
+        "queues": {
+            "_title": "Queues",
+            "queues": {
+                "_title": "Queues",
+                "GET": "View"
+            }
+        }
+    }
+}

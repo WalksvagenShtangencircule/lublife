@@ -1,0 +1,71 @@
+{
+    "analytics": "Analytics",
+    "statsTitle": "Activity (plog)",
+    "metricHint": "Left: WAU — unique subscribers with app server contact in the last 7 days (device last_seen), Firebase-like. Right bar — same rule over the selected series depth in days (30 vs 60 now changes the count; previously it was always a fixed 30-day window unrelated to the dropdown). The line chart is daily uniques from plog over the selected depth (a trend; daily values do not sum to WAU). On a small cohort WAU is often close to the long window: most monthly actives also show up in the last week.",
+    "days": "Series depth, days",
+    "wau7": "WAU (7 days), app users",
+    "mau30": "MAU (30 days), app users",
+    "dauSeries": "By day (%d d window)",
+    "refresh": "Refresh",
+    "eventsTitle": "Event feed",
+    "flat": "Flat number",
+    "phone": "Subscriber phone",
+    "loadEvents": "Load events",
+    "colTime": "Time",
+    "colFlat": "Flat",
+    "colEvent": "Event",
+    "colPreview": "Preview",
+    "noData": "No data (check ClickHouse and API rights)",
+    "ev1": "Call (missed)",
+    "ev2": "Call",
+    "ev3": "Key",
+    "ev4": "App",
+    "ev5": "Face",
+    "ev6": "Code",
+    "ev7": "Gates",
+    "ev9": "Vehicle",
+    "pr0": "—",
+    "pr1": "DVR",
+    "pr2": "FRS",
+    "methods": {
+        "analytics": {
+            "_title": "Analytics",
+            "stats": {
+                "_title": "Summary",
+                "GET": "View"
+            },
+            "events": {
+                "_title": "Events",
+                "GET": "View"
+            },
+            "camshot": {
+                "_title": "Event camshot",
+                "GET": "View"
+            }
+        }
+    },
+    "house": "House",
+    "allHouses": "All houses (whole server)",
+    "housesLoadError": "Could not load house list",
+    "housesNoAddressApi": "No access to address directory — house selection disabled",
+    "chartDauCaption": "%d-day series (plog: event phone or flat)",
+    "chartWauMauCaption": "WAU (7d) and uniques over %d days",
+    "chartEventsByDay": "Event count by day (loaded sample)",
+    "chartEventsByType": "Breakdown by event type",
+    "eventsChartsHint": "Charts are built from the latest events in the log. Optionally narrow by flat or phone.",
+    "noDauSeries": "No app-open events in the window (or no series points in ClickHouse).",
+    "eventsListHint": "Pick a house in the summary block — events for all flats in that building are listed below. Enter a phone and click “Load events” to narrow the feed; “All house events” clears the phone filter.",
+    "pickHouseForEvents": "Select a specific house to load the event feed (not “all houses”).",
+    "previewWait": "Loading preview…",
+    "previewLoading": "Loading…",
+    "previewError": "Could not load media",
+    "previewNoApi": "No access to camshot API",
+    "noPreview": "No snapshot",
+    "openedYes": "opened",
+    "openedNo": "not opened",
+    "code": "Code",
+    "loadAllHouseEvents": "All house events",
+    "eventOpenPhoneLabel": "Opening phone",
+    "activeUsersPeriodLabel": "Uniques, %d d",
+    "chartWauMauBarsDataset": "WAU vs %d-day window"
+}

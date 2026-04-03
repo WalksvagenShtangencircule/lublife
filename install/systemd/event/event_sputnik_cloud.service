@@ -1,0 +1,22 @@
+[Unit]
+Description=Event service for SPUTNIK CLOUD
+Documentation=https://github.com/rosteleset/SmartYard-Server/tree/main/install
+After=network.target
+
+[Service]
+SyslogIdentifier=event_sputnik_cloud
+Type=simple
+WorkingDirectory=/opt/rbt/server/services/event/
+ExecStart=/usr/bin/node /opt/rbt/server/services/event/index.js sputnik_cloud
+RestartSec=10
+Restart=always
+User=rbt
+Group=rbt
+LimitCORE=infinity
+KillMode=process
+StandardOutput=null
+#StandardOutput=append:/var/log/event_service/event_sputnik_cloud.log
+StandardError=append:/var/log/event_service/event_sputnik_cloud.error.log
+
+[Install]
+WantedBy=multi-user.target

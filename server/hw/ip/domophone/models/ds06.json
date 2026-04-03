@@ -1,0 +1,11 @@
+{
+    "title": "BEWARD DS",
+    "vendor": "BEWARD",
+    "model": "DS",
+    "class": "ds06",
+    "eventServer": "beward_ds",
+    "outputs": 3,
+    "camera": "beward",
+    "useSmartConfigurator": true,
+    "cmses": []
+}

@@ -1,0 +1,642 @@
+@charset "UTF-8";
+
+/**
+ * Playful Pop — яркая «мультяшная» тема для RBT (светлая + body.dark-mode).
+ * Файл исторически theme-warm-paper.css; подключается после index.css.
+ */
+
+:root {
+  --wp-font: "Nunito", "Segoe UI", system-ui, -apple-system, sans-serif;
+  /* Фон — мягкий нежно-голубой/лавандовый */
+  --wp-bg: #e8f0ff;
+  --wp-surface: #ffffff;
+  --wp-surface-2: #dde9ff;
+  --wp-text: #1c2d5a;
+  --wp-text-muted: #4a5d8c;
+  --wp-border: rgba(103, 58, 183, 0.2);
+  /* Акцент интерфейса (сайдбар, ссылки) */
+  --wp-accent: #7c4dff;
+  --wp-accent-hover: #651fff;
+  --wp-accent-soft: rgba(124, 77, 255, 0.22);
+  --wp-sidebar-bg: #4a148c;
+  --wp-sidebar-hover: rgba(255, 255, 255, 0.12);
+  --wp-navbar-bg: #ffffff;
+  --wp-input-bg: #ffffff;
+  --wp-shadow: 0 10px 28px rgba(103, 58, 183, 0.14);
+  --wp-radius: 18px;
+  --wp-radius-sm: 14px;
+  /* Яркие «конфетные» кнопки primary */
+  --wp-btn-p1: #ff8fb8;
+  --wp-btn-p2: #ff4d8d;
+  --wp-btn-p3: #e91e8c;
+  --wp-btn-p-border: #c2186d;
+  --wp-btn-p-shadow: 0 5px 0 #9c1458, 0 10px 24px rgba(233, 30, 140, 0.35);
+  --wp-btn-p-shadow-hover: 0 3px 0 #9c1458, 0 8px 22px rgba(233, 30, 140, 0.45);
+}
+
+body.dark-mode {
+  --wp-bg: #0f1223;
+  --wp-surface: #1a1f38;
+  --wp-surface-2: #232845;
+  --wp-text: #eef1ff;
+  --wp-text-muted: #9aa3c9;
+  --wp-border: rgba(156, 168, 255, 0.22);
+  --wp-accent: #b388ff;
+  --wp-accent-hover: #d4a5ff;
+  --wp-accent-soft: rgba(179, 136, 255, 0.28);
+  --wp-sidebar-bg: #0a0c18;
+  --wp-sidebar-hover: rgba(255, 255, 255, 0.08);
+  --wp-navbar-bg: #15192e;
+  --wp-input-bg: #222740;
+  --wp-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+  --wp-btn-p1: #ff79b0;
+  --wp-btn-p2: #ff4d9a;
+  --wp-btn-p3: #ff2d8b;
+  --wp-btn-p-border: #ff1a7a;
+  --wp-btn-p-shadow: 0 5px 0 #b01055, 0 10px 28px rgba(255, 45, 139, 0.4);
+  --wp-btn-p-shadow-hover: 0 3px 0 #b01055, 0 8px 26px rgba(255, 45, 139, 0.5);
+}
+
+/* Базовая типографика и фон */
+body {
+  font-family: var(--wp-font) !important;
+  background-color: var(--wp-bg) !important;
+  color: var(--wp-text) !important;
+}
+
+body .wrapper {
+  background-color: var(--wp-bg) !important;
+}
+
+/* Верхняя панель */
+body:not(.dark-mode) .main-header.navbar-light {
+  background-color: var(--wp-navbar-bg) !important;
+  border-bottom: 2px solid var(--wp-border) !important;
+  box-shadow: 0 4px 18px rgba(103, 58, 183, 0.08) !important;
+}
+
+body:not(.dark-mode) .main-header.navbar-light .nav-link,
+body:not(.dark-mode) .main-header.navbar-light .btn-default {
+  color: var(--wp-text) !important;
+}
+
+body.dark-mode .main-header.navbar-dark {
+  background-color: var(--wp-navbar-bg) !important;
+  border-bottom: 2px solid var(--wp-border) !important;
+}
+
+body.dark-mode .main-header.navbar-dark .nav-link {
+  color: var(--wp-text) !important;
+}
+
+/* Контент */
+.content-wrapper {
+  background-color: var(--wp-bg) !important;
+}
+
+.content-header h1 {
+  color: var(--wp-text) !important;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* Боковое меню */
+.main-sidebar.sidebar-dark-primary {
+  background-color: var(--wp-sidebar-bg) !important;
+  box-shadow: 4px 0 24px rgba(74, 20, 140, 0.25) !important;
+}
+
+.sidebar-dark-primary .brand-link {
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.sidebar-dark-primary .nav-sidebar > .nav-item > .nav-link {
+  color: rgba(255, 255, 255, 0.92) !important;
+  border-radius: 12px;
+  margin: 3px 10px;
+  font-weight: 700;
+}
+
+.sidebar-dark-primary .nav-sidebar > .nav-item > .nav-link:hover {
+  background-color: var(--wp-sidebar-hover) !important;
+  color: #fff !important;
+}
+
+.sidebar-dark-primary .nav-sidebar > .nav-item > .nav-link.active,
+.sidebar-dark-primary .nav-sidebar > .nav-item.menu-open > .nav-link.active {
+  background: linear-gradient(135deg, #ff6b9d 0%, #b388ff 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 16px rgba(255, 107, 157, 0.45) !important;
+}
+
+body.dark-mode .sidebar-dark-primary .nav-sidebar > .nav-item > .nav-link.active,
+body.dark-mode .sidebar-dark-primary .nav-sidebar > .nav-item.menu-open > .nav-link.active {
+  box-shadow: 0 4px 20px rgba(255, 121, 176, 0.4) !important;
+}
+
+/* Карточки — «наклейки» */
+.card {
+  background-color: var(--wp-surface) !important;
+  border: 2px solid var(--wp-border) !important;
+  border-radius: var(--wp-radius) !important;
+  box-shadow: var(--wp-shadow) !important;
+}
+
+.card-header {
+  background: linear-gradient(180deg, var(--wp-surface-2) 0%, var(--wp-surface) 100%) !important;
+  border-bottom: 2px solid var(--wp-border) !important;
+  color: var(--wp-text) !important;
+  border-radius: calc(var(--wp-radius) - 2px) calc(var(--wp-radius) - 2px) 0 0 !important;
+  font-weight: 800;
+}
+
+.card-footer {
+  background-color: var(--wp-surface-2) !important;
+  border-top: 2px solid var(--wp-border) !important;
+}
+
+/* Primary — объёмная яркая кнопка */
+.btn-primary {
+  background: linear-gradient(180deg, var(--wp-btn-p1) 0%, var(--wp-btn-p2) 55%, var(--wp-btn-p3) 100%) !important;
+  border: 2px solid var(--wp-btn-p-border) !important;
+  border-radius: 999px !important;
+  font-weight: 800 !important;
+  color: #fff !important;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+  box-shadow: var(--wp-btn-p-shadow) !important;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background: linear-gradient(180deg, #ffa8c8 0%, var(--wp-btn-p1) 50%, var(--wp-btn-p2) 100%) !important;
+  border-color: var(--wp-btn-p-border) !important;
+  color: #fff !important;
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: var(--wp-btn-p-shadow-hover) !important;
+  filter: brightness(1.05);
+}
+
+.btn-primary:not(:disabled):not(.disabled):active {
+  transform: translateY(2px) scale(0.98);
+  box-shadow: 0 2px 0 #9c1458, 0 4px 12px rgba(233, 30, 140, 0.35) !important;
+}
+
+.btn-sm.btn-primary,
+.btn-xs.btn-primary {
+  border-radius: 12px !important;
+}
+
+/* Остальные семантические кнопки — тоже сочные */
+.btn-success {
+  background: linear-gradient(180deg, #7af0a9 0%, #00e676 50%, #00c853 100%) !important;
+  border: 2px solid #00a344 !important;
+  color: #003b1f !important;
+  font-weight: 800 !important;
+  border-radius: 999px !important;
+  box-shadow: 0 4px 0 #008c3a, 0 8px 20px rgba(0, 200, 83, 0.35) !important;
+  transition: transform 0.12s ease, box-shadow 0.12s ease !important;
+}
+
+.btn-success:hover,
+.btn-success:focus {
+  color: #002814 !important;
+  transform: translateY(-1px) scale(1.02);
+  filter: brightness(1.06);
+}
+
+.btn-info {
+  background: linear-gradient(180deg, #80d8ff 0%, #40c4ff 50%, #00b0ff 100%) !important;
+  border: 2px solid #0091ea !important;
+  color: #002a4d !important;
+  font-weight: 800 !important;
+  border-radius: 999px !important;
+  box-shadow: 0 4px 0 #0077c2, 0 8px 20px rgba(0, 176, 255, 0.35) !important;
+  transition: transform 0.12s ease !important;
+}
+
+.btn-info:hover,
+.btn-info:focus {
+  color: #001f38 !important;
+  transform: translateY(-1px) scale(1.02);
+  filter: brightness(1.05);
+}
+
+.btn-warning {
+  background: linear-gradient(180deg, #ffe082 0%, #ffca28 50%, #ffb300 100%) !important;
+  border: 2px solid #ff8f00 !important;
+  color: #4a3200 !important;
+  font-weight: 800 !important;
+  border-radius: 999px !important;
+  box-shadow: 0 4px 0 #e65100, 0 8px 20px rgba(255, 179, 0, 0.4) !important;
+  transition: transform 0.12s ease !important;
+}
+
+.btn-warning:hover,
+.btn-warning:focus {
+  color: #2d1e00 !important;
+  transform: translateY(-1px) scale(1.02);
+  filter: brightness(1.04);
+}
+
+.btn-danger {
+  background: linear-gradient(180deg, #ff8a80 0%, #ff5252 50%, #d32f2f 100%) !important;
+  border: 2px solid #b71c1c !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+  border-radius: 999px !important;
+  box-shadow: 0 4px 0 #8b0000, 0 8px 20px rgba(211, 47, 47, 0.4) !important;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+  transition: transform 0.12s ease !important;
+}
+
+.btn-danger:hover,
+.btn-danger:focus {
+  color: #fff !important;
+  transform: translateY(-1px) scale(1.02);
+  filter: brightness(1.06);
+}
+
+.btn-default,
+.btn-secondary {
+  border-radius: 999px !important;
+  background: linear-gradient(180deg, var(--wp-surface) 0%, var(--wp-surface-2) 100%) !important;
+  border: 2px solid var(--wp-border) !important;
+  color: var(--wp-text) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 3px 0 rgba(103, 58, 183, 0.15), 0 6px 16px rgba(103, 58, 183, 0.08) !important;
+  transition: transform 0.12s ease !important;
+}
+
+body:not(.dark-mode) .btn-default:hover,
+body:not(.dark-mode) .btn-secondary:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #e8eeff 100%) !important;
+  transform: translateY(-1px);
+}
+
+body.dark-mode .btn-default:hover,
+body.dark-mode .btn-secondary:hover {
+  background: linear-gradient(180deg, #2a3150 0%, #232845 100%) !important;
+  transform: translateY(-1px);
+}
+
+/* Поля ввода — мягкие «пузыри» */
+.form-control,
+.custom-select {
+  background-color: var(--wp-input-bg) !important;
+  border: 2px solid var(--wp-border) !important;
+  color: var(--wp-text) !important;
+  border-radius: var(--wp-radius-sm) !important;
+  font-weight: 600;
+}
+
+.form-control:focus,
+.custom-select:focus {
+  border-color: var(--wp-accent) !important;
+  box-shadow: 0 0 0 0.25rem var(--wp-accent-soft) !important;
+}
+
+.input-group-text {
+  background: linear-gradient(180deg, var(--wp-surface-2) 0%, var(--wp-surface) 100%) !important;
+  border: 2px solid var(--wp-border) !important;
+  color: var(--wp-text-muted) !important;
+  border-radius: var(--wp-radius-sm) !important;
+  font-weight: 700;
+}
+
+/* Таблицы */
+.table {
+  color: var(--wp-text) !important;
+}
+
+body:not(.dark-mode) .table-striped tbody tr:nth-of-type(odd) {
+  background-color: rgba(124, 77, 255, 0.06) !important;
+}
+
+body.dark-mode .table-striped tbody tr:nth-of-type(odd) {
+  background-color: rgba(179, 136, 255, 0.07) !important;
+}
+
+.table-bordered,
+.table th,
+.table td {
+  border-color: var(--wp-border) !important;
+}
+
+/* Модальные окна */
+.modal-content {
+  background-color: var(--wp-surface) !important;
+  color: var(--wp-text) !important;
+  border: 3px solid var(--wp-border) !important;
+  border-radius: var(--wp-radius) !important;
+  box-shadow: var(--wp-shadow) !important;
+}
+
+.modal-header {
+  border-bottom: 2px solid var(--wp-border) !important;
+}
+
+.modal-footer {
+  border-top: 2px solid var(--wp-border) !important;
+}
+
+.close {
+  color: var(--wp-text) !important;
+  opacity: 0.75;
+  font-weight: 800;
+}
+
+/* Выпадающие меню */
+.dropdown-menu {
+  background-color: var(--wp-surface) !important;
+  border: 2px solid var(--wp-border) !important;
+  border-radius: var(--wp-radius-sm) !important;
+  box-shadow: var(--wp-shadow) !important;
+}
+
+.dropdown-item {
+  color: var(--wp-text) !important;
+  font-weight: 600;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background: linear-gradient(90deg, var(--wp-surface-2) 0%, var(--wp-surface) 100%) !important;
+  color: var(--wp-text) !important;
+}
+
+.dropdown-divider {
+  border-top-color: var(--wp-border) !important;
+}
+
+.text-muted {
+  color: var(--wp-text-muted) !important;
+}
+
+.breadcrumb {
+  background-color: transparent !important;
+}
+
+.breadcrumb-item.active {
+  color: var(--wp-text-muted) !important;
+}
+
+body.dark-mode .bg-light,
+body.dark-mode .bg-white {
+  background-color: var(--wp-surface) !important;
+}
+
+body:not(.dark-mode) .bg-navy,
+body:not(.dark-mode) .bg-primary {
+  background: linear-gradient(135deg, var(--wp-accent) 0%, #651fff 100%) !important;
+}
+
+/* hr-text */
+body:not(.dark-mode) .hr-text::after {
+  background-color: var(--wp-bg) !important;
+  color: var(--wp-accent) !important;
+}
+
+body.dark-mode .hr-text::after,
+body.dark-mode .hr-text-pointer::after {
+  background-color: var(--wp-bg) !important;
+  color: var(--wp-accent) !important;
+}
+
+/* Скроллбар */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--wp-surface-2);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--wp-accent) 0%, #ff6b9d 100%);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #ff6b9d 0%, var(--wp-accent) 100%);
+}
+
+/* Select2 */
+.select2-container--bootstrap4 .select2-selection {
+  background-color: var(--wp-input-bg) !important;
+  border: 2px solid var(--wp-border) !important;
+  color: var(--wp-text) !important;
+  border-radius: var(--wp-radius-sm) !important;
+}
+
+.select2-container--bootstrap4 .select2-dropdown {
+  background-color: var(--wp-surface) !important;
+  border: 2px solid var(--wp-border) !important;
+}
+
+.select2-container--bootstrap4 .select2-results__option {
+  color: var(--wp-text) !important;
+  font-weight: 600;
+}
+
+.select2-container--bootstrap4 .select2-results__option--highlighted {
+  background-color: var(--wp-accent-soft) !important;
+  color: var(--wp-text) !important;
+}
+
+/* Пагинация */
+.page-link {
+  background-color: var(--wp-surface) !important;
+  border: 2px solid var(--wp-border) !important;
+  color: var(--wp-accent) !important;
+  border-radius: 12px !important;
+  margin: 0 3px;
+  font-weight: 800;
+}
+
+.page-item.active .page-link {
+  background: linear-gradient(180deg, var(--wp-btn-p1) 0%, var(--wp-btn-p2) 100%) !important;
+  border-color: var(--wp-btn-p-border) !important;
+  color: #fff !important;
+}
+
+/* Toastr */
+#toast-container .toast-info {
+  background: linear-gradient(90deg, #40c4ff 0%, #7c4dff 100%) !important;
+}
+
+/* Левое меню модулей (только текст) */
+#leftside-menu .nav-link.nav-link-text-only {
+  display: flex;
+  align-items: center;
+  padding-left: 0.85rem;
+  padding-right: 0.5rem;
+}
+
+#leftside-menu .nav-link.nav-link-text-only > p {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.sidebar-mini.sidebar-collapse .main-sidebar:not(.sidebar-no-expand):hover #leftside-menu .nav-link.nav-link-text-only > p,
+.sidebar-mini.sidebar-collapse .main-sidebar:not(.sidebar-no-expand).sidebar-focused #leftside-menu .nav-link.nav-link-text-only > p {
+  white-space: normal !important;
+}
+
+/* Бейджи — чуть игривее */
+.badge-primary {
+  background: linear-gradient(135deg, #ff6b9d 0%, #7c4dff 100%) !important;
+  border-radius: 999px !important;
+  padding: 0.35em 0.65em !important;
+  font-weight: 800 !important;
+}
+
+/* Две колонки контента: квартиры слева, входы справа — без переноса из-за широких таблиц */
+.content .container-fluid > .row.rbt-content-split {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: flex-start !important;
+}
+.content .container-fluid > .row.rbt-content-split > #mainForm,
+.content .container-fluid > .row.rbt-content-split > #altForm {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+.content .container-fluid > .row.rbt-content-split .card {
+  max-width: 100% !important;
+}
+.content .container-fluid > .row.rbt-content-split .table-responsive {
+  max-width: 100% !important;
+  overflow-x: auto !important;
+}
+@media (max-width: 991.98px) {
+  .content .container-fluid > .row.rbt-content-split {
+    flex-wrap: wrap !important;
+  }
+  .content .container-fluid > .row.rbt-content-split > #mainForm,
+  .content .container-fluid > .row.rbt-content-split > #altForm {
+    flex: 1 1 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* ─── Таблицы в карточках: яркая типографика и «живые» иконки действий ─── */
+.content-wrapper .card .table {
+  font-family: var(--wp-font) !important;
+  color: var(--wp-text) !important;
+}
+
+.content-wrapper .card .table thead th {
+  color: var(--wp-accent) !important;
+  font-weight: 800 !important;
+  font-size: 0.82rem !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  border-bottom: 2px solid var(--wp-border) !important;
+  background: linear-gradient(180deg, var(--wp-surface-2) 0%, var(--wp-surface) 100%) !important;
+  vertical-align: middle !important;
+  text-align: center !important;
+}
+
+.content-wrapper .card .table tbody td {
+  color: var(--wp-text) !important;
+  font-weight: 700 !important;
+  font-size: 0.98rem !important;
+  letter-spacing: 0.01em !important;
+  border-color: var(--wp-border) !important;
+  vertical-align: middle !important;
+  text-align: center !important;
+}
+
+.content-wrapper .card .table tbody tr.text-secondary td {
+  color: var(--wp-text-muted) !important;
+  font-weight: 600 !important;
+}
+
+.content-wrapper .card .table.table-hover tbody tr:hover td {
+  background-color: var(--wp-accent-soft) !important;
+  color: var(--wp-text) !important;
+}
+
+/* Чипы: редактирование (розово-фиолетовый) и меню (бирюза к акценту) */
+.rbt-table-action-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 2.15rem !important;
+  height: 2.15rem !important;
+  border-radius: 12px !important;
+  font-size: 0.88rem !important;
+  line-height: 1 !important;
+  border: 2px solid var(--wp-border) !important;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, var(--wp-surface-2) 100%) !important;
+  box-shadow: 0 3px 0 rgba(103, 58, 183, 0.12), 0 6px 14px rgba(124, 77, 255, 0.12) !important;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease, border-color 0.18s ease !important;
+}
+
+body.dark-mode .content-wrapper .card .table thead th {
+  background: linear-gradient(180deg, var(--wp-surface-2) 0%, var(--wp-surface) 100%) !important;
+}
+
+body.dark-mode .rbt-table-action-chip {
+  background: linear-gradient(145deg, var(--wp-surface-2) 0%, #12162a 100%) !important;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), 0 6px 16px rgba(179, 136, 255, 0.12) !important;
+}
+
+.rbt-table-action-chip--edit {
+  color: var(--wp-btn-p2) !important;
+}
+
+.rbt-table-action-chip--menu {
+  color: var(--wp-accent) !important;
+}
+
+.rbt-table-edit-cell:hover .rbt-table-action-chip--edit,
+.rbt-table-action-chip--edit:hover {
+  transform: scale(1.1) rotate(-4deg) !important;
+  border-color: var(--wp-btn-p-border) !important;
+  box-shadow: 0 2px 0 #9c1458, 0 8px 20px rgba(233, 30, 140, 0.35) !important;
+  filter: saturate(1.15) !important;
+}
+
+.rbt-table-menu-chip:hover .rbt-table-action-chip--menu,
+.rbt-table-action-chip--menu:hover {
+  transform: scale(1.08) !important;
+  border-color: var(--wp-accent) !important;
+  color: var(--wp-accent-hover) !important;
+  box-shadow: 0 4px 18px rgba(124, 77, 255, 0.35) !important;
+}
+
+.rbt-table-edit-cell {
+  text-align: center !important;
+  width: 3.25rem !important;
+  max-width: 3.5rem !important;
+}
+.rbt-table-menu-chip {
+  text-align: center !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.content-wrapper .card .table tbody td.cut-text {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Колонка «Номер» (квартира) в таблице дома — ширина как у цифр, шрифт как у остальных колонок */
+.rbt-content-split #mainForm .table th.rbt-flats-flat-col,
+.rbt-content-split #mainForm .table td.rbt-flats-flat-cell {
+  max-width: 6rem !important;
+  width: 5.25rem !important;
+  min-width: 3.5rem !important;
+  padding-left: 0.35rem !important;
+  padding-right: 0.35rem !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}

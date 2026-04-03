@@ -1,0 +1,74 @@
+<?php
+
+    /**
+     * @api {get} /api/providers/json get providers json
+     *
+     * @apiVersion 1.0.0
+     *
+     * @apiName getProvidersJson
+     * @apiGroup providers
+     *
+     * @apiHeader {String} Authorization authentication token
+     *
+     * @apiSuccess {Object} json
+     */
+
+    /**
+     * @api {put} /api/providers/json put providers json
+     *
+     * @apiVersion 1.0.0
+     *
+     * @apiName putProvidersJson
+     * @apiGroup providers
+     *
+     * @apiHeader {String} Authorization authentication token
+     *
+     * @apiBody {String} body
+     *
+     * @apiSuccess {Boolean} operationResult
+     */
+
+    /**
+     * providers api
+     */
+
+    namespace api\providers {
+
+        use api\api;
+
+        /**
+         * providers method
+         */
+
+        class json extends api {
+
+            public static function GET($params) {
+                $providers = loadBackend("providers");
+
+                $providers = $providers->getJson();
+
+                return api::ANSWER($providers, ($providers !== false) ? "json" : "notAcceptable");
+            }
+
+            public static function PUT($params) {
+                $providers = loadBackend("providers");
+
+                $success = $providers->putJson($params["body"]);
+
+                return api::ANSWER($success);
+            }
+
+            public static function index() {
+                $providers = loadBackend("providers");
+
+                if ($providers) {
+                    return [
+                        "GET" => "#same(providers,provider,GET)",
+                        "PUT" => "#same(providers,provider,PUT)",
+                    ];
+                } else {
+                    return false;
+                }
+            }
+        }
+    }

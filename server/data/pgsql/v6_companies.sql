@@ -1,0 +1,1 @@
+ALTER TABLE companies ADD IF NOT EXISTS company_type integer;

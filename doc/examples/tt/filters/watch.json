@@ -1,0 +1,14 @@
+{
+    "name": "Watching",
+    "filter": {
+        "watchers": {
+            "$elemMatch": {
+                "$in": "%%my"
+            }
+        }
+    },
+    "fields": [
+        "subject",
+        "status"
+    ]
+}

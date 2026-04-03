@@ -1,0 +1,61 @@
+{
+    "name": "event-service",
+    "version": "1.0.0",
+    "description": "Event service for intercom and ip camera",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+        "start": "concurrently -k \"npm run start:*\"",
+        "dev": "concurrently -k \"npm run dev:*\"",
+        "debug": "NODE_ENV=debug concurrently -k \"npm run dev:*\"",
+        "start:akuvox": "node index.js akuvox",
+        "start:beward": "node index.js beward",
+        "start:beward_ds": "node index.js beward_ds",
+        "start:is": "node index.js is",
+        "start:qtech": "node index.js qtech",
+        "start:rubetek": "node index.js rubetek",
+        "start:sputnik": "node index.js sputnik_cloud",
+        "start:ufanet": "node index.js ufanet",
+        "start:brovotech": "node index.js brovotech",
+        "start:iflow": "node index.js iflow",
+        "start:basip": "node index.js basip",
+        "dev:akuvox": "nodemon index.js akuvox",
+        "dev:beward": "nodemon index.js beward",
+        "dev:beward_ds": "nodemon index.js beward_ds",
+        "dev:is": "nodemon index.js is",
+        "dev:qtech": "nodemon index.js qtech",
+        "dev:rubetek": "nodemon index.js rubetek",
+        "dev:sputnik": "nodemon index.js sputnik_cloud",
+        "dev:ufanet": "nodemon index.js ufanet",
+        "dev:brovotech": "nodemon index.js brovotech",
+        "dev:iflow": "nodemon index.js iflow",
+        "dev:basip": "nodemon index.js basip",
+        "debug:akuvox": "NODE_ENV=debug nodemon index.js akuvox",
+        "debug:beward": "NODE_ENV=debug nodemon index.js beward",
+        "debug:beward_ds": "NODE_ENV=debug nodemon index.js beward_ds",
+        "debug:is": "NODE_ENV=debug nodemon index.js is",
+        "debug:qtech": "NODE_ENV=debug nodemon index.js qtech",
+        "debug:rubetek": "NODE_ENV=debug nodemon index.js rubetek",
+        "debug:sputnik": "NODE_ENV=debug nodemon index.js sputnik_cloud",
+        "debug:ufanet": "NODE_ENV=debug nodemon index.js ufanet",
+        "debug:brovotech": "NODE_ENV=debug nodemon index.js brovotech",
+        "debug:iflow": "NODE_ENV=debug nodemon index.js iflow",
+        "debug:basip": "NODE_ENV=debug nodemon index.js basip"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "axios": "^1.1.0",
+        "concurrently": "^7.4.0",
+        "syslog-server": "^1.0.1",
+        "xml2js": "^0.6.2"
+    },
+    "devDependencies": {
+        "nodemon": "^2.0.20"
+    },
+    "engines": {
+        "npm": ">=10.0.0",
+        "node": ">=20.13.0"
+    }
+}

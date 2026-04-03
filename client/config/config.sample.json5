@@ -1,0 +1,94 @@
+{
+    "defaultServer": "https://example.com/frontend",
+    "defaultLanguage": "ru",
+    "languages": {
+        "ru": "Русский",
+        "en": "English"
+    },
+    // См. также config.example.json (строгий JSON с теми же ключами бренда и адресов)
+    "modules": [
+        "asterisk",
+        "addresses",
+        "analytics",
+        "queues",
+        "users",
+        "groups",
+        "permissions",
+        "tt",
+        "cs",
+        "darkmode",
+        "custom",
+        // "about" — страница RoBoT / о системе; при отключении выставьте defaultRoute не на #about
+    ],
+    "asterisk": {
+        // websocket endpoint (ws or wss)
+        "ws": "wss://example.com/wss",
+        // ICE stun servers
+        "ice": [
+            {
+                "urls": [ "stun:stun.l.google.com:19302" ]
+            }
+        ],
+        "sipDomain": "<!-- your asterisk server external ip here -->"
+    },
+    "map": {
+        // you can set your own (prefer) tile server here
+        "tile": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        // coordinate system
+        "crs": "EPSG3857",
+        // default position and zoom level
+        "default": {
+            "lat": 51.505,
+            "lon": -0.09,
+            "zoom": 13
+        },
+        // minimal and maximum zoom levels
+        "min": 4,
+        "max": 18,
+        "hideAttribution": false,
+    },
+    "regExp": {
+        // phone number validation regexp
+        "phone": "(8|7|\\+7)((\\d{10})|(\\s\\(\\d{3}\\)\\s\\d{3}\\s\\d{2}\\s\\d{2}))",
+        // rfid validation regexp
+        "rfid": "[0-9A-F]{14}"
+    },
+    // Стартовая страница после входа (без модуля about — например #addresses)
+    "defaultRoute": "#addresses",
+    // logo (without extension), файлы img/<logo>.png в клиенте
+    "logo": "rbt",
+    // phone pattern for inputs
+    "phonePattern": "7 (###) ###-##-##",
+    // print server url
+    "printServer": "https://example.com/print",
+    // mobile device check
+    "mdCheck": "https://example.com/md",
+    // redirect to...
+    "mdRedirect": "https://m.example.com",
+    // camTree by false - off, houses - common for all houses, perHouse - per house
+    "camTree": false,
+    // hide "Create issue" menu item
+    "disableCreateIssue": false,
+
+    // Колонки таблицы квартир на карточке дома (см. houses.js / getFlatsTableColumnPlan)
+    "addresses": {
+        "houseFlatsTable": {
+            "columns": [ "floor", "flat", "contract", "openCode" ],
+        },
+    },
+
+    // Бренд в сайдбаре (client/js/app.js): аватар https://github.com/<user>.png, клик — профиль
+    "brandGithubUser": "your-github-username",
+    // true — скрыть текст рядом с аватаром
+    "brandHideSidebarTitle": false,
+    // Подпись вместо i18n windowTitle (например SmartAccess или «Адреса»).
+    // Устаревший маркетинговый вариант с кавычками («"Умный" двор») в config.json перекрывает i18n —
+    // не задавайте его в brandSidebarTitle, иначе снова увидите кавычки в сайдбаре.
+    "brandSidebarTitle": "SmartAccess",
+    // Опционально: свой URL картинки вместо github.com/<user>.png
+    // "brandLogoUrl": "https://…",
+    // Опционально: куда вести по клику (иначе https://github.com/<brandGithubUser>)
+    // "brandLinkUrl": "https://github.com/you/repo",
+    // Опционально: тот же URL как favicon
+    // "brandUseAvatarFavicon": true,
+}

@@ -1,0 +1,532 @@
+<?php
+
+    require_once 'vendor/autoload.php';
+
+    // asterisk support
+
+    $cli = false;
+    $cli_error = false;
+
+    require_once "utils/functions.php";
+    require_once "utils/polyfills.php";
+    require_once "utils/error.php";
+    require_once "utils/loader.php";
+    require_once "utils/PDOExt.php";
+    require_once "utils/debug.php";
+    require_once "utils/i18n.php";
+
+    require_once "backends/backend.php";
+
+    header('Content-Type: application/json');
+
+    try {
+        $config = @json_decode(file_get_contents(__DIR__ . "/config/config.json"), true);
+    } catch (Exception $e) {
+        $config = false;
+    }
+
+    if (!$config) {
+        echo "config is empty\n";
+        exit(1);
+    }
+
+    if (@!$config["backends"]) {
+        echo "no backends defined\n";
+        exit(1);
+    }
+
+    try {
+        $db = new PDOExt(@$config["db"]["dsn"], @$config["db"]["username"], @$config["db"]["password"], @$config["db"]["options"]);
+    } catch (Exception $e) {
+        echo "can't open database " . $config["db"]["dsn"] . "\n";
+        echo $e->getMessage() . "\n";
+        exit(1);
+    }
+
+    if (@$config["db"]["schema"]) {
+        $db->exec("SET search_path TO " . $config["db"]["schema"] . ", public");
+    }
+
+    try {
+        $redis = new Redis();
+        $redis->connect($config["redis"]["host"], $config["redis"]["port"]);
+        if (@$config["redis"]["password"]) {
+            $redis->auth($config["redis"]["password"]);
+        }
+    } catch (Exception $e) {
+        echo "can't connect to redis server\n";
+        exit(1);
+    }
+
+    function paramsToResponse($params) {
+        $r = "";
+
+        if ($params) {
+            foreach ($params as $param => $value) {
+                $r .= urlencode($param) . "=" . urlencode($value) . "&";
+            }
+        }
+
+        return $r;
+    }
+
+    function getExtension($extension, $section) {
+        global $redis;
+
+        // domophone panel
+        if ($extension[0] === "1" && strlen($extension) === 6) {
+            $domophones = loadBackend("households");
+            $panel = $domophones->getDomophone((int)substr($extension, 1));
+
+            switch ($section) {
+                case "aors":
+                    if ($panel && $panel["credentials"]) {
+                        return [
+                            "id" => $extension,
+                            "max_contacts" => "1",
+                            "remove_existing" => "yes"
+                        ];
+                    }
+                    break;
+
+                case "auths":
+
+                    if ($panel && $panel["credentials"]) {
+                        return [
+                            "id" => $extension,
+                            "username" => $extension,
+                            "auth_type" => "userpass",
+                            "password" => $panel["credentials"],
+                        ];
+                    }
+                    break;
+
+                case "endpoints":
+                    if ($panel && $panel["credentials"]) {
+                        return [
+                            "id" => $extension,
+                            "auth" => $extension,
+                            "outbound_auth" => $extension,
+                            "aors" => $extension,
+                            "callerid" => $extension,
+                            "context" => "default",
+                            "disallow" => "all",
+                            "allow" => "alaw,h264",
+                            "rtp_symmetric" => "no",
+                            "force_rport" => "no",
+                            "rewrite_contact" => "yes",
+                            "timers" => "no",
+                            "direct_media" => "no",
+                            "allow_subscribe" => "yes",
+                            "dtmf_mode" => "rfc4733",
+                            "ice_support" => "no",
+                        ];
+                    }
+                    break;
+            }
+        }
+
+        // mobile extension
+        if ($extension[0] === "2" && strlen($extension) === 10) {
+            switch ($section) {
+                case "aors":
+                    $cred = $redis->get("mobile_extension_" . $extension);
+
+                    if ($cred) {
+                        return [
+                            "id" => $extension,
+                            "max_contacts" => "1",
+                            "remove_existing" => "yes"
+                        ];
+                    }
+
+                    break;
+
+                case "auths":
+                    $cred = $redis->get("mobile_extension_" . $extension);
+
+                    if ($cred) {
+                        return [
+                            "id" => $extension,
+                            "username" => $extension,
+                            "auth_type" => "userpass",
+                            "password" => $cred,
+                        ];
+                    }
+
+                    break;
+
+                case "endpoints":
+                    $cred = $redis->get("mobile_extension_" . $extension);
+
+                    if ($cred) {
+                        return [
+                            "id" => $extension,
+                            "auth" => $extension,
+                            "outbound_auth" => $extension,
+                            "aors" => $extension,
+                            "callerid" => $extension,
+                            "context" => "default",
+                            "disallow" => "all",
+                            "allow" => "alaw,h264",
+                            "rtp_symmetric" => "yes",
+                            "force_rport" => "yes",
+                            "rewrite_contact" => "yes",
+                            "timers" => "no",
+                            "direct_media" => "no",
+                            "allow_subscribe" => "yes",
+                            "dtmf_mode" => "rfc4733",
+                            "ice_support" => "yes",
+                        ];
+                    }
+
+                    break;
+            }
+        }
+
+        // sip extension
+        if ($extension[0] === "4" && strlen($extension) === 10) {
+            $households = loadBackend('households');
+
+            $flatId = (int)substr($extension, 1);
+            $cred = $households->getFlat($flatId)['sipPassword'];
+
+            switch ($section) {
+                case "aors":
+                    if ($cred) {
+                        return [
+                            "id" => $extension,
+                            "max_contacts" => "1",
+                            "remove_existing" => "yes"
+                        ];
+                    }
+
+                    break;
+
+                case "auths":
+                    if ($cred) {
+                        return [
+                            "id" => $extension,
+                            "username" => $extension,
+                            "auth_type" => "userpass",
+                            "password" => $cred,
+                        ];
+                    }
+
+                    break;
+
+                case "endpoints":
+                    if ($cred) {
+                        return [
+                            "id" => $extension,
+                            "auth" => $extension,
+                            "outbound_auth" => $extension,
+                            "aors" => $extension,
+                            "callerid" => $extension,
+                            "context" => "default",
+                            "disallow" => "all",
+                            "allow" => "alaw,h264",
+                            "rtp_symmetric" => "yes",
+                            "force_rport" => "yes",
+                            "rewrite_contact" => "yes",
+                            "timers" => "no",
+                            "direct_media" => "no",
+                            "allow_subscribe" => "yes",
+                            "dtmf_mode" => "rfc4733",
+                            "ice_support" => "no",
+                        ];
+                    }
+
+                    break;
+            }
+        }
+
+        // webrtc extension
+        if ($extension[0] === "7" && strlen($extension) === 10) {
+            switch ($section) {
+                case "aors":
+                    $cred = $redis->get("WEBRTC:" . md5($extension));
+
+                    if ($cred) {
+                        return [
+                            "id" => $extension,
+                            "max_contacts" => "1",
+                            "remove_existing" => "yes"
+                        ];
+                    }
+
+                    break;
+
+                case "auths":
+                    $cred = $redis->get("WEBRTC:" . md5($extension));
+
+                    if ($cred) {
+                        return [
+                            "id" => $extension,
+                            "username" => $extension,
+                            "auth_type" => "userpass",
+                            "password" => $cred,
+                        ];
+                    }
+
+                    break;
+
+                case "endpoints":
+                    $cred = $redis->get("WEBRTC:" . md5($extension));
+
+                    $users = loadBackend("users");
+                    $user = $users->getUser((int)substr($extension, 1));
+
+                    if ($user && $cred) {
+                        return [
+                            "id" => $extension,
+                            "auth" => $extension,
+                            "outbound_auth" => $extension,
+                            "aors" => $extension,
+                            "callerid" => $user["realName"],
+                            "context" => "default",
+                            "disallow" => "all",
+                            "allow" => "alaw,h264",
+                            "dtmf_mode" => "rfc4733",
+                            "webrtc" => "yes",
+                        ];
+                    }
+
+                    break;
+            }
+        }
+    }
+
+    $path = $_SERVER["REQUEST_URI"];
+
+    $server = parse_url($config["api"]["asterisk"]);
+
+    if ($server && $server['path']) {
+        $path = substr($path, strlen($server['path']));
+    }
+
+    if ($path && $path[0] == '/') {
+        $path = substr($path, 1);
+    }
+
+    $path = explode("/", $path);
+
+    switch ($path[0]) {
+        case "aors":
+        case "auths":
+        case "endpoints":
+            if (@$_POST["id"]) echo paramsToResponse(getExtension($_POST["id"], $path[0]));
+            break;
+
+        case "extensions":
+            $params = json_decode(file_get_contents("php://input"), true);
+
+            switch ($path[1]) {
+                case "log":
+                    logMsg($params);
+
+                    break;
+
+                case "debug":
+                    debugMsg($params);
+
+                    break;
+
+                case "autoopen":
+                    $households = loadBackend("households");
+
+                    //TODO
+                    // add checking for false, if object doesn't exists
+
+                    $flat = $households->getFlat((int)$params);
+
+                    $rabbit = (int)$flat["whiteRabbit"];
+
+                    echo json_encode($flat["autoOpen"] > time() || ($rabbit && $flat["lastOpened"] + $rabbit * 60 > time()));
+
+                    break;
+
+                case "flat":
+                    $households = loadBackend("households");
+                    $configs = loadBackend("configs");
+
+                    $flat = $households->getFlat((int)$params);
+
+                    if ($configs) {
+                        $domophoneModels = $configs->getDomophonesModels();
+                        // $cmses = $configs->getCMSes();
+
+                        foreach ($flat["entrances"] as $i => $e) {
+                            if (@$domophoneModels[$e["domophoneModel"]]["useAnalogNumber"] && $e["cmsName"]) {
+                                $flat["entrances"][$i]["analog"] = ($e["cms"] * 100) + ($e["dozen"] * 10) + $e["unit"];
+                            }
+                        }
+                    }
+
+                    echo json_encode($flat);
+
+                    break;
+
+                case "flatIdByPrefix":
+                    $households = loadBackend("households");
+
+                    echo json_encode($households->getFlats("flatIdByPrefix", $params));
+
+                    break;
+
+                case "apartment":
+                    $households = loadBackend("households");
+
+                    echo json_encode($households->getFlats("apartment", $params));
+
+                    break;
+
+                case "devices":
+                    $households = loadBackend("households");
+
+                    $devices = $households->getDevices("flat", (int)$params);
+
+                    echo json_encode($devices);
+
+                    break;
+
+                case "domophone":
+                    $households = loadBackend("households");
+
+                    echo json_encode($households->getDomophone((int)$params));
+
+                    break;
+
+                case "entrance":
+                    $households = loadBackend("households");
+
+                    $entrances = $households->getEntrances("domophoneId", [ "domophoneId" => (int)$params, "output" => "0" ]);
+
+                    $entrance = false;
+                    if ($entrances && $entrances[0]) {
+                        $entrance = $entrances[0];
+                    }
+
+                    echo json_encode($entrance);
+
+                    break;
+
+                case "camshot":
+                    $memfs = loadBackend("memfs");
+
+                    if ($params["domophoneId"] >= 0) {
+                        $households = loadBackend("households");
+                        $camerasBackend = loadBackend("cameras");
+
+                        $entrances = $households->getEntrances("domophoneId", [ "domophoneId" => $params["domophoneId"], "output" => "0" ]);
+
+                        if ($entrances && $entrances[0]) {
+                            $cameras = $households->getCameras("id", $entrances[0]["cameraId"]);
+
+                            if ($cameras && $cameras[0]) {
+                                $cameraId = $cameras[0]['cameraId'];
+
+                                if ($memfs) {
+                                    $memfs->putFile($params["hash"], $camerasBackend->getSnapshot($cameraId));
+                                } else {
+                                    $redis->setex("shot_" . $params["hash"], 3 * 60, $camerasBackend->getSnapshot($cameraId));
+                                }
+
+                                $redis->setex("live_" . $params["hash"], 3 * 60, $cameraId);
+
+                                echo $params["hash"];
+                            }
+                        }
+                    } else {
+                        $fakeImage = file_get_contents(__DIR__ . "/hw/ip/camera/fake/img/callcenter.jpg");
+
+                        if ($memfs) {
+                            $memfs->putFile($params["hash"], $fakeImage);
+                        } else {
+                            $redis->setex("shot_" . $params["hash"], 3 * 60, $fakeImage);
+                        }
+
+                        echo $params["hash"];
+                    }
+
+                    break;
+
+                case "server":
+                    $sip = loadBackend("sip");
+
+                    if ($sip) {
+
+                    }
+
+                    break;
+
+                case "push":
+                    $isdn = loadBackend("isdn");
+                    $sip = loadBackend("sip");
+                    $server = $sip->server("extension", $params["extension"]);
+
+                    $_params = [
+                        "token" => $params["token"],
+                        "type" => $params["tokenType"],
+                        "hash" => $params["hash"],
+                        "extension" => $params["extension"],
+                        "server" => $server["ip"],
+                        "port" => @$server["sip_tcp_port"] ?: 5060,
+                        "transport" => "tcp",
+                        "dtmf" => $params["dtmf"],
+                        "timestamp" => time(),
+                        "ttl" => 30,
+                        "platform" => ((int)$params["platform"] == 1) ? "ios" : "android",
+                        "callerId" => $params["callerId"],
+                        "flatId" => $params["flatId"],
+                        "domophoneId" => $params["domophoneId"],
+                        "flatNumber" => $params["flatNumber"],
+                        "bundle" => @$params["bundle"],
+                        "title" => i18n("sip.incomingTitle"),
+                    ];
+
+                    $households = loadBackend("households");
+
+                    $domophone = $households->getDomophone((int)$params["domophoneId"]);
+
+                    if ($domophone && $domophone["video"] != "inband") {
+                        $entrance = $households->getEntrances("domophoneId", [ "domophoneId" => (int)$params["domophoneId"], "output" => "0" ])[0];
+                        $cameras = @loadBackend("cameras");
+                        $dvrs = @loadBackend("dvr");
+                        if ($entrance && $cameras && $dvrs) {
+                            $camera = $cameras->getCamera($entrance["cameraId"]);
+                            $dvr = $dvrs->getDVRServerForCam($camera);
+                            if ($camera && $dvr) {
+                                $_params["videoServer"] = $dvr["type"];
+                                $_params["videoToken"] = $dvrs->getDVRTokenForCam($camera, -1);
+                                $_params["videoType"] = $domophone["video"];
+                                $_params["videoStream"] = $camera["dvrStream"];
+                            }
+                        }
+                    }
+
+                    $stun = $sip->stun($_params["extension"]);
+                    if ($stun) {
+                        $_params["stun"] = $stun;
+                    }
+
+                    $isdn->push($_params);
+
+                    break;
+
+                case "concierge":
+                    if ($params[0] === "1" && strlen($params) === 6) {
+                        echo json_encode(loadBackend("households")->getDomophone((int)substr($params, 1))["concierge"]);
+                    }
+
+                    break;
+
+                case "sos":
+                    if ($params[0] === "1" && strlen($params) === 6) {
+                        echo json_encode(loadBackend("households")->getDomophone((int)substr($params, 1))["sos"]);
+                    }
+
+                    break;
+            }
+            break;
+    }

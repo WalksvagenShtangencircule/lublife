@@ -1,0 +1,41 @@
+{
+    "notes": "Notes",
+    "subject": "Subject",
+    "body": "Body",
+    "list": "List",
+    "category": "Category",
+    "remind": "Remind",
+    "icon": "Icon",
+    "font": "Font",
+    "color": "Color",
+    "createNote": "Create note",
+    "default": "By default",
+    "deleteNote": "Delete note?",
+    "modifyNote": "Modify note",
+    "white": "White",
+    "coral": "Coral",
+    "peach": "Peach",
+    "sand": "Sand",
+    "mint": "Mint",
+    "grayGreen": "Gray-green",
+    "grayBlue": "Gray-blue",
+    "gray": "Gray",
+    "darkBlue": "Dark blue",
+    "pink": "Pink",
+    "terracotta": "Terracotta",
+    "lightGray": "Light gray",
+    "typeText": "Text",
+    "typeMarkdown": "Markdown",
+    "typeChecks": "Checkboxes",
+    "type": "Note type",
+    "fyeo": "Blur",
+    "methods": {
+        "notes": {
+            "_title": "Notes",
+            "notes": {
+                "_title": "Notes",
+                "GET": "Notes"
+            }
+        }
+    }
+}

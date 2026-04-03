@@ -1,0 +1,27 @@
+{
+  "name": "push",
+  "version": "1.0.0",
+  "description": "push service for SmartYard-server",
+  "main": "push.js",
+  "scripts": {
+    "start": "node push.js",
+    "dev": "NODE_ENV=development nodemon push.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "firebase-admin": "^13.4.0",
+    "node-libcurl": "^4.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  },
+  "engines": {
+    "npm": ">=10.2.0",
+    "node": ">=20.10.0"
+  }
+}

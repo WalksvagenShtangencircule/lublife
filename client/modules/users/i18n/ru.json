@@ -1,0 +1,103 @@
+{
+    "users": "Пользователи",
+    "user": "Пользователь",
+    "uid": "#",
+    "login": "Логин",
+    "realName": "Полное имя",
+    "addUser": "Добавить пользователя",
+    "confirmDelete": "Удалить пользователя \"#%s\"?",
+    "edit": "Редактирование пользователя",
+    "delete": "Удалить пользователя",
+    "add": "Добавить пользователя",
+    "setPassword": "Установить пароль",
+    "password": "Пароль",
+    "disabled": "Заблокирован",
+    "userWasChanged": "Изменения сохранены успешно",
+    "userWasAdded": "Пользователь добавлен",
+    "userWasDeleted": "Пользователь удален",
+    "defaultRoute": "Начальная страница",
+    "persistentToken": "Постоянный токен",
+    "blocked": "Заблокирован",
+    "blockedShort": "Блок",
+    "tg": "Telegram (id)",
+    "telegram": "Tg",
+    "notification": "Уведомления",
+    "notificationNone": "Без уведомлений",
+    "notificationTgEmail": "Предпочитаю Telegram",
+    "notificationEmailTg": "Предпочитаю электронную почту",
+    "notificationTg": "Только Telegram",
+    "notificationEmail": "Только электронная почта",
+    "lastLogin": "Вход",
+    "lastAction": "Действие",
+    "ip": "Адрес",
+    "started": "Старт",
+    "updated": "Обновление",
+    "dropSession": "Сбросить сессиию",
+    "sessions": "Сессии",
+    "confirmDropSession": "Сбросить сессию?",
+    "sessionType": "Тип сессии",
+    "sessionPersistent": "Постоянная",
+    "sessionOrdinal": "Обычная",
+    "sessionBase64": "API",
+    "primaryGroup": "Основная группа",
+    "primary": "Основные",
+    "contacts": "Контакты",
+    "2fa": "Двухфакторная авторизация",
+    "2faCode": "Ссылка для приложения",
+    "2faConfirm": "Код авторизации",
+    "2faSecret": "Секретный ключ",
+    "enable2FA": "Включить двухфакторную авторизацию",
+    "userGroups": "Группы",
+    "testNotify": "Тест уведомлений",
+    "notificationSent": "Уведомление отправлено",
+    "avatar": "Аватар",
+    "avatarLoad": "Загрузить аватар",
+    "avatarClear": "Отменить изменения",
+    "avatarApply": "Обрезать",
+    "avatarDelete": "Удалить аватар",
+    "showPassword": "Показать / скрыть пароль",
+    "generatePassword": "Сгенерировать пароль",
+    "serviceAccount": "Служебный аккаунт",
+    "sudo": "Администратор",
+    "wg": "WG",
+    "settings": "Доп. настройки",
+    "errors": {
+        "invalid2FACredentials": "Неверный код авторизации"
+    },
+    "methods": {
+        "accounts": {
+            "_title": "Аккаунты",
+            "group": {
+                "_title": "Группа",
+                "GET": "Просмотр",
+                "PUT": "Редактирование",
+                "POST": "Создание",
+                "DELETE": "Удаление"
+            },
+            "user": {
+                "_title": "Пользователь",
+                "GET": "Просмотр",
+                "PUT": "Редактирование",
+                "POST": "Создание",
+                "DELETE": "Удаление"
+            },
+            "groupUsers": {
+                "_title": "Пользователи групп",
+                "GET": "Просмотр",
+                "PUT": "Назначение"
+            },
+            "password": {
+                "_title": "Пароль",
+                "POST": "Установить"
+            },
+            "users": {
+                "_title": "Пользователи",
+                "GET": "Список"
+            },
+            "groups": {
+                "_title": "Группы",
+                "GET": "Список"
+            }
+        }
+    }
+}

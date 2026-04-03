@@ -1,0 +1,34 @@
+{
+    "company": "Управляющая компания",
+    "companies": "Управляющие компании",
+    "companyId": "#",
+    "type": "Тип",
+    "name": "Наименование",
+    "uid": "ИНН",
+    "contacts": "Контакты",
+    "comments": "Примечания",
+    "addCompany": "Добавить компанию",
+    "companyWasAdded": "Компания добавлена",
+    "companyWasChanged": "Компания изменена",
+    "companyWasDeleted": "Компания удалена",
+    "modifyCompany": "Изменить компанию",
+    "deleteCompany": "Удалить компанию",
+    "confirmCompanyDelete": "Удалить компанию \"#%s\"?",
+    "type1": "УК",
+    "type2": "ТСЖ",
+    "methods": {
+        "companies": {
+            "_title": "Управляющие компании",
+            "companies": {
+                "_title": "Управляющие компании",
+                "GET": "Доступ"
+            },
+            "company": {
+                "_title": "Управляющая компания",
+                "POST": "Создание",
+                "PUT": "Изменение",
+                "DELETE": "Удаление"
+            }
+        }
+    }
+}

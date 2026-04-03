@@ -1,0 +1,438 @@
+{
+    "language": "ru",
+
+    "api": {
+        "api": "https://example.com/api",
+        "asterisk": "http://127.0.0.1/asterisk",
+        "frontend": "https://example.com/frontend",
+        "internal": "http://127.0.0.1/internal",
+        "mobile": "https://example.com/mobile",
+        "kamailio": "http://127.0.0.1/kamailio",
+        "ud363": "https://example.com/ud363",
+        "wh": "https://example.com/wh",
+    },
+
+    "mobile": {
+        "web_server_base_path": "https://example.com/static/",
+        "payments": true,
+        "payments_url": "https://example.com/static/payments/template.html",
+        "city_cams": false,
+        "support_phone": "+7(1234)567890",
+        "chat": true,
+        "chat_url": "<!-- your chat url or remove it and use talkMe by default with options below--!>",
+        "talk_me_id": "<!-- put your talkMe chat id here --!>",
+        "talk_me_domain": "<!-- put your talkMe chat domain id here --!>",
+        "talk_me_token": "<!-- put your talkMe chat rest Api Token here --!>",
+        "phone_pattern": "7 (###) ###-##-##",
+        "time_zone": "Europe/Moscow",
+        // guest_access posible values: "turnOnOnly" or "turnOnAndOff"
+        "guest_access": "turnOnOnly",
+        // How to show cameras in the mobile app. One of: list, tree, userDefined. List(default) - cameras are shown on the map; tree - cameras are shown as a tree structure; userDefined - user has a switch in the common settings
+        "cctv_view": "list",
+        // Active app's tab at start. One of: addresses, notifications, chat, pay, menu. The default value is addresses
+        "active_tab": "addresses",
+
+        // Regex validation patterns
+        "validation_name_pattern": "",
+        "validation_patronymic_pattern": "",
+        "validation_last_pattern": "",
+
+        // Address Verification UI
+        // Visibility of the tab layout and its tabs
+        "address_verification_tab_layout_visible": true,
+        "address_verification_tab_1_visible": true,
+        "address_verification_tab_2_visible": true,
+    },
+
+    "db": {
+        "dsn": "pgsql:host=127.0.0.1;port=5433;dbname=rbt",
+        "username": "rbt",
+        "password": "rbt",
+        "text_search_config": "russian",
+        "schema": "<!-- remove this line if you are not using schemas --!>",
+    },
+
+    "mongo": {
+        "uri": "mongodb://localhost:27017",
+    },
+
+    "redis": {
+        "host": "127.0.0.1",
+        "port": 6379,
+        "frontend_cache_ttl": 600,
+        "backends_cache_ttl": 604800,
+    },
+
+    "clickhouse": {
+        "host": "localhost",
+        "port": "8123",
+        "username": "default",
+        "password": "qqq",
+        "database": "default",
+    },
+
+    "backends": {
+        "authentication": {
+            "backend": "internal",
+            "2faName": "SmartYard",
+            "2faTitle": "RBT",
+            "max_allowed_tokens": 15,
+            "token_idle_ttl": 3600,
+        },
+
+        "authorization": {
+            "backend": "allow",
+        },
+
+        "accounting": {
+            "backend": "syslog",
+        },
+
+        "users": {
+            "backend": "internal",
+            "sudo_timeout": 1800,
+        },
+
+        "geocoder": {
+            "backend": "dadata",
+            "token": "<!-- your dadata token here --!>",
+        },
+
+        "files": {
+            "backend": "mongo",
+            // value must be cron compatible: minutely, 5min, daily, weekly, monthly
+            "autocompact": "weekly",
+        },
+
+        "addresses": {
+            "backend": "internal",
+            // possible values for postgresql: trgm, fts, ftsa, default (levenshtein)
+            "text_search_mode": "default",
+        },
+
+        "households": {
+            "backend": "internal",
+            // "n month", "n day" or "n year"
+            // autoremove subscriber devices by inactivity
+            "autoclean_devices_interval": "6 month",
+            "test_numbers": [
+                "79123456781",
+                "79123456782",
+                "79123456783",
+                "79123456784",
+                "79123456785"
+            ],
+            // self_registering - true by default
+            "self_registering": true,
+            // <= 0 - unlimited
+            "max_devices_per_mobile": -1,
+            // replace || forbidden
+            "max_devices_per_mobile_strategy": "replace",
+        },
+
+        "cameras": {
+            "backend": "internal",
+        },
+
+        "isdn": {
+            "push_routes": {
+                "default": "lanta",
+                "bundle_id_1": {
+                    "host": "127.0.0.1",
+                    "port": "9081",
+                },
+                "bundle_id_2": {
+                    "port": "9082",
+                },
+            },
+            "backend": "lanta",
+            "common_secret": "<!-- your secret here --!>",
+            "confirm_method": "outgoingCall",
+            "confirm_number": "88002220374",
+        },
+
+        "inbox": {
+            "backend": "clickhouse",
+        },
+
+        "plog": {
+            "backend": "clickhouse",
+
+            // your time shift in seconds from current time as the end timepoint for processing plog_* tables (hint 60)
+            "time_shift": 60,
+
+            // your max call length in seconds for backward processing call events (hint 120)
+            "max_call_length": 120,
+
+            // your time to live in seconds for temporary data in plog_* tables (hint 86400 - one day)
+            "ttl_temp_record": 86400,
+
+            // your time to live in days for camshots (hint 60 - approx. two months)
+            "ttl_camshot_days": 60,
+
+            // your back time shift in seconds for receiving video shot from media server (hint 3)
+            "back_time_shift_video_shot": 3,
+
+            "cron_process_events_scheduler": "minutely",
+
+            // http timeout to get screenshots
+            "http_timeout": 3,
+
+            // ffmpeg timeout to get screenshots in microseconds (default is 0 - no timeout)
+            "ffmpeg_timeout": 0,
+        },
+
+        // Аналитика: ClickHouse plog + PostgreSQL (креды — из clickhouse / db выше)
+        // mau_source: "devices" (по умол.) — WAU (7д) и «уникальные за период» по last_seen; "plog_app_only" — то же по plog event=4 и телефону.
+        // series_mode: "plog_composite" — ряд по дням: телефон из plog или иначе flat_id, все события; "plog_app_only" — только event=4 и телефон.
+        // Параметр days в API задаёт глубину ряда и правый столбец; WAU всегда за 7 дней.
+        "analytics": {
+            "backend": "internal",
+            "mau_source": "devices",
+            "series_mode": "plog_composite",
+        },
+
+        "configs": {
+            "backend": "json",
+        },
+
+        "dvr": {
+            "backend": "internal",
+            "servers": [
+                {
+                    "title": "Local server",
+                    "type": "nimble or flussonic or trassir",
+                    "url": "https://video.server.hostname:8443",
+                    "token": "<!-- mediaserver security token here (only if you use it) --!>",
+                    "hlsMode": "mpegts",
+                    "management_ip": "127.0.0.1",
+                    "management_port": "8086",
+                    "management_token": "<!-- management token --!>"
+                }
+            ],
+            "stub": {
+                "payment_require_url": "https://video.server.hostname:8443/stub_payment_require",
+                "service_url": "https://video.server.hostname:8443/stub_service",
+                "fallback_url": "https://video.server.hostname:8443/fallback",
+            },
+        },
+
+        "dvrExports": {
+            "backend": "mongo",
+            "dvr_files_ttl": 259200,
+        },
+
+        "sip": {
+            "backend": "internal",
+            "servers": [
+                {
+                    "title": "First server",
+                    "type": "asterisk",
+                    "trunk": "first",
+                    "ip": "<!-- your asterisk server external ip (or domain name) here --!>",
+                    "sip_tcp_port": 5060,
+                    "sip_udp_port": 5060,
+                },
+                {
+                    "title": "SBC server | Kamailio",
+                    "type": "kamailio",
+                    "domain": "<!-- set your kamailio domain or external ip address --!>",
+                    "rpc_interface": "<!-- set smart-yard interface call to kamailio rpc (default 127.0.0.1) --!>",
+                    "rpc_path": "set path, default is 'RPC'",
+                    "rpc_port": "<!-- set your kamailio json_rpc port here --!>",
+                    "sip_tcp_port": "<!-- set your kamailio tcp port here --!>",
+                    "sip_udp_port": "<!-- set your kamailio udp port here --!>",
+                    "sip_tls_port": "<!-- set your kamailio tls port here --!>",
+                    "auth_token": "<!-- id use bearer token for auth set token or remove this key --!>",
+                },
+            ],
+            "stuns": [
+                "stun:stun.l.google.com:19302",
+            ],
+        },
+
+        "frs": {
+            "backend": "internal",
+            "open_door_timeout": 10,
+            "open_gates_timeout": 30,
+            "cron_sync_data_scheduler": "5min",
+
+            // http timeout for API calls
+            "http_timeout": 3,
+
+            "servers": [
+                {
+                    // API type of FALPRS project. One of: frs, lprs
+                    // "api": "frs",
+
+                    "title": "FRS server",
+
+                    // URL for API calls. For FALPRS project should be like this: http://127.0.0.1:9051/frs/api/
+                    "url": "http://127.0.0.1:9051"
+
+                    // Optional authorization token for FALPRS project (taken from table vstream_groups if you use more than one video stream group).
+                    // By default this option is not needed.
+                    // "authToken": "..."
+                },
+                {
+                    "api": "lprs",
+                    "title": "LPRS server",
+                    "url": "http://127.0.0.1:9051/lprs/api/"
+
+                    // Optional authorization token for FALPRS project (taken from table vstream_groups if you use more than one video stream group)
+                    // By default this option is not needed.
+                    // "authToken": "..."
+                },
+            ],
+        },
+
+        "tt": {
+            "backend": "internal",
+            // for "attachments": "external" required extfs backend
+            // "attachments": "external",
+        },
+
+        "cs": {
+            "backend": "internal",
+            // ttl of CSs (days)
+            "ttl": "3",
+        },
+
+        "mqtt": {
+            "backend": "internal",
+            "agent": "http://127.0.0.1:8082/broadcast",
+            "by": "mqtt",
+            "ws": "wss://example.com/mqtt",
+            "mqtt": "mqtt://127.0.0.1:1883",
+            "username": "rbt",
+            "password": "<!-- your mosquitto password here --!>",
+        },
+
+        "queue": {
+            "backend": "internal",
+        },
+
+        "contacts": {
+            "backend": "internal",
+            "collection": "CNT",
+        },
+
+        "customFields": {
+            "backend": "internal",
+        },
+
+        "wg": {
+            "backend": "internal",
+            "api": "<!-- WGDashboard URL -->",
+            "key": "<!-- API KEY -->",
+        },
+
+        "mkb": {
+            "backend": "internal",
+        },
+
+        "tmpfs": {
+            "backend": "internal",
+            "path": "/tmp/tmpfs",
+            "path_rights": "777",
+            "file_rights": "777",
+            "ttl_max": "3day",
+        },
+
+        "extfs": {
+            "backend": "internal",
+            "path": "/tmp/extfs",
+            "path_rights": "777",
+            "file_rights": "777",
+        },
+
+        "memfs": {
+            "backend": "internal",
+            "path": "/tmp/memfs",
+            "path_rights": "777",
+            "file_rights": "777",
+            "ttl_max": "15min",
+        },
+
+        "systemInfo": {
+            "backend": "internal"
+        },
+
+        "ud363": {
+            "backend": "internal",
+            "path": "/tmp/ud363",
+            "path_rights": "777",
+            "file_rights": "777",
+            "ttl_max_upload": "1day",
+            "ttl_max_download": "1week"
+        },
+
+        "git": {
+            "local": "/opt/rbt/server/data/git",
+            "push": false,
+        },
+    },
+
+    "email": {
+        "server": "127.0.0.1",
+        "port": 587,
+        "username": "<!-- your smtp login here -->",
+        "password": "<!-- your smtp password here -->",
+        "from": "rbt-do-not-reply@example.com",
+        "from_name": "RBT",
+    },
+
+    "telegram": {
+        "bot": "<!-- your telegram bot token here --!>",
+    },
+
+    "document_builder": {
+        "bin": "/opt/onlyoffice/documentbuilder/docbuilder",
+        "tmp": "/tmp/print",
+        "www_user": "www-data",
+        "www_group": "www-data",
+    },
+
+    "syslog_servers": {
+        "beward": [
+            "syslog.udp:127.0.0.1:45450",
+        ],
+        "beward_ds": [
+            "syslog.udp:127.0.0.1:45451",
+        ],
+        "qtech": [
+            "syslog.udp:127.0.0.1:45452",
+        ],
+        "is": [
+            "syslog.udp:127.0.0.1:45453",
+        ],
+        "hikvision": [
+            "syslog.udp:127.0.0.1:45454",
+        ],
+        "akuvox": [
+            "syslog.udp:127.0.0.1:45455",
+        ],
+        "rubetek": [
+            "syslog.udp:127.0.0.1:45456",
+        ],
+        "sputnik": [
+            "https://example.com:55457/smart-yard",
+        ],
+        "ufanet": [
+            "syslog.udp:127.0.0.1:45459",
+        ],
+        "basip": [
+            "http://127.0.0.1:45460",
+        ],
+        "brovotech": [
+            "syslog.udp:127.0.0.1:46450",
+        ],
+        "iflow": [
+            "http://127.0.0.1:46460"
+        ]
+    },
+
+    "ntp_servers": [
+        "ntp:<-- your ntp server ip here -->:123",
+    ],
+}

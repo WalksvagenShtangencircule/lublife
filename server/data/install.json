@@ -1,0 +1,293 @@
+{
+    "1": [
+        "v1_core.sql",
+        "v1_addresses.sql",
+        "v1_houses.sql",
+        "v1_cameras.sql",
+        "v1_dvr.sql",
+        "v1_tt.sql",
+        "v1_inbox.sql",
+        "v1_providers.sql",
+        "v1_tasks.sql",
+        "v1_plog.sql",
+        "v1_frs.sql"
+    ],
+    "2": [
+        "v2_addresses.sql"
+    ],
+    "3": [
+        "v3_tasks.sql"
+    ],
+    "4": [
+        "v4_cameras.sql"
+    ],
+    "5": [
+        "v5_companies.sql"
+    ],
+    "6": [
+        "v6_companies.sql"
+    ],
+    "7": [
+        "v7_address.sql"
+    ],
+    "8": [
+        "v8_core.sql"
+    ],
+    "9": [
+        "v9_tt.sql"
+    ],
+    "10": [
+        "v10_houses.sql"
+    ],
+    "11": [
+        "v11_tt.sql"
+    ],
+    "12": [
+        "v12_core.sql"
+    ],
+    "13": [
+        "v13_cameras.sql"
+    ],
+    "14": [
+        "v14_houses.sql"
+    ],
+    "15": [
+        "v15_core.sql"
+    ],
+    "16": [
+        "v16_houses.sql"
+    ],
+    "17": [
+        "v17_cameras.sql",
+        "v17_houses.sql",
+        "v17_plog.sql"
+    ],
+    "18": [
+        "v18_tt.sql"
+    ],
+    "19": [
+        "v19_tt.sql"
+    ],
+    "20": [
+        "v20_tt.sql"
+    ],
+    "21": [
+        "v21_cameras.sql"
+    ],
+    "22": [
+        "v22_houses.sql"
+    ],
+    "23": [
+        "v23_addresses.sql"
+    ],
+    "24": [
+        "v24_comments.sql"
+    ],
+    "25": [
+        "v25_houses.sql"
+    ],
+    "26": [
+        "v26_core.sql"
+    ],
+    "27": [
+        "v27_houses.sql"
+    ],
+    "28": [
+        "v28_mult.sql"
+    ],
+    "29": [
+        "v29_ua.sql"
+    ],
+    "30": [
+        "v30_houses.sql"
+    ],
+    "31": [
+        "v31_houses.sql"
+    ],
+    "32": [
+        "v32_core.sql"
+    ],
+    "33": [
+        "v33_houses.sql"
+    ],
+    "34": [
+        "v34_cameras.sql"
+    ],
+    "35": [
+        "v35_indexes.sql",
+        "v35_mult_1.php",
+        "v35_mult.sql",
+        "v35_mult_2.php"
+    ],
+    "36": [
+        "v36_tt.sql"
+    ],
+    "37": [
+        "v37_tt.sql"
+    ],
+    "38": [
+        "v38_settings.sql"
+    ],
+    "39": [
+        "v39_core.sql"
+    ],
+    "40": [
+        "v40_core.sql"
+    ],
+    "41": [
+        "v41_notes.sql"
+    ],
+    "42": [
+        "v42_core.sql"
+    ],
+    "43": [
+        "v43_addresses.sql"
+    ],
+    "44": [
+        "v44_tt.sql"
+    ],
+    "45": [
+        "v45_search.sql",
+        "v45_search.php"
+    ],
+    "46": [
+        "v46_mult.sql"
+    ],
+    "47": [
+        "v47_inbox.sql"
+    ],
+    "48": [
+        "v48_mult.sql"
+    ],
+    "49": [
+        "v49_core.sql"
+    ],
+    "50": [
+        "v50_version.sql"
+    ],
+    "51": [
+        "v51_path.sql"
+    ],
+    "52": [
+        "v52_indexes.sql"
+    ],
+    "53": [
+        "v53_avatar.sql"
+    ],
+    "54": [
+        "v54_households.sql"
+    ],
+    "55": [
+        "v55_core.sql"
+    ],
+    "56": [
+        "v56_cameras.sql"
+    ],
+    "57": [
+        "v57_domophones.sql"
+    ],
+    "58": [
+        "v58_cameras.sql"
+    ],
+    "59": [
+        "v59_video_1.sql",
+        "v59_video_2.php",
+        "v59_video_3.sql"
+    ],
+    "60": [
+        "v60_cars.sql"
+    ],
+    "61": [
+        "v61_cars.sql"
+    ],
+    "62": [
+        "v62_cameras.sql"
+    ],
+    "63": [
+        "v63_custom_fields.sql"
+    ],
+    "64": [
+        "v64_bundle.sql"
+    ],
+    "65": [
+        "v65_paranoid.sql"
+    ],
+    "66": [
+        "v66_custom_fields.sql"
+    ],
+    "67": [
+        "v67_subscribers_flats.sql"
+    ],
+    "68": [
+        "v68_custom_fields.sql"
+    ],
+    "69": [
+        "v69_domophones.sql"
+    ],
+    "70": [
+        "v70_custom_fields.sql"
+    ],
+    "71": [
+        "v71_custom_fields.sql"
+    ],
+    "72": [
+        "v72_project_comments.sql"
+    ],
+    "73": [
+        "v73_favorite_filters.sql"
+    ],
+    "74": [
+        "v74_favorite_filters.sql"
+    ],
+    "75": [
+        "v75_readonly.sql"
+    ],
+    "76": [
+        "v76_custom_fields.sql"
+    ],
+    "77": [
+        "v77_custom_fields.sql"
+    ],
+    "78": [
+        "v78_bulk_messages.sql"
+    ],
+    "79": [
+        "v79_monitoring.sql"
+    ],
+    "80": [
+        "v80_watchers.sql"
+    ],
+    "81": [
+        "v81_tags.sql"
+    ],
+    "82": [
+        "v82_fields.sql"
+    ],
+    "83": [
+        "v83_sos.sql"
+    ],
+    "84": [
+        "v84_notes.sql"
+    ],
+    "85": [
+        "v85_users.sql"
+    ],
+    "86": [
+        "v86_webrtc.sql"
+    ],
+    "87": [
+        "v87_fyeo.sql"
+    ],
+    "88": [
+        "v88_sudo.sql"
+    ],
+    "89": [
+        "v89_devices_tree.sql"
+    ],
+    "90": [
+        "v90_sip_alt.sql"
+    ],
+    "91": [
+        "v91_notes.sql"
+    ]
+}

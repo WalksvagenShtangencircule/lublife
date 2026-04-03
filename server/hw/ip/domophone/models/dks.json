@@ -1,0 +1,28 @@
+{
+    "title": "BEWARD DKS",
+    "vendor": "BEWARD",
+    "model": "DKS",
+    "class": "dks",
+    "eventServer": "beward",
+    "outputs": 3,
+    "camera": "beward",
+    "useSmartConfigurator": true,
+    "cmses": [
+        "bk-100",
+        "com-25u",
+        "com-80u",
+        "com-100u",
+        "com-220u",
+        "factorial_8x8",
+        "kad2501",
+        "kad2502",
+        "kkm-100s2",
+        "kkm-105",
+        "kkm-108",
+        "km100-7.1",
+        "km100-7.2",
+        "km100-7.3",
+        "km100-7.5",
+        "kmg-100"
+    ]
+}

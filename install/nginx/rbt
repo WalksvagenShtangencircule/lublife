@@ -1,0 +1,222 @@
+map $http_upgrade $connection_upgrade {
+        default upgrade;
+        '' close;
+}
+
+server {
+# IPv4
+        listen 80 default_server;
+# IPv6
+#        listen [::]:80 default_server;
+
+        client_max_body_size 100M;
+
+        location / {
+                root /opt/rbt/client;
+                try_files $uri $uri/ =404;
+        }
+
+        location /frontend {
+                rewrite ^.*$ /frontend.php last;
+        }
+
+        location /api {
+                rewrite ^.*$ /frontend.php last;
+        }
+
+        location = /frontend.php {
+                root /opt/rbt/server;
+                include snippets/fastcgi-php.conf;
+                fastcgi_pass unix:/var/run/php/php-fpm.sock;
+        }
+
+        location /asterisk {
+                rewrite ^.*$ /asterisk.php last;
+        }
+
+        location = /asterisk.php {
+                allow 127.0.0.1;
+                deny all;
+                root /opt/rbt/server;
+                include snippets/fastcgi-php.conf;
+                fastcgi_pass unix:/var/run/php/php-fpm.sock;
+        }
+
+        # RBT Kamailio AUT API
+        location /kamailio {
+                rewrite ^.*$ /kamailio.php last;
+        }
+
+        location = /kamailio.php {
+                allow 127.0.0.1;
+                deny all;
+                root /opt/rbt/server;
+                include snippets/fastcgi-php.conf;
+                fastcgi_pass unix:/var/run/php/php-fpm.sock;
+        }
+
+        location /internal {
+                rewrite ^.*$ /internal.php last;
+        }
+
+        location = /internal.php {
+                allow 127.0.0.1;
+                deny all;
+                root /opt/rbt/server;
+                include snippets/fastcgi-php.conf;
+                fastcgi_pass unix:/var/run/php/php-fpm.sock;
+        }
+
+        location /md {
+                rewrite ^.*$ /md.php last;
+        }
+
+        location = /md.php {
+                root /opt/rbt/server;
+                include snippets/fastcgi-php.conf;
+                fastcgi_pass unix:/var/run/php/php-fpm.sock;
+        }
+
+        location /wh {
+                rewrite ^.*$ /wh.php last;
+        }
+
+        location = /wh.php {
+                root /opt/rbt/server;
+                include snippets/fastcgi-php.conf;
+                fastcgi_pass unix:/var/run/php/php-fpm.sock;
+        }
+
+        location /ud363 {
+                rewrite ^.*$ /ud363.php last;
+        }
+
+        location = /ud363.php {
+                root /opt/rbt/server;
+                include snippets/fastcgi-php.conf;
+                fastcgi_pass unix:/var/run/php/php-fpm.sock;
+        }
+
+        location /qr {
+                rewrite ^.*$ /qr.php last;
+        }
+
+        location = /qr.php {
+                root /opt/rbt/server;
+                include snippets/fastcgi-php.conf;
+                fastcgi_pass unix:/var/run/php/php-fpm.sock;
+        }
+
+        location /mobile {
+                if ($request_method = 'OPTIONS') {
+                        add_header 'Access-Control-Allow-Origin' '*';
+                        add_header 'Access-Control-Allow-Credentials' 'true';
+                        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+                        add_header 'Access-Control-Allow-Headers' 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization';
+                        add_header 'Access-Control-Max-Age' 1728000;
+                        add_header 'Content-Type' 'text/plain charset=UTF-8';
+                        add_header 'Content-Length' 0;
+                        return 204;
+                }
+                if ($request_method = 'GET') {
+                        add_header 'Access-Control-Allow-Origin' '*';
+                        add_header 'Access-Control-Allow-Credentials' 'true';
+                        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+                        add_header 'Access-Control-Allow-Headers' 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization';
+                }
+                if ($request_method = 'POST') {
+                        add_header 'Access-Control-Allow-Origin' '*';
+                        add_header 'Access-Control-Allow-Credentials' 'true';
+                        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+                        add_header 'Access-Control-Allow-Headers' 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization';
+                }
+                rewrite ^.*$ /mobile.php last;
+        }
+
+        location = /mobile.php {
+                if ($request_method = 'OPTIONS') {
+                        add_header 'Access-Control-Allow-Origin' '*';
+                        add_header 'Access-Control-Allow-Credentials' 'true';
+                        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+                        add_header 'Access-Control-Allow-Headers' 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization';
+                        add_header 'Access-Control-Max-Age' 1728000;
+                        add_header 'Content-Type' 'text/plain charset=UTF-8';
+                        add_header 'Content-Length' 0;
+                        return 204;
+                }
+                if ($request_method = 'GET') {
+                        add_header 'Access-Control-Allow-Origin' '*';
+                        add_header 'Access-Control-Allow-Credentials' 'true';
+                        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+                        add_header 'Access-Control-Allow-Headers' 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization';
+                }
+                if ($request_method = 'POST') {
+                        add_header 'Access-Control-Allow-Origin' '*';
+                        add_header 'Access-Control-Allow-Credentials' 'true';
+                        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+                        add_header 'Access-Control-Allow-Headers' 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization';
+                }
+                root /opt/rbt/server;
+                include snippets/fastcgi-php.conf;
+                fastcgi_pass unix:/var/run/php/php-fpm.sock;
+        }
+
+        location /wss {
+                proxy_pass http://127.0.0.1:8088/ws;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_read_timeout 43200000;
+        }
+
+        location /mqtt {
+                proxy_pass http://127.0.0.1:8081;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_read_timeout 43200000;
+        }
+
+        location /static {
+                root /opt/rbt;
+                try_files $uri $uri/ =404;
+        }
+
+        location /portal {
+                root /opt/rbt/static;
+                try_files $uri $uri/ =404;
+        }
+
+        location /print {
+                root /tmp;
+                try_files $uri $uri/ =404;
+        }
+
+        location /.well-known {
+                root /var/www/html;
+        }
+}
+
+## Event webhook for sputnik
+
+server {
+# IPv4
+        listen 55457 ssl http2 default_server;
+# IPv6
+        listen [::]:55457 ssl http2 default_server;
+
+        ssl_certificate /etc/ssl/cert.pem;
+        ssl_certificate_key /etc/ssl/key.pem;
+
+        location /smart-yard {
+                proxy_pass http://localhost:45457/webhook/sputnik;
+                proxy_set_header Host      $host;
+                proxy_set_header X-Real-IP $remote_addr;
+        }
+}
