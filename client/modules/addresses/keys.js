@@ -2,7 +2,7 @@
     menuItem: false,
 
     init: function () {
-        if (AVAIL("subscribers", "keys")) {
+        if (AVAIL("subscribers", "keys", "GET")) {
             this.menuItem = leftSide("fab fa-fw fa-keycdn", i18n("addresses.superKeys"), "?#addresses.keys", "households");
         }
         moduleLoaded("addresses.keys", this);

@@ -761,7 +761,7 @@ function initAll() {
     if (lStore("_server") && lStore("_token")) {
         POST("server", "ping", false).done((a, b) => {
             if (b === "nocontent") {
-                GET("authorization", "available").done(a => {
+                GET("authorization", "available", false, true).done(a => {
                     if (a && a.available) {
                         myself = {
                             uid: -1,
@@ -831,12 +831,21 @@ function loadModule() {
     if (!module) {
         for (let i in modules) {
             if (typeof modules[i].allLoaded == "function") {
-                modules[i].allLoaded();
+                try {
+                    modules[i].allLoaded();
+                } catch (e) {
+                    console.error("allLoaded: ошибка в модуле \"" + i + "\":", e);
+                }
             }
             if (config && config.customSubModules && config.customSubModules[i]) {
                 for (let j in config.customSubModules[i]) {
-                    if (typeof modules[i][config.customSubModules[i][j]].allLoaded == "function") {
-                        modules[i][config.customSubModules[i][j]].allLoaded();
+                    let sm = config.customSubModules[i][j];
+                    if (modules[i] && modules[i][sm] && typeof modules[i][sm].allLoaded == "function") {
+                        try {
+                            modules[i][sm].allLoaded();
+                        } catch (e) {
+                            console.error("allLoaded: ошибка в пользовательском подмодуле \"" + i + "/" + sm + "\":", e);
+                        }
                     }
                 }
             }
@@ -903,12 +912,14 @@ function loadModule() {
                     $.getScript("modules/" + module + "/" + module + ".js?ver=" + version)
                     .fail(() => {
                         pageError(i18n("errorLoadingModule", module));
+                        loadModule();
                     });
                 });
             } else {
                 $.getScript("modules/" + module + "/" + module + ".js?ver=" + version)
                 .fail(() => {
                     pageError(i18n("errorLoadingModule", module));
+                    loadModule();
                 });
             }
         });
@@ -952,7 +963,10 @@ function loadSubModules(parent, subModules, doneOrParentObject) {
         done(() => {
             loadSubModules(parent, subModules, doneOrParentObject);
         }).
-        fail(FAIL);
+        fail(() => {
+            pageError(i18n("errorLoadingModule", parent + "/" + module));
+            loadSubModules(parent, subModules, doneOrParentObject);
+        });
     }
 }
 
@@ -965,6 +979,9 @@ function loadCustomSubModules(parent, subModules) {
         done(() => {
             loadCustomSubModules(parent, subModules);
         }).
-        fail(FAIL);
+        fail(() => {
+            pageError(i18n("errorLoadingModule", parent + "/custom/" + module));
+            loadCustomSubModules(parent, subModules);
+        });
     }
 }

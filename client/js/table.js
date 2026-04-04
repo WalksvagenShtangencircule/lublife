@@ -537,7 +537,9 @@ function cardTable(params) {
             }, 5);
         });
 
-        $("." + clickableClass).off("click").on("click", function () {
+        $("." + clickableClass).off("click").on("click", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
             rows[parseInt($(this).attr("data-row-id"))].cols[parseInt($(this).attr("colId"))].click($(this).attr("data-uid"));
         });
 

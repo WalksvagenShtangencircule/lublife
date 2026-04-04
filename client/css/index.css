@@ -1220,3 +1220,15 @@ th.rbt-entrance-preview-col {
 .main-sidebar .sidebar > nav.mt-2 {
     margin-top: 0.35rem !important;
 }
+
+/* Полноразмерный превью-поток MJPEG/видео в модалке камеры */
+.rbt-camera-player-wrap {
+    overflow: hidden;
+}
+.rbt-camera-mjpeg-live {
+    background: #111;
+}
+.rbt-camera-video-el:focus {
+    outline: 2px solid rgba(0, 123, 255, 0.5);
+    outline-offset: 2px;
+}

@@ -37,7 +37,7 @@
         // dirty hack, don't do that!
         modules.tt = this;
         //
-        if (AVAIL("tt", "tt")) {
+        if (AVAIL("tt", "tt", "GET")) {
             if (parseInt(myself.uid) == 0) {
                 leftSide("fas fa-fw fa-tasks", i18n("tt.tt"), "?#tt.settings", "tt");
                 this.menuItem = false;

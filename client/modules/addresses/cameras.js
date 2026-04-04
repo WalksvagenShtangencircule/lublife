@@ -1,6 +1,6 @@
 ({
     init: function () {
-        if (AVAIL("addresses", "region", "PUT")) {
+        if ((AVAIL("addresses", "region", "PUT") || AVAIL("addresses", "addresses", "GET")) && AVAIL("cameras", "cameras", "GET")) {
             leftSide("fas fa-fw fa-video", i18n("addresses.cameras"), "?#addresses.cameras", "households");
         }
         moduleLoaded("addresses.cameras", this);
@@ -1314,7 +1314,14 @@
                 },
             }).show();
         }).
-        fail(FAIL).
+        fail(x => {
+            if (x && x.responseJSON && (x.responseJSON.error === "accessDenied" || x.responseJSON.error === "permissionDenied")) {
+                subTop();
+                pageError(i18n("errors.accessDenied"));
+                return;
+            }
+            FAIL(x);
+        }).
         always(loadingDone);
     },
 }).init();

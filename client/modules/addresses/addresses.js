@@ -17,7 +17,7 @@
     ],
 
     init: function () {
-        if (AVAIL("addresses", "region", "PUT")) {
+        if (AVAIL("addresses", "region", "PUT") || AVAIL("addresses", "addresses", "GET")) {
             this.menuItem = leftSide("fas fa-fw fa-globe-americas", i18n("moduleAddresses"), "?#addresses", "households");
         }
 
@@ -25,7 +25,8 @@
     },
 
     allLoaded: function () {
-        if (modules.addresses.menuItem) {
+        /* Избранное — отдельный метод API (addresses/favorites); без прав не дергаем и не показываем FAIL */
+        if (modules.addresses.menuItem && AVAIL("addresses", "favorites", "GET")) {
             GET("addresses", "favorites", false, true).
             done(r => {
                 if (r && r.favorites) {
@@ -72,16 +73,23 @@
                     }
                 }
             }).
-            fail(FAIL);
+            fail(x => {
+                if (x && x.responseJSON && (x.responseJSON.error === "accessDenied" || x.responseJSON.error === "permissionDenied")) {
+                    return;
+                }
+                FAIL(x);
+            });
         }
 
-        for (let i in modules.addresses.subModules) {
-            if (modules.addresses.subModules[i] != "_search") {
-                modules.addresses[modules.addresses.subModules[i]].search = modules.addresses._search.search;
+        if (modules.addresses._search && modules.addresses._search.search) {
+            for (let i in modules.addresses.subModules) {
+                let sub = modules.addresses.subModules[i];
+                if (sub != "_search" && modules.addresses[sub]) {
+                    modules.addresses[sub].search = modules.addresses._search.search;
+                }
             }
+            modules.addresses.search = modules.addresses._search.search;
         }
-
-        modules.addresses.search = modules.addresses._search.search;
     },
 
     moduleLoaded: function () {

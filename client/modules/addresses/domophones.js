@@ -1,6 +1,6 @@
 ({
     init: function () {
-        if (AVAIL("addresses", "region", "PUT")) {
+        if ((AVAIL("addresses", "region", "PUT") || AVAIL("addresses", "addresses", "GET")) && AVAIL("houses", "domophones", "GET")) {
             leftSide("fas fa-fw fa-lock", i18n("addresses.domophones"), "?#addresses.domophones", "households");
         }
         moduleLoaded("addresses.domophones", this);
@@ -675,7 +675,14 @@
                 },
             }).show();
         }).
-        fail(FAIL).
+        fail(x => {
+            if (x && x.responseJSON && (x.responseJSON.error === "accessDenied" || x.responseJSON.error === "permissionDenied")) {
+                subTop();
+                pageError(i18n("errors.accessDenied"));
+                return;
+            }
+            FAIL(x);
+        }).
         always(loadingDone);
     },
 }).init();

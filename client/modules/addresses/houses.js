@@ -2845,8 +2845,22 @@
                 }
             }
 
+            /* Квартиры/подъезды/камеры в карточке — отдельный метод API GET houses/house */
+            if (!AVAIL("houses", "house", "GET")) {
+                loadingDone();
+                pageError(i18n("errors.accessDenied"));
+                return;
+            }
+
             GET("houses", "house", houseId, true).
-            fail(FAILPAGE).
+            fail(x => {
+                if (x && x.responseJSON && (x.responseJSON.error === "accessDenied" || x.responseJSON.error === "permissionDenied")) {
+                    loadingDone();
+                    pageError(i18n("errors.accessDenied"));
+                    return;
+                }
+                FAILPAGE(x);
+            }).
             done(response => {
                 if (!modules.addresses.houses.meta) {
                     modules.addresses.houses.meta = {};
@@ -2903,6 +2917,26 @@
             return "";
         }
         return t;
+    },
+
+    /**
+     * HTTP(S) поток: iframe часто пустой или браузер предлагает «Скачать» (MJPEG, Content-Disposition).
+     */
+    inferCameraHttpEmbedMode: function (url) {
+        if (!url || typeof url !== "string") {
+            return "iframe";
+        }
+        let u = url.toLowerCase();
+        if (/\.m3u8([?#]|$)/.test(u)) {
+            return "hls";
+        }
+        if (/\.mp4([?#]|$)/.test(u) || /\/video\.mp4/i.test(u)) {
+            return "video";
+        }
+        if (/mjpe?g|mjpg|multipart|x-mixed-replace|videostream|axis-cgi\/mjpg|cgi-bin\/mjpe|ipcam\/mjpe|\/streaming\/channels\/\d+\/httppreview|\/streaming\/channels\/\d+\/picture|snapshot\.cgi|jpg\/video\.mjpg|video\.cgi|cam\.jpg|-stream\.jpg|\/live\/[^?]+\.jpg|\/cgi-bin\/viewer|ucast\./i.test(u)) {
+            return "mjpeg";
+        }
+        return "iframe";
     },
 
     findCameraInHouseMeta: function (cameraId) {
@@ -2969,21 +3003,75 @@
         }
 
         if (embedUrl) {
-            $body.append($("<iframe>", {
-                class: "rbt-camera-dvr-iframe",
-                title: modalTitle,
-                css: {
-                    width: "100%",
-                    height: "calc(100vh - 260px)",
-                    border: "0",
-                    display: "block",
-                },
-                src: embedUrl,
-            }));
-            $body.append($("<p>", {
-                class: "text-muted small mt-2 mb-0",
-                text: i18n("addresses.cameraEmbedHint"),
-            }));
+            let mode = modules.addresses.houses.inferCameraHttpEmbedMode(embedUrl);
+            let other = (liveHttp && liveHttp !== embedUrl) ? liveHttp : ((dvrHttp && dvrHttp !== embedUrl) ? dvrHttp : "");
+            if (mode === "iframe" && other) {
+                let m2 = modules.addresses.houses.inferCameraHttpEmbedMode(other);
+                if (m2 === "mjpeg" || m2 === "video" || m2 === "hls") {
+                    embedUrl = other;
+                    mode = m2;
+                }
+            }
+            let boxCss = { width: "100%", minHeight: "200px", maxHeight: "calc(100vh - 260px)", background: "#000", borderRadius: "4px" };
+            if (mode === "mjpeg") {
+                $body.append($("<div>", { class: "rbt-camera-player-wrap", css: boxCss }).append($("<img>", {
+                    class: "rbt-camera-mjpeg-live",
+                    alt: "",
+                    src: embedUrl,
+                    draggable: false,
+                    referrerPolicy: "no-referrer",
+                    css: { width: "100%", height: "auto", maxHeight: "calc(100vh - 260px)", objectFit: "contain", display: "block" },
+                })));
+            } else if (mode === "video") {
+                let $v = $("<video>", {
+                    class: "rbt-camera-video-el",
+                    controls: true,
+                    playsInline: true,
+                    preload: "metadata",
+                    title: modalTitle,
+                    css: { width: "100%", maxHeight: "calc(100vh - 260px)", display: "block" },
+                });
+                $v.append($("<source>", { src: embedUrl, type: "video/mp4" }));
+                $body.append($("<div>", { class: "rbt-camera-player-wrap", css: boxCss }).append($v));
+            } else if (mode === "hls") {
+                let $vh = $("<video>", {
+                    class: "rbt-camera-video-el",
+                    controls: true,
+                    playsInline: true,
+                    preload: "metadata",
+                    title: modalTitle,
+                    css: { width: "100%", maxHeight: "calc(100vh - 260px)", display: "block" },
+                });
+                $vh.append($("<source>", { src: embedUrl, type: "application/vnd.apple.mpegurl" }));
+                $body.append($("<div>", { class: "rbt-camera-player-wrap", css: boxCss }).append($vh));
+                $body.append($("<p>", {
+                    class: "text-muted small mt-2 mb-0",
+                    text: i18n("addresses.cameraEmbedHint"),
+                }));
+            } else {
+                $body.append($("<iframe>", {
+                    class: "rbt-camera-dvr-iframe",
+                    title: modalTitle,
+                    css: {
+                        width: "100%",
+                        height: "calc(100vh - 260px)",
+                        border: "0",
+                        display: "block",
+                    },
+                    src: embedUrl,
+                    allow: "autoplay; fullscreen; picture-in-picture",
+                }));
+                $body.append($("<p>", {
+                    class: "text-muted small mt-2 mb-0",
+                    text: i18n("addresses.cameraEmbedHint"),
+                }));
+            }
+            if (mode === "mjpeg" || mode === "video") {
+                $body.append($("<p>", {
+                    class: "text-muted small mt-2 mb-0",
+                    text: i18n("addresses.cameraEmbedHint"),
+                }));
+            }
         } else if (dvrRtsp || liveRtsp) {
             $body.append($("<p>", {
                 class: "text-muted small mt-2 mb-0",
@@ -2999,6 +3087,13 @@
         }
 
         $("#tableModal").off("hidden.bs.modal.rbtCamViewer").on("hidden.bs.modal.rbtCamViewer", function () {
+            $("#tableModalBody video").each(function () {
+                try {
+                    this.pause();
+                    $(this).find("source").removeAttr("src");
+                    this.load();
+                } catch (e) {}
+            });
             $("#tableModalBody").empty();
         });
 

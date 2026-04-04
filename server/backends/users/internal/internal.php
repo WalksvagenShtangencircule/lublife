@@ -447,7 +447,11 @@
                         $m[":sudo"] = (int)$sudo;
                     }
 
-                    return $sth->execute($m);
+                    $ok = $sth->execute($m);
+                    if ($ok && function_exists("clearCache")) {
+                        clearCache($uid);
+                    }
+                    return $ok;
                 } catch (\Exception $e) {
                     error_log(print_r($e, true));
                     return false;

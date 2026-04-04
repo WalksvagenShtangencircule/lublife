@@ -21,7 +21,7 @@
     },
 
     init: function () {
-        if (parseInt(myself.uid) && AVAIL("tt", "tt")) {
+        if (parseInt(myself.uid) && AVAIL("tt", "tt", "GET")) {
             this.menuItem = leftSide("fas fa-fw fa-tablets", i18n("tt.workspaces"), "?#tt.workspaces", "tt");
         }
         moduleLoaded("tt.workspaces", this);

@@ -317,10 +317,13 @@
     } else
     if (file_exists(__DIR__ . "/api/$api/$method.php")) {
         if ($backends["authorization"]->allow($params)) {
+            /* Матрица прав не должна жить в FRONT-кэше: смена групп не меняет URL/_md5 */
+            $skipFrontCache = ($api === "authorization" && $method === "available");
+
             $cache = false;
-            if ($params["_request_method"] === "GET") {
+            if ($params["_request_method"] === "GET" && !$skipFrontCache) {
                 try {
-                    $cache = json_decode($redis->get("CACHE:FRONT:" . strtoupper($params["_md5"])) . ":" . $auth["uid"], true);
+                    $cache = json_decode($redis->get("CACHE:FRONT:" . strtoupper($params["_md5"]) . ":" . $auth["uid"]), true);
                 } catch (Exception $e) {
                     error_log(print_r($e, true));
                 }
@@ -347,7 +350,7 @@
                         $result = call_user_func([$class, $params["_request_method"]], $params);
                         $code = array_key_first($result);
                         if ((int)$code) {
-                            if ($params["_request_method"] == "GET" && (int)$code === 200) {
+                            if ($params["_request_method"] == "GET" && (int)$code === 200 && !$skipFrontCache) {
                                 $ttl = (array_key_exists("cache", $result)) ? ((int)$cache) : $redis_cache_ttl;
                                 if ((int)$auth["uid"] > 0) {
                                     $redis->setex("CACHE:FRONT:" . strtoupper($params["_md5"]) . ":" . $auth["uid"], $ttl, json_encode($result));
