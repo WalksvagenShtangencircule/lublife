@@ -1,0 +1,11 @@
+# Скопировать в drop-in для php-fpm, чтобы веб-приложение не стартовало раньше Tor (аналог After=tor в airy.service).
+# Пример для PHP 8.3 на Debian/Ubuntu:
+#   sudo mkdir -p /etc/systemd/system/php8.3-fpm.service.d
+#   sudo cp install/systemd/php-fpm.service.d.tor.conf.example /etc/systemd/system/php8.3-fpm.service.d/tor.conf
+#   sudo systemctl daemon-reload && sudo systemctl restart php8.3-fpm
+#
+# Подставьте имя юнита, если версия PHP другая (php8.2-fpm и т.д.).
+
+[Unit]
+After=network-online.target tor.service
+Wants=tor.service

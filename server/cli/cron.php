@@ -80,6 +80,9 @@
                     }
                 }
 
+                require_once __DIR__ . '/../utils/DiagnosticsCron.php';
+                DiagnosticsCron::runIfScheduled($part, $config, $redis);
+
                 exit(0);
             }
 

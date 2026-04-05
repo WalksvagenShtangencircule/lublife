@@ -1,0 +1,9 @@
+[Unit]
+Description=RBT Tor bridge healthcheck and pool rotation
+After=network-online.target tor.service
+Wants=tor.service
+
+[Service]
+Type=oneshot
+# Путь к репозиторию; при установке в другое место скопируйте скрипты в /usr/local/sbin.
+ExecStart=/bin/bash /opt/rbt/install/scripts/tor_bridge_monitor.sh

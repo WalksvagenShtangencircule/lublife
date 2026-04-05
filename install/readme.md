@@ -22,6 +22,8 @@ ___
 ## Optional feature
 
 1. [Kamailio](98.kamailio.md)
+2. [Tor (SOCKS) for diagnostics Telegram](17.tor.md) — если Telegram API недоступен без Tor  
+   Скрипты в `install/scripts/`: `tor_enable_snowflake.sh` (пул мостов Snowflake), `tor_bridge_monitor_install.sh` (проверка SOCKS + ротация пула по таймеру), `tor_bridge_pool_apply.sh` / `tor_bridge_pool_rotate.sh`, `tor_php_debian_tor.sh` (php-fpm и группа `debian-tor`), `tor_append_control_port.sh` (TCP `127.0.0.1:9051`). Подробно — §11 в `17.tor.md`.
 
 #### Monitoring
 

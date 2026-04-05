@@ -1,0 +1,7 @@
+# Пул мостов Snowflake для Tor (одна строка Bridge на мост).
+# Пополнение: https://bridges.torproject.org/ (тип snowflake) — вставьте полные строки Bridge.
+# Автоматическая ротация: install/scripts/tor_bridge_monitor_install.sh и systemd timer.
+
+Bridge snowflake 192.95.36.142:80 2B280B23E1107CE834953B9846990F765555
+# Добавьте второй и дальше мосты с сайта Tor — иначе ротация не сработает (нужно ≥2 строк):
+# Bridge snowflake ...

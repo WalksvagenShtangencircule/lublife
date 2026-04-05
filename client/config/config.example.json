@@ -16,7 +16,8 @@
         "tt",
         "cs",
         "darkmode",
-        "custom"
+        "custom",
+        "diagnostics"
     ],
     "asterisk": {
         "ws": "wss://your-host.example/wss",

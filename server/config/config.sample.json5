@@ -432,6 +432,62 @@
         ]
     },
 
+    // Опционально: модуль диагностики (api/diagnostics/*, только admin / uid 0)
+    "diagnostics": {
+        "allowOsProbe": true,
+        "allowSystemd": true,
+        "allowExec": false,
+        "summaryCacheTtl": 120,
+        "historyMaxPoints": 48,
+        "sslVerifyStrict": false,
+        "sslExtraHosts": [],
+        "httpTimeout": 8,
+        "slowHttpWarnMs": 8000,
+        "clickhouseSlowMs": 2000,
+        "bgProcessWarnSec": 90,
+        "bgProcessFailSec": 600,
+        // Учебные строки warn/fail в начале таблицы (отключить на проде). При enabled в UI — жёлтый баннер и кнопка «Тест алерта».
+        "simulate": {
+            "enabled": false,
+        },
+        // Алерты в Telegram через HTTP(S)/SOCKS-прокси: URL со списком и/или static_proxies (TCP + опц. HTTP-проверка, кеш).
+        // Кнопка «Ждать чат» вызывает deleteWebhook — если у бота был webhook, без этого getUpdates пустой.
+        "telegram": {
+            "enabled": false,
+            "bot_token": "<!-- токен @BotFather --!>",
+            // Можно заполнить вручную или кнопкой «Ждать чат» в UI (POST telegramArmWait + GET telegramWait, только admin)
+            "chats": [],
+            // Никнеймы Telegram (без @), дополняются при приёме /start через «Ждать чат»
+            "allowed_usernames": [],
+            "append_scenario_hints": true,
+            "proxy": {
+                // false = только прямой HTTPS к api.telegram.org
+                "use_proxy": true,
+                // URL текстового списка прокси (пусто = не загружать). Пример: свой сервер в ЕС.
+                "config_url": "",
+                "fetch_interval_sec": 300,
+                "fetch_timeout_sec": 15,
+                "tcp_connect_timeout_sec": 3,
+                // HEAD через прокси к probe_url; при очень медленном SOCKS можно выключить
+                "probe_http": true,
+                "probe_url": "https://api.telegram.org/",
+                // Строки прокси помимо config_url: http(s)://, socks5://, host:port
+                "static_proxies": [],
+                // если прокси недоступен — повтор без прокси
+                "fallback_direct": true,
+                // true = сначала прямой HTTPS, потом прокси
+                "delete_webhook_direct_first": false,
+                "http_timeout_sec": 45,
+            },
+            "alert": {
+                "on_fail": true,
+                "on_warn": false,
+                "cooldown_sec": 3600,
+                "max_lines": 35,
+            },
+        },
+    },
+
     "ntp_servers": [
         "ntp:<-- your ntp server ip here -->:123",
     ],

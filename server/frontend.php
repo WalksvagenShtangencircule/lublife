@@ -52,7 +52,7 @@
 
     try {
         mb_internal_encoding("UTF-8");
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         error_log(print_r($e, true));
         response(555, [
             "error" => "mbstring",
@@ -61,7 +61,7 @@
 
     try {
         $config = @json_decode(file_get_contents(__DIR__ . "/config/config.json"), true);
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         $config = false;
     }
 
@@ -106,7 +106,7 @@
             $redis->auth($config["redis"]["password"]);
         }
         $redis->setex("iAmOk", 1, "1");
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         error_log(print_r($e, true));
         response(555, [
             "error" => "redis",
@@ -115,7 +115,7 @@
 
     try {
         $db = new PDOExt(@$config["db"]["dsn"], @$config["db"]["username"], @$config["db"]["password"], @$config["db"]["options"]);
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         error_log(print_r($e, true));
         response(555, [
             "error" => "PDO",
@@ -324,7 +324,7 @@
             if ($params["_request_method"] === "GET" && !$skipFrontCache) {
                 try {
                     $cache = json_decode($redis->get("CACHE:FRONT:" . strtoupper($params["_md5"]) . ":" . $auth["uid"]), true);
-                } catch (Exception $e) {
+                } catch (Throwable $e) {
                     error_log(print_r($e, true));
                 }
             }
@@ -363,7 +363,7 @@
                                 "error" => "resultCode",
                             ]);
                         }
-                    } catch (Exception $e) {
+                    } catch (Throwable $e) {
                         error_log(print_r($e, true));
                         response(555, [
                             "error" => "internal",

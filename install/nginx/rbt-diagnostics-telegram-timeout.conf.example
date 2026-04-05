@@ -1,0 +1,11 @@
+# Drop-in для server { } или include из sites-enabled.
+# GET /diagnostics/telegramWait вызывает deleteWebhook + getUpdates к api.telegram.org (часто через прокси).
+# Если fastcgi_read_timeout слишком мал — nginx вернёт 504, хотя PHP ещё ждёт curl.
+# После правки: sudo nginx -t && sudo systemctl reload nginx
+
+location = /diagnostics/telegramWait {
+    include fastcgi_params;
+    fastcgi_param SCRIPT_FILENAME $document_root/index.php;
+    fastcgi_read_timeout 180s;
+    fastcgi_send_timeout 180s;
+}
