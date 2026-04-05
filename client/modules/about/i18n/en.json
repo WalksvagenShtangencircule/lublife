@@ -1,5 +1,5 @@
 {
-    "about": "RoBoT",
+    "about": "SmartAccess",
     "systemInfo": "System info",
     "hostname": "Hostname",
     "os": "OS",
@@ -30,7 +30,7 @@
     "user": "Login",
     "text": [
         "",
-        "<b>RoBoT - RBT (SmartYard-Server)</b>",
+        "<b>SmartAccess</b> (client for SmartYard-Server)",
         "",
         "Client version: %s",
         "SmartYard version: %s",

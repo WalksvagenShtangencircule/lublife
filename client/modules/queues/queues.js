@@ -4,7 +4,7 @@
 
     init: function () {
         if (AVAIL("queues", "queues")) {
-            this.menuItem = leftSide("far fa-fw fa-clock", i18n("queues.queues"), "?#queues", "households");
+            this.menuItem = leftSide("fas fa-fw fa-clock", i18n("queues.queues"), "?#queues", "households");
         }
         moduleLoaded("queues", this);
     },

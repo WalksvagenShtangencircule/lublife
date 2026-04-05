@@ -14,7 +14,7 @@
 
     init: function () {
         if (AVAIL("diagnostics", "run", "GET")) {
-            leftSide("fas fa-fw fa-heartbeat", i18n("diagnostics.diagnostics"), "?#diagnostics", "productivity");
+            leftSide("fas fa-fw fa-stethoscope", i18n("diagnostics.diagnostics"), "?#diagnostics", "productivity");
         }
         moduleLoaded("diagnostics", this);
     },

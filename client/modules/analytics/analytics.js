@@ -80,7 +80,7 @@
 
     init: function () {
         if (AVAIL("analytics", "stats", "GET")) {
-            leftSide("fas fa-fw fa-chart-line", i18n("analytics.analytics"), "?#analytics", "productivity");
+            leftSide("fas fa-fw fa-chart-area", i18n("analytics.analytics"), "?#analytics", "productivity");
         }
         moduleLoaded("analytics", this);
     },

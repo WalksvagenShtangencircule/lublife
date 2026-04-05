@@ -427,6 +427,21 @@ function subTop(html) {
     }
 }
 
+/**
+ * Стабильный ключ для цветной иконки в сайдбаре (CSS [data-rbt-sidebar="..."]).
+ */
+function sidebarIconKey(target) {
+    const t = String(target);
+    if (t.indexOf("customFilter=yes") >= 0) {
+        return "tt-custom-filter";
+    }
+    const m = t.match(/#([^?&]+)/);
+    if (!m) {
+        return "unknown";
+    }
+    return m[1].replace(/\./g, "-");
+}
+
 function leftSide(button, title, target, group, wisibleOnlyWhenActive) {
     if (group != mainSidebarGroup && !mainSidebarFirst) {
         $("#leftside-menu").append(`
@@ -444,10 +459,12 @@ function leftSide(button, title, target, group, wisibleOnlyWhenActive) {
         style += "display: none;";
     }
 
+    const sk = sidebarIconKey(target);
     $("#leftside-menu").append(`
         <li id="${id}" class="leftsidebar-button nav-item${wisibleOnlyWhenActive?" wisibleOnlyWhenActive":""}" data-target="${target}" title="${escapeHTML(title)}" style="${style}">
-            <a href="${target}" data-href="${target}" class="nav-link nav-link-text-only ${(target === "#" + (route ? route.split('.')[0] : "")) ? "active" : ""}">
-                <p class="text-nowrap mb-0">${title}</p>
+            <a href="${target}" data-href="${target}" data-rbt-sidebar="${sk}" class="nav-link nav-link-text-only ${(target === "#" + (route ? route.split('.')[0] : "")) ? "active" : ""}">
+                <i class="nav-icon ${button}" aria-hidden="true"></i>
+                <p class="mb-0 sidebar-module-label">${escapeHTML(title)}</p>
             </a>
         </li>
     `);
@@ -469,8 +486,9 @@ function leftSideClick(button, title, group, click) {
 
     $("#leftside-menu").append(`
         <li id="${id}" class="leftsidebar-button nav-item" title="${escapeHTML(title)}">
-            <a class="nav-link nav-link-text-only" href="#" onclick="xblur(); return false;">
-                <p class="text-nowrap mb-0">${title}</p>
+            <a class="nav-link nav-link-text-only" href="#" data-rbt-sidebar="click-action" onclick="xblur(); return false;">
+                <i class="nav-icon ${button}" aria-hidden="true"></i>
+                <p class="mb-0 sidebar-module-label">${escapeHTML(title)}</p>
             </a>
         </li>
     `);

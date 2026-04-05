@@ -1,7 +1,7 @@
 ({
     init: function () {
         if (AVAIL("tt", "issue", "POST") && modules.tt.menuItem && !config.disableCreateIssue) {
-            let c = leftSide("far fa-fw fa-plus-square", i18n("tt.createIssue"), navigateUrl("tt.createIssue", false, { exclude: [ "_" ]}), "tt");
+            let c = leftSide("fas fa-fw fa-square-plus", i18n("tt.createIssue"), navigateUrl("tt.createIssue", false, { exclude: [ "_" ]}), "tt");
             $("#" + modules.tt.menuItem).before($("#" + c));
         }
         moduleLoaded("tt.createIssue", this);

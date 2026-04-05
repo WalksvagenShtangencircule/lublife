@@ -2,7 +2,7 @@
     menuItem: false,
 
     init: function () {
-        this.menuItem = leftSide("fas fa-fw fa-info-circle", i18n("about.about"), "?#about", "about");
+        this.menuItem = leftSide("fas fa-fw fa-circle-info", i18n("about.about"), "?#about", "about");
         if (AVAIL("server", "systemInfo")) {
             loadSubModules("about", [ "systemInfo" ], this);
         } else {

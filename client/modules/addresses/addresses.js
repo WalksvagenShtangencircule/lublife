@@ -4,11 +4,11 @@
     favorites: [],
 
     subModules: [
-        "keys",
         "cms",
         "houses",
         "domophones",
         "cameras",
+        "keys",
         "subscribers",
         "subscriberInbox",
         "subscriberDevices",
@@ -18,10 +18,42 @@
 
     init: function () {
         if (AVAIL("addresses", "region", "PUT") || AVAIL("addresses", "addresses", "GET")) {
-            this.menuItem = leftSide("fas fa-fw fa-globe-americas", i18n("moduleAddresses"), "?#addresses", "households");
+            this.menuItem = leftSide("fas fa-fw fa-house-chimney", i18n("moduleAddresses"), "?#addresses", "households");
         }
 
         loadSubModules("addresses", JSON.parse(JSON.stringify(this.subModules)), this);
+    },
+
+    /**
+     * Фиксированный порядок пунктов «Адреса»: Адреса → избранное (если есть) → Домофоны → Камеры → Спецключи.
+     * Без этого подмодули с разными правами AVAIL и асинхронное избранное сдвигают порядок.
+     */
+    reorderHouseholdsAddressMenu: function () {
+        const $menu = $("#leftside-menu");
+        const $main = $menu.find("a[data-href='?#addresses']").closest("li.leftsidebar-button");
+        if (!$main.length) {
+            return;
+        }
+        const $dom = $menu.find("a[data-href='?#addresses.domophones']").closest("li.leftsidebar-button");
+        const $cam = $menu.find("a[data-href='?#addresses.cameras']").closest("li.leftsidebar-button");
+        const $keys = $menu.find("a[data-href='?#addresses.keys']").closest("li.leftsidebar-button");
+        let $anchor = $main;
+        let $n = $main.next();
+        while ($n.length && $n.hasClass("address-favorite-row")) {
+            $anchor = $n;
+            $n = $n.next();
+        }
+        if ($dom.length) {
+            $dom.insertAfter($anchor);
+            $anchor = $dom;
+        }
+        if ($cam.length) {
+            $cam.insertAfter($anchor);
+            $anchor = $cam;
+        }
+        if ($keys.length) {
+            $keys.insertAfter($anchor);
+        }
     },
 
     allLoaded: function () {
@@ -72,6 +104,7 @@
                         $favRows.insertAfter(i);
                     }
                 }
+                modules.addresses.reorderHouseholdsAddressMenu();
             }).
             fail(x => {
                 if (x && x.responseJSON && (x.responseJSON.error === "accessDenied" || x.responseJSON.error === "permissionDenied")) {
@@ -90,6 +123,8 @@
             }
             modules.addresses.search = modules.addresses._search.search;
         }
+
+        modules.addresses.reorderHouseholdsAddressMenu();
     },
 
     moduleLoaded: function () {

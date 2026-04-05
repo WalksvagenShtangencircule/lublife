@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Сборка проверок для модуля «Диагностика»: ОС, БД, интеграции, SSL/TLS.
+ * Сборка проверок для модуля «Диагностика»: ОС, БД, интеграции (DVR, ClickHouse), SSL публичного хоста.
  */
 class DiagnosticsService {
 
@@ -30,6 +30,8 @@ class DiagnosticsService {
             'summaryCacheTtl' => isset($d['summaryCacheTtl']) ? max(10, (int)$d['summaryCacheTtl']) : 45,
             'historyMaxPoints' => isset($d['historyMaxPoints']) ? max(5, min(500, (int)$d['historyMaxPoints'])) : 48,
             'sslVerifyStrict' => !empty($d['sslVerifyStrict']),
+            /** Явный URL (только HTTPS) для проверки одного сертификата; иначе берётся первый https из api.frontend / api.api / api.mobile */
+            'sslPublicUrl' => isset($d['sslPublicUrl']) && is_string($d['sslPublicUrl']) ? trim($d['sslPublicUrl']) : '',
             'sslExtraHosts' => isset($d['sslExtraHosts']) && is_array($d['sslExtraHosts']) ? $d['sslExtraHosts'] : [],
             'httpTimeout' => isset($d['httpTimeout']) ? max(1, (int)$d['httpTimeout']) : 4,
             /** Порог «медленного» HTTP (мс): интеграции и DVR — типичный признак заторов очереди */
@@ -67,10 +69,8 @@ class DiagnosticsService {
             ]);
         }
         if ($want($groupFilter, 'integrations')) {
-            $checks = array_merge($checks, self::checksHttpIntegrations($config, $cfg));
             $checks = array_merge($checks, self::checksDvrHttp($config, $cfg));
             $checks = array_merge($checks, self::checksClickhouseDeep($config, $cfg));
-            $checks = array_merge($checks, self::checksZabbix($config, $cfg['httpTimeout']));
         }
         if ($want($groupFilter, 'ssl')) {
             $checks = array_merge($checks, self::checksSslCertificates($config, $cfg));
@@ -324,23 +324,6 @@ class DiagnosticsService {
         return $out;
     }
 
-    private static function checksHttpIntegrations(array $config, array $cfg): array {
-        $timeoutSec = $cfg['httpTimeout'];
-        $slowMs = (int)$cfg['slowHttpWarnMs'];
-        $out = [];
-        $slowHint = 'Долгий ответ внешнего URL — интерфейс и фоновые сценарии могут казаться «зависшими».';
-        foreach (['api', 'frontend', 'mobile', 'asterisk', 'internal', 'kamailio'] as $k) {
-            if (!empty($config['api'][$k])) {
-                $out[] = self::httpProbe('http_api_' . $k, 'HTTP: api.' . $k, 'integrations', $config['api'][$k], $timeoutSec, $slowMs, $slowHint);
-            }
-        }
-        $mqttAgent = ($config['backends']['mqtt'] ?? [])['agent'] ?? null;
-        if (!empty($mqttAgent)) {
-            $out[] = self::httpProbe('mqtt_agent', 'HTTP: MQTT agent', 'integrations', (string)$mqttAgent, $timeoutSec, $slowMs, $slowHint);
-        }
-        return $out;
-    }
-
     private static function checksDvrHttp(array $config, array $cfg): array {
         $servers = (($config['backends']['dvr'] ?? [])['servers'] ?? null);
         if (!is_array($servers) || !$servers) {
@@ -449,46 +432,8 @@ class DiagnosticsService {
         ])];
     }
 
-    private static function checksZabbix(array $config, int $timeoutSec): array {
-        $mon = $config['backends']['monitoring'] ?? [];
-        if (($mon['backend'] ?? '') !== 'zabbix' || empty($mon['zbx_api_url']) || empty($mon['zbx_token'])) {
-            return [self::item('zabbix_skip', 'Zabbix API', 'integrations', 'skip', [
-                'hint' => 'Мониторинг не zabbix или нет URL/токена',
-            ])];
-        }
-        $url = $mon['zbx_api_url'];
-        $body = json_encode([
-            'jsonrpc' => '2.0',
-            'method' => 'apiinfo.version',
-            'params' => [],
-            'id' => 1,
-        ]);
-        $t0 = microtime(true);
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_POST => true,
-            CURLOPT_HTTPHEADER => [
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $mon['zbx_token'],
-            ],
-            CURLOPT_POSTFIELDS => $body,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => $timeoutSec,
-        ]);
-        $res = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        $ms = (int)round((microtime(true) - $t0) * 1000);
-        $ok = $code >= 200 && $code < 300 && $res && str_contains((string)$res, 'result');
-        return [self::item('zabbix_api', 'Zabbix API', 'integrations', $ok ? 'ok' : 'fail', [
-            'latencyMs' => $ms,
-            'value' => $ok ? 'OK' : ('HTTP ' . $code),
-            'hint' => $ok ? null : 'Проверьте zbx_api_url и токен',
-        ])];
-    }
-
     private static function checksSslCertificates(array $config, array $cfg): array {
-        $hosts = self::collectSslTargets($config, $cfg['sslExtraHosts'] ?? []);
+        $hosts = self::collectSslTargets($config, $cfg);
         $out = [];
         $seen = [];
         foreach ($hosts as $h) {
@@ -500,56 +445,64 @@ class DiagnosticsService {
             $out[] = self::probeTlsCertificate($h['host'], $h['port'], $h['label'], !empty($cfg['sslVerifyStrict']));
         }
         if (!$out) {
-            $out[] = self::item('ssl_none', 'SSL/TLS: нет HTTPS-целей', 'ssl', 'skip', [
-                'hint' => 'Добавьте URL в config или diagnostics.sslExtraHosts',
+            $out[] = self::item('ssl_none', 'SSL/TLS: нет публичного HTTPS в конфиге', 'ssl', 'skip', [
+                'hint' => 'Задайте diagnostics.sslPublicUrl (https://…) или api.frontend / api.api / api.mobile с https://',
             ]);
         }
         return $out;
     }
 
-    private static function collectSslTargets(array $config, array $extraHosts): array {
-        $targets = [];
-        $addUrl = static function (string $label, ?string $url) use (&$targets): void {
-            if (!$url || !is_string($url)) {
-                return;
-            }
+    /**
+     * Один хост: публичный интерфейс этого развёртывания (не сторонние DVR/Zabbix/syslog).
+     *
+     * @return array<int, array{host:string, port:int, label:string}>
+     */
+    private static function collectSslTargets(array $config, array $cfg): array {
+        $extraHosts = $cfg['sslExtraHosts'] ?? [];
+        $parseOne = static function (string $url, string $label): ?array {
             $p = @parse_url($url);
-            if (!$p || empty($p['scheme']) || strtolower($p['scheme']) !== 'https' || empty($p['host'])) {
-                return;
+            if (!$p || empty($p['host']) || strtolower((string)($p['scheme'] ?? '')) !== 'https') {
+                return null;
             }
             $port = isset($p['port']) ? (int)$p['port'] : 443;
-            $targets[] = ['host' => $p['host'], 'port' => $port, 'label' => $label];
+            return ['host' => (string)$p['host'], 'port' => $port, 'label' => $label];
         };
-        foreach (['api', 'frontend', 'mobile'] as $k) {
-            $addUrl('api.' . $k, $config['api'][$k] ?? null);
+        $explicit = isset($cfg['sslPublicUrl']) ? trim((string)$cfg['sslPublicUrl']) : '';
+        if ($explicit !== '') {
+            $one = $parseOne($explicit, 'Публичный HTTPS (sslPublicUrl)');
+            if ($one !== null) {
+                return [$one];
+            }
         }
-        foreach ($config['backends']['dvr']['servers'] ?? [] as $i => $srv) {
-            $addUrl('dvr.' . $i, $srv['url'] ?? null);
-        }
-        $addUrl('zabbix', $config['backends']['monitoring']['zbx_api_url'] ?? null);
-        $addUrl('isdn', $config['backends']['isdn']['api_host'] ?? null);
-        foreach ($config['syslog_servers'] ?? [] as $vendor => $list) {
-            if (!is_array($list)) {
+        foreach (['frontend', 'api', 'mobile'] as $k) {
+            $url = $config['api'][$k] ?? null;
+            if (!is_string($url) || $url === '') {
                 continue;
             }
-            foreach ($list as $j => $entry) {
-                if (is_string($entry) && self::startsWith($entry, 'https://')) {
-                    $addUrl('syslog.' . $vendor . '.' . $j, $entry);
+            $one = $parseOne($url, 'Сертификат сервера (' . $k . ')');
+            if ($one !== null) {
+                return [$one];
+            }
+        }
+        if (is_array($extraHosts)) {
+            foreach ($extraHosts as $row) {
+                if (is_string($row) && $row !== '') {
+                    $u = preg_match('#^https?://#i', $row) ? $row : ('https://' . $row);
+                    $one = $parseOne($u, 'Доп. хост (sslExtraHosts)');
+                    if ($one !== null) {
+                        return [$one];
+                    }
+                }
+                if (is_array($row) && !empty($row['host'])) {
+                    return [[
+                        'host' => (string)$row['host'],
+                        'port' => (int)($row['port'] ?? 443),
+                        'label' => (string)($row['label'] ?? 'sslExtraHosts'),
+                    ]];
                 }
             }
         }
-        foreach ($extraHosts as $row) {
-            if (is_string($row)) {
-                $targets[] = ['host' => $row, 'port' => 443, 'label' => 'extra:' . $row];
-            } elseif (is_array($row) && !empty($row['host'])) {
-                $targets[] = [
-                    'host' => (string)$row['host'],
-                    'port' => (int)($row['port'] ?? 443),
-                    'label' => (string)($row['label'] ?? 'extra'),
-                ];
-            }
-        }
-        return $targets;
+        return [];
     }
 
     private static function probeTlsCertificate(string $host, int $port, string $label, bool $strictVerify): array {
@@ -838,13 +791,39 @@ class DiagnosticsService {
                 'hint' => 'Включите allowExec',
             ])];
         }
+        $marker = 'RBT crons start';
         $out = [];
         @exec('crontab -l 2>/dev/null', $out, $code);
         $text = implode("\n", $out);
-        $ok = str_contains($text, 'RBT crons start');
-        return [self::item('cron_rbt', 'Cron: секция RBT', 'background', $ok ? 'ok' : 'warn', [
-            'value' => $ok ? 'найдена' : 'не найдена',
-            'hint' => $ok ? null : 'Установите crontab (installCrontabs)',
+        $ok = str_contains($text, $marker);
+        $source = '';
+        if ($ok) {
+            $source = 'crontab пользователя процесса PHP';
+        } else {
+            $grep = [];
+            @exec('grep -r ' . escapeshellarg($marker) . ' /etc/cron.d /var/spool/cron 2>/dev/null', $grep);
+            if ($grep !== []) {
+                $ok = true;
+                $source = 'системный crontab/cron.d';
+            }
+        }
+        if (!$ok) {
+            $etcCrontab = [];
+            @exec('grep -h ' . escapeshellarg($marker) . ' /etc/crontab 2>/dev/null', $etcCrontab);
+            if ($etcCrontab !== []) {
+                $ok = true;
+                $source = '/etc/crontab';
+            }
+        }
+        if ($ok) {
+            return [self::item('cron_rbt', 'Cron: секция RBT', 'background', 'ok', [
+                'value' => 'найдена',
+                'hint' => $source !== '' ? ('Источник: ' . $source) : null,
+            ])];
+        }
+        return [self::item('cron_rbt', 'Cron: секция RBT', 'background', 'skip', [
+            'value' => 'не проверено',
+            'hint' => 'Маркер не найден в crontab пользователя PHP и недоступен для чтения типичный root-crontab. Если cron настроен у root (installCrontabs от root), это нормально.',
         ])];
     }
 

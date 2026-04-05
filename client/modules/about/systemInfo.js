@@ -2,7 +2,7 @@
     menuItem: false,
 
     init: function () {
-        this.menuItem = leftSide("fas fa-fw fa-tachometer-alt", i18n("about.systemInfo"), "?#about.systemInfo", "about");
+        this.menuItem = leftSide("fas fa-fw fa-gauge-high", i18n("about.systemInfo"), "?#about.systemInfo", "about");
         $("#" + this.menuItem).after($("#" + modules.about.menuItem));
         moduleLoaded("about.systemInfo", this);
     },

@@ -1,5 +1,5 @@
 {
-    "about": "RoBoT",
+    "about": "SmartAccess",
     "systemInfo": "Системная информация",
     "hostname": "Имя сервера",
     "os": "ОС",
@@ -30,7 +30,7 @@
     "user": "Пользователь",
     "text": [
         "",
-        "<b>RoBoT - RBT (SmartYard-Server)</b>",
+        "<b>SmartAccess</b> (клиент к SmartYard-Server)",
         "",
         "Версия клиента: %s",
         "Версия SmartYard: %s",

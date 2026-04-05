@@ -4,7 +4,7 @@
 
     init: function () {
         if (AVAIL("accounts", "user", "GET")) {
-            leftSide("fas fa-fw fa-user", i18n("users.users"), "?#users", "accounts");
+            leftSide("fas fa-fw fa-user-circle", i18n("users.users"), "?#users", "accounts");
         }
         moduleLoaded("users", this);
     },

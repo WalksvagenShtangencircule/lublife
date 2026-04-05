@@ -71,7 +71,7 @@
 
     init: function () {
         if (parseInt(myself.uid) && AVAIL("notes")) {
-            this.menuItem = leftSide("fas fa-fw fa-thumbtack", i18n("notes.notes"), "?#notes", "productivity");
+            this.menuItem = leftSide("fas fa-fw fa-note-sticky", i18n("notes.notes"), "?#notes", "productivity");
         }
         moduleLoaded("notes", this);
     },

@@ -604,29 +604,43 @@ function brandExternalProfileUrl() {
 }
 
 function initAll() {
-    if (config.logo) {
-        setFavicon("img/" + config.logo + "Icon.png");
-        if (!config.brandLogoUrl && !config.brandGithubUser) {
-            $("#leftSideToggler").attr("src", "img/" + config.logo + ".png");
-        }
-        $("#loginBoxLogo").html("<img class='mb-2' src='img/" + config.logo + "Text.png' width='285px'/>");
-        $("#forgotBoxLogo").html("<img class='mb-2' src='img/" + config.logo + "Text.png' width='285px'/>");
-        $("#2faBoxLogo").html("<img class='mb-2' src='img/" + config.logo + "Text.png' width='285px'/>");
-    }
-
     if (config.brandLogoUrl || config.brandGithubUser) {
         let ghUser = config.brandGithubUser ? String(config.brandGithubUser).trim().replace(/^@/, "") : "";
         let logoSrc = config.brandLogoUrl || ("https://github.com/" + ghUser + ".png");
         $("#leftSideToggler").attr("src", logoSrc).attr("alt", ghUser ? ("GitHub @" + ghUser) : "");
         if (config.brandUseAvatarFavicon) {
             setFavicon(logoSrc);
+        } else {
+            setFavicon(config.favicon || "img/brandIcon.svg?v=s2");
         }
+    } else {
+        setFavicon(config.favicon || "img/brandIcon.svg?v=s2");
     }
 
-    $("#leftSideToggler").off("click.rbtBrand").on("click.rbtBrand", function (e) {
-        window.open(brandExternalProfileUrl(), "_blank", "noopener,noreferrer").focus();
+    if (config.logo) {
+        if (!config.brandLogoUrl && !config.brandGithubUser) {
+            let sideSrc = config.sidebarAvatar ? config.sidebarAvatar : ("img/" + config.logo + ".png");
+            $("#leftSideToggler").attr("src", sideSrc).attr("alt", i18n("windowTitleShort"));
+        }
+        let loginBrandEl;
+        if (config.loginBrandText && String(config.loginBrandText).trim()) {
+            loginBrandEl = $("<span class='login-brand-text mb-2 d-block'></span>").text(String(config.loginBrandText).trim());
+        } else {
+            loginBrandEl = $("<img class='mb-2' src='img/" + config.logo + "Text.png' width='285px'/>");
+        }
+        $("#loginBoxLogo").empty().append(loginBrandEl.clone());
+        $("#forgotBoxLogo").empty().append(loginBrandEl.clone());
+        $("#2faBoxLogo").empty().append(loginBrandEl.clone());
+    }
+
+    /* Внешняя ссылка профиля/репозитория — только по клику на заголовок бренда (не блокируем pushmenu на логотипе) */
+    $("#brandTitle").off("click.rbtBrand").on("click.rbtBrand", function (e) {
+        if (!config.brandLogoUrl && !config.brandGithubUser) {
+            return;
+        }
         e.preventDefault();
         e.stopPropagation();
+        window.open(brandExternalProfileUrl(), "_blank", "noopener,noreferrer").focus();
         return false;
     });
 
@@ -635,6 +649,10 @@ function initAll() {
     loadingStart();
 
     document.title = i18n("windowTitle");
+    let metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) {
+        metaDesc.setAttribute("content", i18n("appTagline"));
+    }
 
     $("#loginBoxTitle").text(i18n("loginFormTitle"));
     $("#loginBoxLogin").attr("placeholder", i18n("login"));
@@ -673,7 +691,7 @@ function initAll() {
         $("#brand").attr("title", brandExternalProfileUrl());
         $("#leftSideToggler").attr("title", brandExternalProfileUrl());
     } else {
-        let brandTxt = config.brandSidebarTitle !== undefined ? config.brandSidebarTitle : i18n("windowTitle");
+        let brandTxt = config.brandSidebarTitle !== undefined ? config.brandSidebarTitle : i18n("windowTitleShort");
         $("#brandTitle").text(brandTxt).show();
         $(".sidebarToggler").attr("title", brandTxt);
     }
@@ -706,10 +724,7 @@ function initAll() {
         if (event.keyCode === 13) $('#inputTextButton').click();
     });
 
-    $(".sidebarToggler").off("click").on("click", e => {
-        e.preventDefault();
-        return false;
-    })
+    /* Не перехватываем клики по [data-widget=pushmenu] — иначе AdminLTE не сворачивает сайдбар */
 
     $("#loginBoxLogin").off("keypress").on("keypress", e => {
         if (e.keyCode == 13) {

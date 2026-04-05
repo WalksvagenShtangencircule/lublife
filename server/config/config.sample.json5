@@ -440,6 +440,8 @@
         "summaryCacheTtl": 120,
         "historyMaxPoints": 48,
         "sslVerifyStrict": false,
+        // Один HTTPS для проверки срока сертификата (если пусто — берётся первый https из api.frontend / api.api / api.mobile)
+        "sslPublicUrl": "",
         "sslExtraHosts": [],
         "httpTimeout": 8,
         "slowHttpWarnMs": 8000,
@@ -483,6 +485,8 @@
                 "on_fail": true,
                 "on_warn": false,
                 "cooldown_sec": 3600,
+                // true (по умолчанию): Telegram только если изменился набор fail/warn или счётчики; при стабильной проблеме не пинговать каждый час. false — старое поведение (повтор после cooldown_sec при том же состоянии).
+                "only_notify_on_change": true,
                 "max_lines": 35,
             },
         },

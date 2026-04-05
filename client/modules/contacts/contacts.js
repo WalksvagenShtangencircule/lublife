@@ -3,7 +3,7 @@
 
     init: function () {
         if (AVAIL("contacts", "contacts")) {
-            leftSide("far fa-fw fa-address-book", i18n("contacts.contacts"), "?#contacts", "contacts");
+            leftSide("fas fa-fw fa-address-card", i18n("contacts.contacts"), "?#contacts", "contacts");
         }
         moduleLoaded("contacts", this);
     },

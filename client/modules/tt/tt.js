@@ -39,13 +39,13 @@
         //
         if (AVAIL("tt", "tt", "GET")) {
             if (parseInt(myself.uid) == 0) {
-                leftSide("fas fa-fw fa-tasks", i18n("tt.tt"), "?#tt.settings", "tt");
+                leftSide("fas fa-fw fa-clipboard-list", i18n("tt.tt"), "?#tt.settings", "tt");
                 this.menuItem = false;
             } else {
-                this.menuItem = leftSide("fas fa-fw fa-tasks", i18n("tt.tt"), "?#tt", "tt");
+                this.menuItem = leftSide("fas fa-fw fa-clipboard-list", i18n("tt.tt"), "?#tt", "tt");
 
                 if (AVAIL("tt", "customFilter")) {
-                    leftSide("fas fa-fw fa-search-plus", i18n("tt.customFilter"), `?#tt&filter=empty&customFilter=yes`, "tt");
+                    leftSide("fas fa-fw fa-filter", i18n("tt.customFilter"), `?#tt&filter=empty&customFilter=yes`, "tt");
                 }
 
                 reg.push({

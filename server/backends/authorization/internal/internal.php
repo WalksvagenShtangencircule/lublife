@@ -33,36 +33,51 @@
                 $rights_request_method = $params["_request_method"];
 
                 try {
-                    $sth = $this->db->prepare("
-                        select
-                            api,
-                            method,
-                            request_method
-                        from
-                            core_api_methods as m1
-                        where aid in (
+                    // Цепочка permissions_same (напр. diagnostics → analytics → addresses): проверять права на листе.
+                    for ($depth = 0; $depth < 32; $depth++) {
+                        $sth = $this->db->prepare("
                             select
                                 permissions_same
                             from
-                                core_api_methods as m2
+                                core_api_methods
                             where
                                 api = :api and
                                 method = :method and
                                 request_method = :request_method
-                        )
-                    ");
-
-                    if ($sth->execute([
-                        ":api" => $params["_path"]["api"],
-                        ":method" => $params["_path"]["method"],
-                        ":request_method" => $params["_request_method"],
-                    ])) {
-                        $s = $sth->fetchAll(\PDO::FETCH_ASSOC);
-                        if ($s && $s[0]) {
-                            $rights_api = $s[0]["api"];
-                            $rights_method = $s[0]["method"];
-                            $rights_request_method = $s[0]["request_method"];
+                        ");
+                        if (!$sth->execute([
+                            ":api" => $rights_api,
+                            ":method" => $rights_method,
+                            ":request_method" => $rights_request_method,
+                        ])) {
+                            break;
                         }
+                        $row = $sth->fetch(\PDO::FETCH_ASSOC);
+                        if (!$row || $row["permissions_same"] === null || $row["permissions_same"] === "") {
+                            break;
+                        }
+                        $sth = $this->db->prepare("
+                            select
+                                api,
+                                method,
+                                request_method
+                            from
+                                core_api_methods
+                            where
+                                aid = :aid
+                        ");
+                        if (!$sth->execute([
+                            ":aid" => $row["permissions_same"],
+                        ])) {
+                            break;
+                        }
+                        $parent = $sth->fetch(\PDO::FETCH_ASSOC);
+                        if (!$parent) {
+                            break;
+                        }
+                        $rights_api = $parent["api"];
+                        $rights_method = $parent["method"];
+                        $rights_request_method = $parent["request_method"];
                     }
 
                     $sth = $this->db->prepare("
@@ -245,9 +260,15 @@
                                     permissions_same is not null
                             ", \PDO::FETCH_ASSOC)->fetchAll();
 
-                            foreach ($same as $a) {
-                                if (@$r[$a["permissions_same"]]) {
-                                    $_m[$a['api']][$a['method']][$a['request_method']] = $a['aid'];
+                            $changed = true;
+                            while ($changed) {
+                                $changed = false;
+                                foreach ($same as $a) {
+                                    if (@$r[$a["permissions_same"]] && !@$r[$a["aid"]]) {
+                                        $_m[$a['api']][$a['method']][$a['request_method']] = $a['aid'];
+                                        $r[$a['aid']] = true;
+                                        $changed = true;
+                                    }
                                 }
                             }
                         }

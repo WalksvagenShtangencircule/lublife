@@ -467,21 +467,14 @@ body.dark-mode .hr-text-pointer::after {
   background: linear-gradient(90deg, #40c4ff 0%, #7c4dff 100%) !important;
 }
 
-/* Левое меню модулей (только текст) */
-#leftside-menu .nav-link.nav-link-text-only {
-  display: flex;
-  align-items: center;
-  padding-left: 0.85rem;
-  padding-right: 0.5rem;
-}
-
-#leftside-menu .nav-link.nav-link-text-only > p {
+/* Левое меню модулей — тёплая тема поверх index.css */
+#leftside-menu .nav-link.nav-link-text-only > .sidebar-module-label {
   font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
 }
 
-.sidebar-mini.sidebar-collapse .main-sidebar:not(.sidebar-no-expand):hover #leftside-menu .nav-link.nav-link-text-only > p,
-.sidebar-mini.sidebar-collapse .main-sidebar:not(.sidebar-no-expand).sidebar-focused #leftside-menu .nav-link.nav-link-text-only > p {
+.sidebar-mini.sidebar-collapse .main-sidebar:not(.sidebar-no-expand):hover #leftside-menu .nav-link.nav-link-text-only > .sidebar-module-label,
+.sidebar-mini.sidebar-collapse .main-sidebar:not(.sidebar-no-expand).sidebar-focused #leftside-menu .nav-link.nav-link-text-only > .sidebar-module-label {
   white-space: normal !important;
 }
 

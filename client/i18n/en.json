@@ -1,6 +1,8 @@
 {
     "_code": "en",
-    "windowTitle": "RBT",
+    "windowTitle": "SmartAccess — single sign-on and access control",
+    "windowTitleShort": "SmartAccess",
+    "appTagline": "Single sign-on, permission management, and secure access to your infrastructure.",
     "moduleAddresses": "Addresses",
     "error": "Error",
     "errorCode": "Error [%s]",

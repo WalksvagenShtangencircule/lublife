@@ -44,7 +44,7 @@
     loadOnInit: true,
     loadErrorTemplate: true,
     responseType: '',
-    overlayTemplate: '<div class="overlay"><i class="fas fa-2x fa-sync-alt fa-spin"></i></div>',
+    overlayTemplate: '<div class="overlay"><img class="rbt-spinner-img" src="img/spinnerSmall.svg" width="48" height="48" alt="" role="presentation"/></div>',
     errorTemplate: '<span class="text-danger"></span>',
     onLoadStart: function onLoadStart() {},
     onLoadDone: function onLoadDone(response) {
@@ -1701,7 +1701,7 @@
   var SELECTOR_LOGIN_BOX = '.login-box';
   var SELECTOR_REGISTER_BOX = '.register-box';
   var SELECTOR_PRELOADER = '.preloader';
-  var CLASS_NAME_SIDEBAR_COLLAPSED$1 = 'sidebar-collapse-disabled';
+  var CLASS_NAME_SIDEBAR_COLLAPSED$1 = 'sidebar-collapse';
   var CLASS_NAME_SIDEBAR_FOCUSED = 'sidebar-focused';
   var CLASS_NAME_LAYOUT_FIXED = 'layout-fixed';
   var CLASS_NAME_CONTROL_SIDEBAR_SLIDE_OPEN = 'control-sidebar-slide-open-disable';
@@ -1950,10 +1950,10 @@
   var SELECTOR_BODY = 'body';
   var SELECTOR_OVERLAY = '#sidebar-overlay';
   var SELECTOR_WRAPPER = '.wrapper';
-  var CLASS_NAME_COLLAPSED = 'sidebar-collapse-disabled';
-  var CLASS_NAME_OPEN$3 = 'sidebar-open-disabled';
-  var CLASS_NAME_IS_OPENING$1 = 'sidebar-is-opening-disabled';
-  var CLASS_NAME_CLOSED = 'sidebar-closed-disabled';
+  var CLASS_NAME_COLLAPSED = 'sidebar-collapse';
+  var CLASS_NAME_OPEN$3 = 'sidebar-open';
+  var CLASS_NAME_IS_OPENING$1 = 'sidebar-is-opening';
+  var CLASS_NAME_CLOSED = 'sidebar-closed';
   var Default$5 = {
     autoCollapseSize: 992,
     enableRemember: false,
@@ -2899,7 +2899,7 @@
   var SELECTOR_DATA_WIDGET = '[data-widget="treeview"]';
   var CLASS_NAME_OPEN = 'menu-open';
   var CLASS_NAME_IS_OPENING = 'menu-is-opening';
-  var CLASS_NAME_SIDEBAR_COLLAPSED = 'sidebar-collapse-disabled';
+  var CLASS_NAME_SIDEBAR_COLLAPSED = 'sidebar-collapse';
   var Default = {
     trigger: SELECTOR_DATA_WIDGET + " " + SELECTOR_LINK,
     animationSpeed: 300,

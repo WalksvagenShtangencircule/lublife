@@ -14,7 +14,7 @@
 
     init: function () {
         if (parseInt(myself.uid) && AVAIL("mkb")) {
-            this.menuItem = leftSide("fas fa-fw fa-layer-group", i18n("mkb.mkb"), "?#mkb", "productivity");
+            this.menuItem = leftSide("fas fa-fw fa-sitemap", i18n("mkb.mkb"), "?#mkb", "productivity");
         }
 
         loadSubModules("mkb", JSON.parse(JSON.stringify(this.subModules)), this);
@@ -1317,7 +1317,7 @@
                 <div class="card-header card-handle pl-1 pr-3">
                     <h5 class="card-title">
                         <span class="btn btn-tool cardDone pr-0 ${card.done ? "text-success" : ""}" title="${i18n("mkb.done")}" data-card-id="${card._id}" style="padding-top: 8px;"><i class="fas fa-fw fa-check-circle"></i></span>
-                        <span class="btn btn-tool text-black cardLoading pr-0" title="${i18n("mkb.loading")}" style="display: none; padding-top: 8px;" data-card-id="${card._id}"><i class="fas fa-fw fa-spinner rotate"></i></span>
+                        <span class="btn btn-tool text-black cardLoading pr-0" title="${i18n("mkb.loading")}" style="display: none; padding-top: 8px;" data-card-id="${card._id}"><img class="rbt-spinner-img" src="img/spinnerSmall.svg" width="22" height="22" alt="" role="presentation"/></span>
                         ${c}
                     </h5>
                     <div class="card-tools">

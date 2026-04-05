@@ -486,10 +486,19 @@ select {
   background-color: #cfcfcf !important;
 }
 
+/* Единый SVG-спиннер: img (оверлеи, карточки) и фоновая картинка (ячейки, Select2) */
+img.rbt-spinner-img {
+  display: block;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
 .spinner-small {
-  background-image:url('../img/spinnerSmall.svg');
+  background-image: url('../img/spinnerSmall.svg');
   background-repeat: no-repeat;
   background-position: center center;
+  background-size: 32px 32px;
+  min-height: 32px;
 }
 
 .select2-container--open {
@@ -949,11 +958,169 @@ code {
 }
 
 .leftsidebar-button {
-  margin-top: 3px;
+  margin-top: 2px;
 }
 
 .leftsidebar-button:first-child {
   margin-top: 11px !important;
+}
+
+/* Левое меню модулей: иконка + подпись, акцент у активного, свёрнутый сайдбар */
+.main-sidebar #leftside-menu .nav-link.nav-link-text-only {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.45rem;
+  position: relative;
+  text-align: center;
+  padding: 0.5rem 0.65rem 0.5rem 0.55rem;
+  margin: 0 0.35rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Вертикальная полоса-акцент слева у активного пункта */
+.main-sidebar #leftside-menu .nav-link.nav-link-text-only::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.35rem;
+  bottom: 0.35rem;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, rgba(125, 211, 252, 0.95) 0%, rgba(56, 189, 248, 0.85) 100%);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+.main-sidebar #leftside-menu .nav-link.nav-link-text-only.active::before {
+  opacity: 1;
+}
+
+.main-sidebar #leftside-menu .nav-link.nav-link-text-only .nav-icon {
+  flex: 0 0 auto;
+  width: 1.35rem;
+  text-align: center;
+  font-size: 1.05rem;
+  opacity: 1;
+  margin-right: 0 !important;
+  margin-left: 0 !important;
+}
+
+.main-sidebar #leftside-menu .nav-link.nav-link-text-only > .sidebar-module-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+  line-height: 1.35;
+  font-size: 0.97rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: normal;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+.main-sidebar #leftside-menu .nav-link.nav-link-text-only:hover {
+  background-color: rgba(255, 255, 255, 0.07);
+}
+
+.main-sidebar #leftside-menu .nav-link.nav-link-text-only.active {
+  background-color: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.main-sidebar #leftside-menu .nav-link.nav-link-text-only.active > .sidebar-module-label {
+  font-weight: 700;
+}
+
+/* Свёрнутый сайдбар (sidebar-collapse): только иконки по центру полосы */
+body.sidebar-collapse .main-sidebar #leftside-menu .nav-link.nav-link-text-only {
+  justify-content: center;
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
+  margin-left: 0.25rem;
+  margin-right: 0.25rem;
+}
+
+body.sidebar-collapse .main-sidebar #leftside-menu .nav-link.nav-link-text-only .sidebar-module-label {
+  display: none !important;
+}
+
+body.sidebar-collapse .main-sidebar #leftside-menu .nav-link.nav-link-text-only .nav-icon {
+  font-size: 1.15rem;
+  width: auto;
+}
+
+body.sidebar-collapse .main-sidebar #leftside-menu .nav-link.nav-link-text-only::before {
+  top: 0.25rem;
+  bottom: 0.25rem;
+}
+
+/* Разворот при наведении на узкую полосу (AdminLTE): снова подпись + иконка слева */
+body.sidebar-collapse .main-sidebar.sidebar-focused #leftside-menu .nav-link.nav-link-text-only,
+body.sidebar-collapse .main-sidebar:hover #leftside-menu .nav-link.nav-link-text-only {
+  justify-content: flex-start;
+  padding-left: 0.55rem;
+  padding-right: 0.65rem;
+}
+
+body.sidebar-collapse .main-sidebar.sidebar-focused #leftside-menu .nav-link.nav-link-text-only .sidebar-module-label,
+body.sidebar-collapse .main-sidebar:hover #leftside-menu .nav-link.nav-link-text-only .sidebar-module-label {
+  display: block !important;
+}
+
+/* Разделители между группами модулей */
+.main-sidebar #leftside-menu > li.nav-item > hr.border-top {
+  margin: 0.55rem 0.85rem 0.4rem;
+  opacity: 0.18;
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* Цветные иконки левого меню (data-rbt-sidebar задаётся в widgets.js / leftSide) */
+.main-sidebar #leftside-menu .nav-link.nav-link-text-only .nav-icon {
+  opacity: 1;
+  filter: drop-shadow(0 0 0.35rem rgba(0, 0, 0, 0.35));
+}
+
+.main-sidebar #leftside-menu .nav-link.nav-link-text-only:hover .nav-icon,
+.main-sidebar #leftside-menu .nav-link.nav-link-text-only.active .nav-icon {
+  filter: drop-shadow(0 0 0.45rem rgba(255, 255, 255, 0.2));
+}
+
+.main-sidebar #leftside-menu a[data-rbt-sidebar="addresses"] .nav-icon { color: #7ecbff !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="addresses-domophones"] .nav-icon { color: #ffab91 !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="addresses-cameras"] .nav-icon { color: #a5d6a7 !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="addresses-keys"] .nav-icon { color: #ffe082 !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="companies"] .nav-icon { color: #b39ddb !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="queues"] .nav-icon { color: #ce93d8 !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="analytics"] .nav-icon { color: #80cbc4 !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="map"] .nav-icon { color: #4dd0e1 !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="diagnostics"] .nav-icon { color: #ff8a80 !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="users"] .nav-icon { color: #90caf9 !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="groups"] .nav-icon { color: #9fa8da !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="permissions"] .nav-icon { color: #ffcc80 !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="contacts"] .nav-icon { color: #aed581 !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="providers"] .nav-icon { color: #bcaaa4 !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="mkb"] .nav-icon { color: #f48fb1 !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="notes"] .nav-icon { color: #fff59d !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="cs"] .nav-icon { color: #81d4fa !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="tt"] .nav-icon { color: #64b5f6 !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="tt-settings"] .nav-icon { color: #42a5f5 !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="tt-workspaces"] .nav-icon { color: #5c6bc0 !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="tt-custom-filter"] .nav-icon { color: #7986cb !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="tt-createIssue"] .nav-icon { color: #66bb6a !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="about"] .nav-icon { color: #b0bec5 !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="about-systemInfo"] .nav-icon { color: #cfd8dc !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="unknown"] .nav-icon { color: #eceff1 !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="click-action"] .nav-icon { color: #aed581 !important; }
+
+/* Избранные адреса: усилить цвет классов text-* от сервера */
+.main-sidebar #leftside-menu .address-favorite-link .nav-icon {
+  opacity: 1 !important;
+  filter: saturate(1.4) brightness(1.12) drop-shadow(0 0 0.3rem rgba(0, 0, 0, 0.35));
 }
 
 .rbt-grid-col:first-child {
@@ -1231,4 +1398,14 @@ th.rbt-entrance-preview-col {
 .rbt-camera-video-el:focus {
     outline: 2px solid rgba(0, 123, 255, 0.5);
     outline-offset: 2px;
+}
+
+/* Надпись над формой входа при config.loginBrandText (вместо img/*Text.png) */
+.login-logo .login-brand-text {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #1a4ca1;
+    letter-spacing: 0.02em;
+    text-align: center;
+    line-height: 1.2;
 }

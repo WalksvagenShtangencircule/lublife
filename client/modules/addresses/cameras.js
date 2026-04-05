@@ -1,7 +1,7 @@
 ({
     init: function () {
         if ((AVAIL("addresses", "region", "PUT") || AVAIL("addresses", "addresses", "GET")) && AVAIL("cameras", "cameras", "GET")) {
-            leftSide("fas fa-fw fa-video", i18n("addresses.cameras"), "?#addresses.cameras", "households");
+            leftSide("fas fa-fw fa-camera", i18n("addresses.cameras"), "?#addresses.cameras", "households");
         }
         moduleLoaded("addresses.cameras", this);
     },

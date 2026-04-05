@@ -1,6 +1,8 @@
 {
     "_code": "ru",
-    "windowTitle": "RBT",
+    "windowTitle": "SmartAccess — единая точка входа и контроль доступа",
+    "windowTitleShort": "SmartAccess",
+    "appTagline": "Единая точка входа, учёт прав и безопасный доступ к инфраструктуре.",
     "moduleAddresses": "Адреса",
     "error": "Ошибка",
     "errorCode": "Ошибка [%s]",
