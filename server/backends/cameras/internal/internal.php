@@ -342,7 +342,15 @@
 
             public function getSnapshot(int $cameraId): ?string {
                 $cameraData = $this->getCamera($cameraId);
-                $snapshotUrl = $cameraData['ext']->snapshotUrl ?? null;
+
+                if ($cameraData === false) {
+                    return null;
+                }
+
+                $ext = $cameraData['ext'] ?? null;
+                $snapshotUrl = (is_object($ext) && isset($ext->snapshotUrl) && is_string($ext->snapshotUrl) && $ext->snapshotUrl !== '')
+                    ? $ext->snapshotUrl
+                    : null;
 
                 if ($snapshotUrl) {
                     $snapshot = @file_get_contents($snapshotUrl);
@@ -355,19 +363,86 @@
                     return $snapshot;
                 }
 
-                try {
-                    $device = loadDevice(
-                        type: 'camera',
-                        model: $cameraData['model'],
-                        url: $cameraData['url'],
-                        password: $cameraData['credentials'],
-                    );
+                require_once __DIR__ . '/../../../utils/rtspSnapshot.php';
 
-                    return $device->getCamshot();
-                } catch (Exception) {
-                    error_log("Error getting snapshot from '{$cameraData['url']}' using device method");
+                $disableRtsp = is_object($ext) && !empty($ext->disableRtspSnapshot);
+                $model = (string)($cameraData['model'] ?? '');
+                $preferRtsp = is_object($ext) && !empty($ext->preferRtspSnapshot);
+                $candidates = !$disableRtsp ? cameraFfmpegSnapshotCandidates($cameraData, $preferRtsp) : [];
+                $rtspTimeout = $this->rtspSnapshotTimeoutFromExt($ext);
+
+                $skipLoadDevice = ($model === 'fake.json' && $candidates !== []);
+
+                $shot = null;
+
+                if (!$skipLoadDevice) {
+                    try {
+                        $device = loadDevice(
+                            type: 'camera',
+                            model: $cameraData['model'],
+                            url: $cameraData['url'],
+                            password: $cameraData['credentials'],
+                        );
+
+                        $shot = $device->getCamshot();
+                    } catch (Exception) {
+                        error_log("Error getting snapshot from '{$cameraData['url']}' using device method");
+                    }
+                }
+
+                if (is_string($shot) && snapshotBytesLookLikeImage($shot)) {
+                    return $shot;
+                }
+
+                if ($candidates !== [] && !$disableRtsp) {
+                    $jpeg = ffmpegTrySnapshotUrls($candidates, $rtspTimeout);
+
+                    if ($jpeg !== null) {
+                        return $jpeg;
+                    }
+                }
+
+                if (is_string($shot)) {
+                    return $shot;
+                }
+
+                if ($model === 'fake.json' && $skipLoadDevice) {
+                    try {
+                        $device = loadDevice(
+                            type: 'camera',
+                            model: $cameraData['model'],
+                            url: $cameraData['url'],
+                            password: $cameraData['credentials'],
+                        );
+
+                        return $device->getCamshot();
+                    } catch (Exception) {
+                        error_log("fake camshot stub fallback failed for '{$cameraData['url']}'");
+                    }
+                }
+
+                return null;
+            }
+
+            /**
+             * @param object|null $ext
+             */
+            private function rtspSnapshotTimeoutFromExt($ext): ?int {
+                if (!is_object($ext) || !isset($ext->rtspSnapshotTimeout)) {
                     return null;
                 }
+
+                $t = $ext->rtspSnapshotTimeout;
+
+                if (is_int($t)) {
+                    return $t;
+                }
+
+                if (is_string($t) && ctype_digit($t)) {
+                    return (int)$t;
+                }
+
+                return null;
             }
         }
     }
