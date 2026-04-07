@@ -27,7 +27,7 @@
             public static function index() {
                 if (loadBackend("analytics")) {
                     return [
-                        "GET" => "#same(addresses,addresses,GET)",
+                        "GET" => false,
                     ];
                 }
                 return false;

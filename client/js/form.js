@@ -112,7 +112,8 @@ function cardForm(params) {
         h += `<div class="card-header pointer" id="modalHeader">`;
         h += `<h3 class="card-title text-bold">`;
         if (params.topApply) {
-            h += `<button class="btn btn-primary btn-xs btn-tool-rbt-left mr-2 formOk" data-prefix=${_prefix} id="formApply" title="${i18n(params.apply)}"><i class="fas fa-fw fa-check-circle"></i></button> `;
+            let applyLabel = escapeHTML(i18n(params.apply));
+            h += `<button type="button" class="btn btn-primary btn-sm btn-tool-rbt-left mr-2 formOk" data-prefix=${_prefix} id="formApply" title="${applyLabel}"><i class="fas fa-fw fa-check-circle mr-1"></i>${applyLabel}</button> `;
         }
         h += params.title;
         h += `</h3>`;
@@ -763,25 +764,33 @@ function cardForm(params) {
 
     h += `</tbody>`;
 
+    // Не дублировать «Применить/Сохранить» внизу таблицы, если уже есть кнопка в шапке (topApply) —
+    // иначе в модалке сначала виден низ формы, потом шапка (мигание двух кнопок).
     if (params.footer) {
-        h += `<tfoot>`;
-        h += `<tr>`;
-        if (params.singleColumn) {
-            h += `<td>`;
-        } else {
-            h += `<td colspan="2">`;
-        }
-        h += `<button type="button" class="btn btn-primary formOk" data-prefix=${_prefix}>${i18n(params.apply)}</button>`;
-        if (typeof params.cancel === "function") {
-            h += `<button type="button" class="btn btn-default float-right formCancel" data-prefix=${_prefix}>${i18n("cancel")}</button>`;
-        } else {
-            if (params.delete) {
-                h += `<button type="button" class="btn btn-danger float-right formDelete" data-prefix=${_prefix}>${params.delete}</button>`;
+        let footerExtra = (typeof params.cancel === "function") || params.delete;
+        let showFooter = !params.topApply || footerExtra;
+        if (showFooter) {
+            h += `<tfoot>`;
+            h += `<tr>`;
+            if (params.singleColumn) {
+                h += `<td>`;
+            } else {
+                h += `<td colspan="2">`;
             }
+            if (!params.topApply) {
+                h += `<button type="button" class="btn btn-primary formOk" data-prefix=${_prefix}>${i18n(params.apply)}</button>`;
+            }
+            if (typeof params.cancel === "function") {
+                h += `<button type="button" class="btn btn-default float-right formCancel" data-prefix=${_prefix}>${i18n("cancel")}</button>`;
+            } else {
+                if (params.delete) {
+                    h += `<button type="button" class="btn btn-danger float-right formDelete" data-prefix=${_prefix}>${params.delete}</button>`;
+                }
+            }
+            h += `</td>`;
+            h += `</tr>`;
+            h += `</tfoot>`;
         }
-        h += `</td>`;
-        h += `</tr>`;
-        h += `</tfoot>`;
     }
 
     h += `</table>`;

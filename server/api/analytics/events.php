@@ -33,7 +33,7 @@
             public static function index() {
                 if (loadBackend("analytics")) {
                     return [
-                        "GET" => "#same(addresses,addresses,GET)",
+                        "GET" => "#same(analytics,stats,GET)",
                     ];
                 }
                 return false;

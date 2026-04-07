@@ -3,7 +3,7 @@
     /**
      * @api {get} /api/analytics/eventVideoPlay/:id поток mp4 архива с Content-Disposition: inline (просмотр в вкладке, не «Скачать»)
      *
-     * id — event_uuid. Query: houseId. Права: #same(addresses,addresses,GET).
+     * id — event_uuid. Query: houseId. Права: #same(analytics,stats,GET).
      */
 
     namespace api\analytics {
@@ -67,7 +67,7 @@
             public static function index() {
                 if (loadBackend("analytics")) {
                     return [
-                        "GET" => "#same(addresses,addresses,GET)",
+                        "GET" => "#same(analytics,stats,GET)",
                     ];
                 }
                 return false;

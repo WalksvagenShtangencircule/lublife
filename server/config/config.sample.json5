@@ -200,7 +200,13 @@
             "verify_ssl": true,
             "http_timeout": 25,
             "hls_url_template": "",
-            "embed_url_template": ""
+            "embed_url_template": "",
+            // true — фильтр по хосту ссылки сопоставления (RTSP из stream или запасной dvrStream); false — все подходящие камеры
+            "list_only_matching_rtsp_host": false,
+            // Каталог DVR на стороне Flussonic для новых потоков (см. PUT streams: dvr.root). Пусто — в конфиг уходит только dvr.expiration (сутки × 86400), root может взяться из шаблона сервера
+            "dvr_root": "",
+            // Если в интерфейсе много потоков «нет на сервере», хотя они есть: задайте лимит выборки GET /streams (например 5000 или 10000), если Flussonic отдаёт усечённый список по умолчанию
+            "streams_fetch_limit": 0
         },
 
         "configs": {

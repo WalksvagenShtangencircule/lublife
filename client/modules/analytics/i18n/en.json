@@ -37,6 +37,22 @@
             "eventVideo": {
                 "_title": "DVR clip for event",
                 "GET": "Access"
+            },
+            "events": {
+                "_title": "Event feed (API)",
+                "GET": "Access"
+            },
+            "camshot": {
+                "_title": "Event still/video (plog)",
+                "GET": "Access"
+            },
+            "eventPreview": {
+                "_title": "Event preview (list)",
+                "GET": "Access"
+            },
+            "eventVideoPlay": {
+                "_title": "In-browser DVR stream",
+                "GET": "Access"
             }
         }
     },

@@ -21,6 +21,43 @@
         always(modules.addresses.cameras.route);
     },
 
+    doAddCameraViaMediaserver: function (camera) {
+        loadingStart();
+        POST("cameras", "camera", false, camera).
+        done(function (resp) {
+            let cid = resp && resp.cameraId;
+            if (!cid) {
+                loadingDone();
+                error(i18n("errors.badRequest"));
+                return;
+            }
+            POST("mediaserver", "cameraStream", false, { cameraId: cid }).
+            done(function () {
+                message(i18n("mediaserver.cameraStreamCreated"));
+            }).
+            fail(function (xhr) {
+                let j = xhr && xhr.responseJSON ? xhr.responseJSON : null;
+                if (j && j.error === "applyUrlsFailed") {
+                    warning(i18n("mediaserver.applyUrlsFailed"));
+                } else if (j && (j.cameraId != null || j.error === "flussonicError")) {
+                    warning(i18n("mediaserver.cameraCreatedFlussonicFailed"));
+                } else {
+                    FAIL(xhr);
+                }
+            }).
+            always(function () {
+                loadingDone();
+                if (modules.mediaserver && typeof modules.mediaserver.route === "function") {
+                    modules.mediaserver.route({});
+                }
+            });
+        }).
+        fail(function (xhr) {
+            FAIL(xhr);
+            loadingDone();
+        });
+    },
+
     doModifyCamera: function (camera, params) {
         loadingStart();
         PUT("cameras", "camera", camera.cameraId, camera).
@@ -43,7 +80,23 @@
         always(modules.addresses.cameras.route);
     },
 
-    addCamera: function () {
+    addCamera: function (options) {
+        options = options || {};
+        if (options.mediaserver && !modules.addresses.cameras.meta) {
+            loadingStart();
+            QUERY("cameras", "cameras", {}, true).
+            done(function (r) {
+                modules.addresses.cameras.meta = r.cameras;
+                loadingDone();
+                modules.addresses.cameras.addCamera(options);
+            }).
+            fail(function (x) {
+                loadingDone();
+                FAIL(x);
+            });
+            return;
+        }
+
         let models = [];
 
         for (let id in modules.addresses.cameras.meta.models) {
@@ -88,7 +141,7 @@
         let t = buildTreeFromPaths(modules.addresses.cameras.meta.tree);
 
         cardForm({
-            title: i18n("addresses.addCamera"),
+            title: options.mediaserver ? i18n("mediaserver.addCameraStreamTitle") : i18n("addresses.addCamera"),
             footer: true,
             borderless: true,
             topApply: true,
@@ -134,22 +187,52 @@
                     title: i18n("addresses.stream"),
                     placeholder: "rtsp://",
                     validate: v => {
-                        if (v) {
-                            try {
-                                if (!/^rtsp:\/\/.+/.test(v)) {
-                                    throw new Error();
-                                }
-                                new URL(v);
-                                return true;
-                            } catch (_) {
-                                return false;
+                        if (!v || !$.trim(String(v))) {
+                            return !options.mediaserver;
+                        }
+                        try {
+                            if (!/^rtsps?:\/\/.+/.test(v)) {
+                                throw new Error();
                             }
-                        } else {
+                            new URL(v);
                             return true;
+                        } catch (_) {
+                            return false;
                         }
                     },
                     tab: i18n("addresses.primary"),
                 },
+                ...(options.mediaserver ? [
+                    {
+                        id: "mediaserverStreamName",
+                        type: "text",
+                        title: i18n("mediaserver.mediaserverStreamNameField"),
+                        placeholder: "Lug_1_2",
+                        hint: i18n("mediaserver.mediaserverStreamNameHint"),
+                        required: true,
+                        validate: v => {
+                            let s = $.trim(String(v !== undefined && v !== null ? v : ""));
+                            if (!s) {
+                                return false;
+                            }
+                            return /^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(s);
+                        },
+                        tab: i18n("addresses.primary"),
+                    },
+                    {
+                        id: "dvrRetentionDays",
+                        type: "text",
+                        title: i18n("mediaserver.dvrRetentionDays"),
+                        placeholder: "1",
+                        value: "1",
+                        required: true,
+                        validate: v => {
+                            let n = parseInt(String(v !== undefined && v !== null ? v : "").trim(), 10);
+                            return Number.isFinite(n) && n >= 1 && n <= 3660;
+                        },
+                        tab: i18n("addresses.primary"),
+                    },
+                ] : []),
                 {
                     id: "credentials",
                     type: "text",
@@ -176,28 +259,27 @@
                     placeholder: i18n("addresses.cameraName"),
                     tab: i18n("addresses.primary"),
                 },
-                {
+                ...(options.mediaserver ? [] : [{
                     id: "dvrStream",
                     type: "text",
                     title: i18n("addresses.dvrStream"),
                     placeholder: "https://",
                     validate: v => {
-                        if (v) {
-                            try {
-                                if (!/^https?:\/\/.+/.test(v)) {
-                                    throw new Error();
-                                }
-                                new URL(v);
-                                return true;
-                            } catch (_) {
+                        if (!v || !$.trim(String(v))) {
+                            return true;
+                        }
+                        try {
+                            if (!/^https?:\/\/.+/.test(v)) {
                                 return false;
                             }
-                        } else {
+                            new URL(v);
                             return true;
+                        } catch (_) {
+                            return false;
                         }
                     },
                     tab: i18n("addresses.primary"),
-                },
+                }]),
                 {
                     id: "sound",
                     type: "noyes",
@@ -435,6 +517,41 @@
                 }
             },
             callback: result => {
+                if (options.mediaserver) {
+                    if (!$.trim(result.stream || "")) {
+                        error(i18n("mediaserver.rtspRequiredForMediaserver"));
+                        return;
+                    }
+                    let msn = $.trim(String(result.mediaserverStreamName !== undefined && result.mediaserverStreamName !== null ? result.mediaserverStreamName : ""));
+                    if (!msn) {
+                        error(i18n("mediaserver.mediaserverStreamNameRequired"));
+                        return;
+                    }
+                    if (!/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(msn)) {
+                        error(i18n("mediaserver.mediaserverStreamNameInvalid"));
+                        return;
+                    }
+                    let days = parseInt(String(result.dvrRetentionDays !== undefined && result.dvrRetentionDays !== null ? result.dvrRetentionDays : "").trim(), 10);
+                    if (!Number.isFinite(days) || days < 1 || days > 3660) {
+                        error(i18n("mediaserver.dvrRetentionDaysInvalid"));
+                        return;
+                    }
+                    let ext = result.ext;
+                    if (typeof ext === "string") {
+                        try {
+                            ext = $.trim(ext) ? JSON.parse(ext) : {};
+                        } catch (e) {
+                            ext = {};
+                        }
+                    }
+                    if (!ext || typeof ext !== "object") {
+                        ext = {};
+                    }
+                    ext.mediaserverStreamName = msn;
+                    ext.dvrRetentionDays = days;
+                    result.ext = ext;
+                    result.dvrStream = "";
+                }
                 let g = result.geo.split(",");
                 result.lat = $.trim(g[0]);
                 result.lon = $.trim(g[1]);
@@ -444,7 +561,11 @@
                 result.distance = $.trim(p[2]);
                 result.rcArea = [];
                 result.mdArea = [];
-                modules.addresses.cameras.doAddCamera(result);
+                if (options.mediaserver) {
+                    modules.addresses.cameras.doAddCameraViaMediaserver(result);
+                } else {
+                    modules.addresses.cameras.doAddCamera(result);
+                }
             },
         });
     },

@@ -7,7 +7,7 @@
      * фрагмента с DVR: camera_id из domophone в plog + интервал date±plog_archive_half_duration_sec).
      * Не то же самое, что mobile/cctv/recPrepare (очередь dvrExports), но тот же медиасервер и окно по времени.
      *
-     * id — event_uuid из plog. Query: houseId. Права: #same(addresses,addresses,GET).
+     * id — event_uuid из plog. Query: houseId. Права: #same(analytics,stats,GET).
      */
 
     namespace api\analytics {
@@ -36,7 +36,7 @@
             public static function index() {
                 if (loadBackend("analytics")) {
                     return [
-                        "GET" => "#same(addresses,addresses,GET)",
+                        "GET" => "#same(analytics,stats,GET)",
                     ];
                 }
                 return false;

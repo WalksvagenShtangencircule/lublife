@@ -1,7 +1,7 @@
 <?php
 
     /**
-     * @api {get} /api/mediaserver/streams Список потоков Flussonic + привязка к камерам (имя = первый сегмент пути dvrStream на этом сервере).
+     * @api {get} /api/mediaserver/streams Список потоков + камеры: приоритет ext.mediaserverStreamName / flussonicStreamName; для старых карточек — имя из URL dvrStream.
      */
 
     namespace api\mediaserver {

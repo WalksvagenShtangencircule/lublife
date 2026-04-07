@@ -3,7 +3,7 @@
     /**
      * @api {get} /api/analytics/camshot/:id кадр/ролик события plog по UUID файла (как в мобильном plogCamshot)
      *
-     * Права: #same(addresses,addresses,GET) — как в рабочей версии (доступ по правам на адреса).
+     * Права: #same(analytics,stats,GET) — вместе с остальными методами модуля аналитики.
      * id: как в git — fromGUIDv4($raw); плюс plogImageIdToStorageId для 32 hex без дефисов из ClickHouse.
      * Порядок кандидатов: сначала legacy (как в HEAD), затем plog при отличии — до непустого тела файла.
      */
@@ -103,7 +103,7 @@
             public static function index() {
                 if (loadBackend("analytics")) {
                     return [
-                        "GET" => "#same(addresses,addresses,GET)",
+                        "GET" => "#same(analytics,stats,GET)",
                     ];
                 }
                 return false;

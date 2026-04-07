@@ -3,7 +3,7 @@
     /**
      * @api {get} /api/analytics/eventPreview/:id кадр для списка событий (DVR → середина окна, иначе plog), + признак mp4
      *
-     * id — event_uuid. Query: houseId. Права: #same(addresses,addresses,GET).
+     * id — event_uuid. Query: houseId. Права: #same(analytics,stats,GET).
      */
 
     namespace api\analytics {
@@ -32,7 +32,7 @@
             public static function index() {
                 if (loadBackend("analytics")) {
                     return [
-                        "GET" => "#same(addresses,addresses,GET)",
+                        "GET" => "#same(analytics,stats,GET)",
                     ];
                 }
                 return false;
