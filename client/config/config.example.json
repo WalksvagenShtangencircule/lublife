@@ -9,6 +9,7 @@
         "asterisk",
         "addresses",
         "analytics",
+        "mediaserver",
         "queues",
         "users",
         "groups",

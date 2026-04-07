@@ -192,6 +192,17 @@
             "series_mode": "plog_composite",
         },
 
+        // Медиасервер (Flussonic): REST к тому же хосту, что dvr.servers[].url; логин/пароль API — api_user/api_password в записи сервера или Bearer из management_token.
+        "mediaserver": {
+            "backend": "internal",
+            "dvr_server_index": 0,
+            "api_prefix": "/streamer/api/v3",
+            "verify_ssl": true,
+            "http_timeout": 25,
+            "hls_url_template": "",
+            "embed_url_template": ""
+        },
+
         "configs": {
             "backend": "json",
         },
@@ -205,6 +216,8 @@
                     "url": "https://video.server.hostname:8443",
                     "token": "<!-- mediaserver security token here (only if you use it) --!>",
                     "hlsMode": "mpegts",
+                    "api_user": "<!-- для Flussonic REST: логин view_auth/edit_auth; иначе оставьте пустым и используйте management_token как Bearer --!>",
+                    "api_password": "<!-- пароль для Basic auth к /streamer/api/v3 --!>",
                     "management_ip": "127.0.0.1",
                     "management_port": "8086",
                     "management_token": "<!-- management token --!>"
