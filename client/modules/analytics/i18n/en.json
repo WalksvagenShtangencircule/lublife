@@ -65,9 +65,14 @@
     "activeUsersPeriodLabel": "Uniques, %d d",
     "chartWauMauBarsDataset": "WAU vs %d-day window",
     "archiveVideoTitle": "DVR archive video",
+    "eventPreviewTitle": "Preview (archive frame or plog)",
+    "eventFrameTitle": "Event snapshot (plog)",
     "archiveVideoWait": "Loading…",
     "archiveVideoLoading": "Loading video…",
     "archiveVideoError": "Could not get archive URL",
+    "archiveVideoTimeout": "Timeout: DVR did not respond",
+    "camshotTimeout": "Timeout: snapshot did not load",
     "archiveVideoNoApi": "No access to archive API",
-    "archiveVideoOpenTab": "Open video in new tab"
+    "archiveVideoOpenTab": "Open video",
+    "mediaNoSnapshot": "No video and no stored snapshot"
 }

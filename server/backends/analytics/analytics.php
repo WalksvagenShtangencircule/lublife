@@ -20,6 +20,14 @@
              * @return array{url: string, start: int, finish: int}|false
              */
             abstract public function getDvrArchiveVideoUrlForEvent(int $houseId, string $eventUuid);
+
+            /**
+             * Превью строки списка: кадр с DVR (середина окна date±half) при успешной загрузке изображения,
+             * иначе кадр plog из GridFS; плюс признак наличия mp4 для отдельного открытия.
+             *
+             * @return array{preview: ?array{contentType: string, base64: string}, previewSource: string, hasVideo: bool}|null null — событие не найдено / нет доступа
+             */
+            abstract public function getEventMediaPreview(int $houseId, string $eventUuid);
         }
     }
 

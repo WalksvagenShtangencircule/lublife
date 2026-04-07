@@ -1,20 +1,16 @@
 <?php
 
     /**
-     * @api {get} /api/analytics/eventVideo/:id URL mp4-фрагмента архива DVR вокруг времени события.
+     * @api {get} /api/analytics/eventPreview/:id кадр для списка событий (DVR → середина окна, иначе plog), + признак mp4
      *
-     * Источник: backends.dvr::getUrlOfRecord (тот же тип ссылок, что строит мобильный клиент для выгрузки
-     * фрагмента с DVR: camera_id из domophone в plog + интервал date±plog_archive_half_duration_sec).
-     * Не то же самое, что mobile/cctv/recPrepare (очередь dvrExports), но тот же медиасервер и окно по времени.
-     *
-     * id — event_uuid из plog. Query: houseId. Права: #same(addresses,addresses,GET).
+     * id — event_uuid. Query: houseId. Права: #same(addresses,addresses,GET).
      */
 
     namespace api\analytics {
 
         use api\api;
 
-        class eventVideo extends api {
+        class eventPreview extends api {
 
             public static function GET($params) {
                 $houseId = isset($params["houseId"]) ? (int)$params["houseId"] : 0;
@@ -26,11 +22,11 @@
                 if (!$a) {
                     return api::ERROR("notFound");
                 }
-                $r = $a->getDvrArchiveVideoUrlForEvent($houseId, $eventUuid);
-                if ($r === false || empty($r["url"])) {
+                $r = $a->getEventMediaPreview($houseId, $eventUuid);
+                if ($r === null) {
                     return api::ERROR("notFound");
                 }
-                return api::ANSWER($r, "eventVideo");
+                return api::ANSWER($r, "eventPreview");
             }
 
             public static function index() {

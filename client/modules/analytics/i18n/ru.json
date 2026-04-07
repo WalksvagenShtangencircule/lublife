@@ -65,9 +65,14 @@
     "activeUsersPeriodLabel": "Уникальные, %d дн.",
     "chartWauMauBarsDataset": "WAU и период (%d дн.)",
     "archiveVideoTitle": "Видео архива (DVR)",
+    "eventPreviewTitle": "Превью (кадр из архива или plog)",
+    "eventFrameTitle": "Кадр события (plog)",
     "archiveVideoWait": "Загрузка…",
     "archiveVideoLoading": "Загрузка видео…",
     "archiveVideoError": "Не удалось получить ссылку на архив",
+    "archiveVideoTimeout": "Таймаут: архив DVR не ответил",
+    "camshotTimeout": "Таймаут: кадр не загрузился",
     "archiveVideoNoApi": "Нет доступа к API архива",
-    "archiveVideoOpenTab": "Открыть видео в новой вкладке"
+    "archiveVideoOpenTab": "Открыть видео",
+    "mediaNoSnapshot": "Нет ни видео, ни сохранённого кадра"
 }

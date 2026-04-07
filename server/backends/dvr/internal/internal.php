@@ -10,6 +10,22 @@
 
         class internal extends dvr {
 
+            /**
+             * Значение token= для Flussonic в query: допустимы «грязные» шаблоны из конфига (пробелы, &lt;!— … —&gt;),
+             * иначе PHP libcurl отвергает URL. Кодируем только значение.
+             */
+            private function appendFlussonicTokenQuery(string $url, string $token): string {
+                $t = trim($token);
+                if ($t === "") {
+                    return $url;
+                }
+                $glue = strpos($url, "?") !== false ? "&" : "?";
+                if (preg_match('/^token\s*=\s*(.+)\s*$/i', $t, $m)) {
+                    return $url . $glue . "token=" . rawurlencode($m[1]);
+                }
+                return $url . $glue . "token=" . rawurlencode($t);
+            }
+
             function getRangesForNimble($host, $port, $stream, $token) {
 
                 $salt= rand(0, 1000000);
@@ -420,7 +436,8 @@
                         $from = $start;
                         $duration = (int)$finish - (int)$start;
 
-                        $request_url = $this->getDVRStreamURLForCam($cam)."/archive-$from-$duration.mp4?token=$flussonic_token";
+                        $request_url = $this->getDVRStreamURLForCam($cam) . "/archive-$from-$duration.mp4";
+                        $request_url = $this->appendFlussonicTokenQuery($request_url, $flussonic_token);
                 }
 
                 return $request_url;
@@ -471,6 +488,7 @@
                     //     "success": 1,
                     //     "sid": {sid} // Уникальный идентификатор сессии, используется для остальных запросов
                     // }
+                    $subscriberId = 0;
                     $parsed_url = parse_url($cam['dvrStream']);
 
                     $scheme   = isset($parsed_url['scheme']) ? $parsed_url['scheme'] . '://' : '';
@@ -492,8 +510,6 @@
                         parse_str($parsed_url['query'], $parsed_query);
                         $guid = isset($parsed_query['channel']) ? $parsed_query['channel'] : '';
                     }
-                    $from_time = urlencode(gmdate("d.m.Y H:i:s", $start));
-                    $to_time = urlencode(gmdate("d.m.Y H:i:s", $finish));
 
                     $request_url = "$scheme$user$pass$host$port/login?$token";
                     $arrContextOptions=array(
@@ -552,8 +568,14 @@
                 default:
                     // Flussonic Server by default
                     $url = "$prefix/$time-preview.mp4";
-                    if (isset($dvr['token']) && strlen($dvr['token']) !== 0)
-                        $url = $url . "?token=" . $dvr['token'];
+                    if (isset($dvr['token']) && strlen((string)$dvr['token']) !== 0) {
+                        $url = $this->appendFlussonicTokenQuery($url, (string)$dvr['token']);
+                    } else {
+                        $tk = $this->getDVRTokenForCam($cam, 0);
+                        if ($tk !== '') {
+                            $url = $this->appendFlussonicTokenQuery($url, $tk);
+                        }
+                    }
                     return $url;
                 }
                 return false;

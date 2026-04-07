@@ -4,6 +4,10 @@
     _chEvDay: null,
     _chEvType: null,
 
+    _eventPreviewAjaxRunning: 0,
+    _eventPreviewAjaxMax: 3,
+    _eventPreviewAjaxQueue: [],
+
     destroyChart: function (prop) {
         if (this[prop]) {
             this[prop].destroy();
@@ -105,7 +109,7 @@
             .replace(/"/g, "&quot;");
     },
 
-    /** Только нулевой UUID из CH — запрос camshot всегда 404 */
+    /** Нулевой UUID из CH — файла кадра нет */
     isNilImageUuid: function (s) {
         let t = String(s).trim().toLowerCase();
         if (t === "00000000-0000-0000-0000-000000000000") {
@@ -121,70 +125,112 @@
         return d.getFullYear() + "-" + z(d.getMonth() + 1) + "-" + z(d.getDate()) + " " + z(d.getHours()) + ":" + z(d.getMinutes()) + ":" + z(d.getSeconds());
     },
 
-    attachEventCamshots: function ($root) {
-        if (typeof IntersectionObserver === "undefined") {
-            $root.find(".analytics-camshot-slot").each(function () {
-                modules.analytics.loadCamshotIntoSlot($(this));
-            });
+    /**
+     * Превью в списке: один запрос (кадр с DVR в середине окна или plog), без встраивания mp4.
+     * IntersectionObserver + очередь до _eventPreviewAjaxMax параллельных AJAX.
+     */
+    attachEventPreviews: function ($root) {
+        let nodes = $root.find(".analytics-event-preview-slot").toArray();
+        if (!nodes.length) {
             return;
         }
-        let io = new IntersectionObserver(function (entries) {
-            entries.forEach(function (ent) {
-                if (!ent.isIntersecting) {
-                    return;
+        function startSlot($slot) {
+            if ($slot.data("previewStarted")) {
+                return;
+            }
+            $slot.data("previewStarted", true);
+            modules.analytics.queueEventPreviewSlot($slot);
+        }
+        if (typeof IntersectionObserver !== "undefined") {
+            let io = new IntersectionObserver(function (entries) {
+                for (let i = 0; i < entries.length; i++) {
+                    if (!entries[i].isIntersecting) {
+                        continue;
+                    }
+                    let el = entries[i].target;
+                    io.unobserve(el);
+                    startSlot($(el));
                 }
-                io.unobserve(ent.target);
-                modules.analytics.loadCamshotIntoSlot($(ent.target));
+            }, { root: null, rootMargin: "120px", threshold: 0.01 });
+            for (let j = 0; j < nodes.length; j++) {
+                io.observe(nodes[j]);
+            }
+        } else {
+            for (let k = 0; k < nodes.length; k++) {
+                startSlot($(nodes[k]));
+            }
+        }
+    },
+
+    runNextEventPreview: function () {
+        let t = modules.analytics;
+        while (t._eventPreviewAjaxRunning < t._eventPreviewAjaxMax && t._eventPreviewAjaxQueue.length) {
+            let $next = t._eventPreviewAjaxQueue.shift();
+            if (!$next || !$next.length) {
+                continue;
+            }
+            t._eventPreviewAjaxRunning++;
+            t.loadEventPreviewSlotNow($next, function () {
+                t._eventPreviewAjaxRunning--;
+                t.runNextEventPreview();
             });
-        }, { root: null, rootMargin: "80px", threshold: 0.01 });
-        $root.find(".analytics-camshot-slot").each(function () {
-            io.observe(this);
+        }
+    },
+
+    queueEventPreviewSlot: function ($slot) {
+        modules.analytics._eventPreviewAjaxQueue.push($slot);
+        modules.analytics.runNextEventPreview();
+    },
+
+    /**
+     * Открыть mp4 в новой вкладке через прокси (inline), с Bearer — без прямой ссылки на DVR (attachment).
+     */
+    openEventArchiveVideo: function (eventUuid, houseId) {
+        let can = (AVAIL("analytics", "eventVideoPlay", "GET") || AVAIL("analytics", "stats", "GET"));
+        if (!can) {
+            warning(i18n("analytics.archiveVideoNoApi"));
+            return;
+        }
+        let url = lStore("_server") + "/analytics/eventVideoPlay/" + encodeURIComponent(eventUuid) + "?" + $.param({ houseId: houseId, _: Math.random() });
+        let l = lStore("_lang") || config.defaultLanguage || "ru";
+        fetch(url, {
+            method: "GET",
+            headers: {
+                Authorization: "Bearer " + lStore("_token"),
+                "Accept-Language": l,
+                "X-Api-Refresh": "1",
+            },
+        }).then(function (resp) {
+            if (!resp.ok) {
+                throw new Error("badStatus");
+            }
+            return resp.blob();
+        }).then(function (blob) {
+            let objUrl = URL.createObjectURL(blob);
+            window.open(objUrl, "_blank", "noopener,noreferrer");
+            setTimeout(function () { URL.revokeObjectURL(objUrl); }, 180000);
+        }).catch(function () {
+            error(i18n("analytics.archiveVideoError"));
         });
     },
 
-    attachEventArchiveVideos: function ($root) {
-        let $slots = $root.find(".analytics-event-video-slot");
-        if (!$slots.length) {
-            return;
-        }
-        if (typeof IntersectionObserver === "undefined") {
-            $slots.each(function () {
-                modules.analytics.loadArchiveVideoIntoSlot($(this));
-            });
-            return;
-        }
-        let io = new IntersectionObserver(function (entries) {
-            entries.forEach(function (ent) {
-                if (!ent.isIntersecting) {
-                    return;
-                }
-                io.unobserve(ent.target);
-                modules.analytics.loadArchiveVideoIntoSlot($(ent.target));
-            });
-        }, { root: null, rootMargin: "80px", threshold: 0.01 });
-        $slots.each(function () {
-            io.observe(this);
-        });
-    },
-
-    loadArchiveVideoIntoSlot: function ($slot) {
+    loadEventPreviewSlotNow: function ($slot, doneFn) {
         let eventUuid = $.trim($slot.attr("data-event-uuid") || "");
         let houseId = $.trim($slot.attr("data-house-id") || "");
-        if (!eventUuid || !houseId) {
+        let tryPreview = eventUuid !== "" && houseId !== "" && (AVAIL("analytics", "eventPreview", "GET") || AVAIL("analytics", "stats", "GET"));
+        if (!tryPreview) {
+            $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.previewNoApi") + "</span>");
+            if (typeof doneFn === "function") {
+                doneFn();
+            }
             return;
         }
-        // #same(addresses) — после reindex обычно есть eventVideo; иначе как у camshot/stats
-        let canVideo = AVAIL("analytics", "eventVideo", "GET") || AVAIL("analytics", "camshot", "GET") || AVAIL("analytics", "stats", "GET");
-        if (!canVideo) {
-            $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.archiveVideoNoApi") + "</span>");
-            return;
-        }
-        $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.archiveVideoLoading") + "</span>");
+        $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.previewLoading") + "</span>");
         let l = lStore("_lang") || config.defaultLanguage || "ru";
         $.ajax({
-            url: lStore("_server") + "/analytics/eventVideo/" + encodeURIComponent(eventUuid) + "?" + $.param({ houseId: houseId, _: Math.random() }),
+            url: lStore("_server") + "/analytics/eventPreview/" + encodeURIComponent(eventUuid) + "?" + $.param({ houseId: houseId, _: Math.random() }),
             type: "GET",
-            timeout: 120000,
+            timeout: 90000,
             beforeSend: function (xhr) {
                 xhr.setRequestHeader("Authorization", "Bearer " + lStore("_token"));
                 xhr.setRequestHeader("Accept-Language", l);
@@ -196,81 +242,52 @@
                     try {
                         r = JSON.parse(r);
                     } catch (e1) {
-                        $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.archiveVideoError") + "</span>");
-                        return;
-                    }
-                }
-                let url = r && r.eventVideo && r.eventVideo.url ? String(r.eventVideo.url) : "";
-                if (!url) {
-                    $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.archiveVideoError") + "</span>");
-                    return;
-                }
-                $slot.empty().append(
-                    $("<video>", { controls: true, playsinline: true, preload: "metadata" }).attr("src", url).css({ maxWidth: "100%", maxHeight: "220px" }),
-                    $("<div>", { class: "small mt-1" }).append(
-                        $("<a>", { href: url, target: "_blank", rel: "noopener noreferrer" }).text(i18n("analytics.archiveVideoOpenTab"))
-                    )
-                );
-            }).
-            fail(function () {
-                $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.archiveVideoError") + "</span>");
-            });
-    },
-
-    loadCamshotIntoSlot: function ($slot) {
-        // attr: сырой data-uuid; .data("uuid") кэширует и может исказить строку с дефисами
-        let uuid = $.trim($slot.attr("data-uuid") || "");
-        if (!uuid) {
-            return;
-        }
-        if (modules.analytics.isNilImageUuid(uuid)) {
-            $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.noPreview") + "</span>");
-            return;
-        }
-        if (!AVAIL("analytics", "camshot", "GET")) {
-            $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.previewNoApi") + "</span>");
-            return;
-        }
-        $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.previewLoading") + "</span>");
-        let l = lStore("_lang") || config.defaultLanguage || "ru";
-        // Без dataType: "json" (как в QUERYID): иначе при parsererror/не-JSON сразу fail, хотя ответ может быть валиден
-        $.ajax({
-            url: lStore("_server") + "/analytics/camshot/" + encodeURIComponent(uuid) + "?" + $.param({ _: Math.random() }),
-            type: "GET",
-            timeout: 120000,
-            beforeSend: function (xhr) {
-                xhr.setRequestHeader("Authorization", "Bearer " + lStore("_token"));
-                xhr.setRequestHeader("Accept-Language", l);
-                xhr.setRequestHeader("X-Api-Refresh", "1");
-            },
-        }).
-            done(function (r) {
-                if (typeof r === "string") {
-                    try {
-                        r = JSON.parse(r);
-                    } catch (e) {
                         $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.previewError") + "</span>");
                         return;
                     }
                 }
-                if (!r || !r.camshot || !r.camshot.base64) {
+                if (r && r.error) {
                     $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.previewError") + "</span>");
                     return;
                 }
-                let ct = r.camshot.contentType || "image/jpeg";
-                let src = "data:" + ct + ";base64," + r.camshot.base64;
-                if (ct.indexOf("video/") === 0) {
-                    $slot.empty().append(
-                        $("<video>", { controls: true, playsinline: true }).attr("src", src).css({ maxWidth: "100%", maxHeight: "240px" })
-                    );
+                if (r && r["200"] && typeof r["200"] === "object") {
+                    r = r["200"];
+                }
+                let ep = r && r.eventPreview ? r.eventPreview : null;
+                if (!ep) {
+                    $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.previewError") + "</span>");
+                    return;
+                }
+                let hasVid = !!ep.hasVideo;
+                let p = ep.preview;
+                let $wrap = $("<div>", { class: "w-100" });
+                if (p && p.base64) {
+                    let ct = p.contentType || "image/jpeg";
+                    let src = "data:" + ct + ";base64," + p.base64;
+                    $wrap.append($("<img>", { alt: "" }).attr("src", src).css({ maxWidth: "100%", maxHeight: "220px", objectFit: "contain", display: "block" }));
                 } else {
-                    $slot.empty().append(
-                        $("<img>", { alt: "" }).attr("src", src).css({ maxWidth: "100%", maxHeight: "240px", objectFit: "contain", display: "block" })
-                    );
+                    $wrap.append($("<span>", { class: "text-muted small p-2 d-block" }).text(i18n("analytics.mediaNoSnapshot")));
+                }
+                if (hasVid) {
+                    let $btn = $("<button>", { type: "button", class: "btn btn-sm btn-outline-primary mt-2" }).text(i18n("analytics.archiveVideoOpenTab"));
+                    $btn.on("click", function () {
+                        modules.analytics.openEventArchiveVideo(eventUuid, houseId);
+                    });
+                    $wrap.append($btn);
+                }
+                $slot.empty().append($wrap);
+            }).
+            fail(function (xhr, status) {
+                if (status === "timeout") {
+                    $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.camshotTimeout") + "</span>");
+                } else {
+                    $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.previewError") + "</span>");
                 }
             }).
-            fail(function () {
-                $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.previewError") + "</span>");
+            always(function () {
+                if (typeof doneFn === "function") {
+                    doneFn();
+                }
             });
     },
 
@@ -482,19 +499,19 @@
                 if (e.rfid) {
                     extra.push("RFID " + modules.analytics.escapeHtml(String(e.rfid)));
                 }
-                let uuid = (e.image_uuid != null && String(e.image_uuid).trim() !== "") ? String(e.image_uuid).trim() : "";
                 let evUid = (e.event_uuid != null && String(e.event_uuid).trim() !== "") ? String(e.event_uuid).trim() : "";
-                let camId = e.camera_id != null ? parseInt(e.camera_id, 10) : 0;
-                if (isNaN(camId)) {
-                    camId = 0;
-                }
-                let videoCol = "";
-                if (camId > 0 && evUid !== "") {
-                    videoCol =
-                        "<div class=\"mt-2\"><div class=\"small text-muted mb-1\">" + modules.analytics.escapeHtml(i18n("analytics.archiveVideoTitle")) + "</div>" +
-                        "<div class=\"analytics-event-video-slot rounded border bg-light d-flex flex-column align-items-stretch justify-content-center\" style=\"min-height:120px;overflow:hidden;\" data-event-uuid=\"" +
+                let mediaCol;
+                if (evUid !== "") {
+                    mediaCol =
+                        "<div>" +
+                        "<div class=\"small text-muted mb-1\">" + modules.analytics.escapeHtml(i18n("analytics.eventPreviewTitle")) + "</div>" +
+                        "<div class=\"analytics-event-preview-slot rounded border bg-light d-flex flex-column align-items-stretch justify-content-center\" style=\"min-height:120px;overflow:hidden;\" data-event-uuid=\"" +
                         modules.analytics.escapeHtml(evUid) + "\" data-house-id=\"" + modules.analytics.escapeHtml(String(hid)) + "\">" +
-                        "<span class=\"text-muted small p-2\">" + i18n("analytics.archiveVideoWait") + "</span></div></div>";
+                        "<span class=\"text-muted small p-2\">" + i18n("analytics.previewWait") + "</span></div></div>";
+                } else {
+                    mediaCol =
+                        "<div><div class=\"small text-muted mb-1\">" + modules.analytics.escapeHtml(i18n("analytics.eventPreviewTitle")) + "</div>" +
+                        "<div class=\"rounded border bg-light p-3 small text-muted\">" + modules.analytics.escapeHtml(i18n("analytics.mediaNoSnapshot")) + "</div></div>";
                 }
                 let flatLine = "";
                 if (e.flatNumber != null && String(e.flatNumber).trim() !== "") {
@@ -508,11 +525,7 @@
                     "<div class=\"card mb-2 analytics-event-card\">" +
                     "<div class=\"card-body py-2 px-3\">" +
                     "<div class=\"row align-items-start\">" +
-                    "<div class=\"col-md-4 col-lg-3 mb-2 mb-md-0\">" +
-                    "<div class=\"analytics-camshot-slot rounded border bg-light d-flex align-items-center justify-content-center\" style=\"min-height:140px;overflow:hidden;\" data-uuid=\"" +
-                    modules.analytics.escapeHtml(uuid) + "\">" +
-                    (uuid ? ("<span class=\"text-muted small p-2\">" + i18n("analytics.previewWait") + "</span>") : ("<span class=\"text-muted small p-2\">" + i18n("analytics.noPreview") + "</span>")) +
-                    "</div>" + videoCol + "</div>" +
+                    "<div class=\"col-md-4 col-lg-3 mb-2 mb-md-0\">" + mediaCol + "</div>" +
                     "<div class=\"col-md-8 col-lg-9\">" +
                     "<div class=\"small text-muted\">" + modules.analytics.escapeHtml(ts) + "</div>" +
                     "<div class=\"font-weight-bold\">" + modules.analytics.escapeHtml(String(addr)) + "</div>" +
@@ -526,8 +539,7 @@
                 );
             }
             el.html(parts.join(""));
-            modules.analytics.attachEventCamshots(el);
-            modules.analytics.attachEventArchiveVideos(el);
+            modules.analytics.attachEventPreviews(el);
         }).
         fail(FAIL).
         always(loadingDone);

@@ -44,7 +44,7 @@
             }
 
             /**
-             * Нулевой UUID в ClickHouse = «кадра нет»; не отдаём в UI, чтобы не дергать camshot (всегда 404).
+             * Нулевой UUID в CH — кадра в GridFS нет.
              */
             private function stripNilImageUuid($v) {
                 if ($v === null || $v === "") {
@@ -438,8 +438,15 @@
                     if (isset($row["event_uuid"])) {
                         $row["event_uuid"] = trim((string)$row["event_uuid"]);
                     }
+                    if (!array_key_exists("image_uuid", $row) && array_key_exists("Image_UUID", $row)) {
+                        $row["image_uuid"] = $row["Image_UUID"];
+                    }
                     if (array_key_exists("image_uuid", $row)) {
-                        $row["image_uuid"] = $this->stripNilImageUuid($row["image_uuid"]);
+                        $iu = $row["image_uuid"];
+                        if ($iu !== null && !is_scalar($iu)) {
+                            $iu = is_object($iu) && method_exists($iu, "__toString") ? (string)$iu : null;
+                        }
+                        $row["image_uuid"] = $this->stripNilImageUuid($iu);
                     }
                     $row["camera_id"] = 0;
                     if (isset($row["domophone"]) && is_string($row["domophone"]) && $row["domophone"] !== "") {
@@ -475,29 +482,30 @@
             }
 
             /**
-             * @inheritDoc
+             * Одна строка plog для архива DVR / превью (дата, domophone, кадр).
              */
-            public function getDvrArchiveVideoUrlForEvent(int $houseId, string $eventUuid) {
+            private function selectPlogEventForArchive(int $houseId, string $eventUuid): ?array {
                 if ($houseId <= 0) {
-                    return false;
+                    return null;
                 }
                 $eventUuid = trim($eventUuid);
                 if (!preg_match(
                     '/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/',
                     $eventUuid
                 )) {
-                    return false;
+                    return null;
                 }
                 $flatIds = $this->flatIdsForHouse($houseId);
                 $flatFilter = $this->flatFilterSql($flatIds);
                 if ($flatFilter === "1=0") {
-                    return false;
+                    return null;
                 }
                 $eu = strtolower($eventUuid);
                 $q = "
                     select
                         date,
-                        toJSONString(domophone) as domophone
+                        toJSONString(domophone) as domophone,
+                        image_uuid
                     from plog
                     where
                         event_uuid = toUUID('" . $eu . "')
@@ -507,9 +515,196 @@
                 ";
                 $rows = $this->chSelect($q);
                 if ($rows === null || !count($rows)) {
+                    return null;
+                }
+                return $rows[0];
+            }
+
+            private function fetchBinaryFromUrl(string $url, int $maxBytes = 9437184): ?array {
+                if ($url === "") {
+                    return null;
+                }
+                $ch = curl_init($url);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
+                $data = curl_exec($ch);
+                $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $ct = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+                curl_close($ch);
+                if ($data === false || $code < 200 || $code >= 300) {
+                    return null;
+                }
+                $len = strlen($data);
+                if ($len === 0 || $len > $maxBytes) {
+                    return null;
+                }
+                return [
+                    "data" => $data,
+                    "contentType" => is_string($ct) ? $ct : "",
+                ];
+            }
+
+            /**
+             * Только настоящее растровое изображение (не mp4-«превью» Nimble/Flussonic).
+             */
+            private function isRasterImagePayload(string $data, string $contentTypeHeader): bool {
+                if ($contentTypeHeader !== "" && preg_match('#^image/(jpeg|jpg|png|gif|webp|bmp|tiff)\b#i', $contentTypeHeader)) {
+                    return true;
+                }
+                $n = strlen($data);
+                if ($n >= 3 && $data[0] === "\xFF" && $data[1] === "\xD8" && $data[2] === "\xFF") {
+                    return true;
+                }
+                if ($n >= 8 && substr($data, 0, 8) === "\x89PNG\r\n\x1a\n") {
+                    return true;
+                }
+                if ($n >= 6 && (str_starts_with($data, "GIF87a") || str_starts_with($data, "GIF89a"))) {
+                    return true;
+                }
+                if ($n >= 12 && substr($data, 0, 4) === "RIFF" && substr($data, 8, 4) === "WEBP") {
+                    return true;
+                }
+                return false;
+            }
+
+            private function isMp4Payload(string $data, string $contentTypeHeader): bool {
+                if ($contentTypeHeader !== "" && preg_match('#^video/mp4\b#i', $contentTypeHeader)) {
+                    return true;
+                }
+                $n = strlen($data);
+                if ($n >= 12 && substr($data, 4, 4) === "ftyp") {
+                    return true;
+                }
+                return false;
+            }
+
+            /**
+             * Кадр JPEG из короткого mp4 (Flussonic *-preview.mp4, Nimble dvr_thumbnail_*.mp4).
+             */
+            private function rasterFromShortMp4(string $mp4Binary, float $seekSec = 0.5): ?string {
+                $len = strlen($mp4Binary);
+                if ($len < 64 || $len > 10 * 1024 * 1024) {
+                    return null;
+                }
+                $ffmpeg = "/usr/bin/ffmpeg";
+                if (!is_executable($ffmpeg)) {
+                    return null;
+                }
+                $dir = sys_get_temp_dir();
+                $id = bin2hex(random_bytes(8));
+                $in = $dir . "/rbt_an_prv_" . $id . ".mp4";
+                $out = $dir . "/rbt_an_prv_" . $id . ".jpg";
+                if (file_put_contents($in, $mp4Binary) === false) {
+                    return null;
+                }
+                $seek = max(0.0, min(60.0, $seekSec));
+                $ss = $seek > 0.001 ? (" -ss " . escapeshellarg((string)$seek)) : "";
+                $cmd = $ffmpeg . " -hide_banner -loglevel error" . $ss
+                    . " -i " . escapeshellarg($in) . " -frames:v 1 -q:v 4 -update 1 -y " . escapeshellarg($out) . " 2>/dev/null";
+                exec($cmd, $unused, $ret);
+                $jpeg = (is_file($out) && $ret === 0) ? (string)file_get_contents($out) : "";
+                @unlink($in);
+                @unlink($out);
+                if ($jpeg === "" || strlen($jpeg) < 1024) {
+                    return null;
+                }
+                if ($jpeg[0] !== "\xFF" || $jpeg[1] !== "\xD8") {
+                    return null;
+                }
+                return $jpeg;
+            }
+
+            private function normalizePreviewContentType(string $contentType): string {
+                $contentType = trim(explode(";", $contentType, 2)[0]);
+                if ($contentType !== "" && preg_match('#^image/#i', $contentType)) {
+                    return $contentType;
+                }
+                return "image/jpeg";
+            }
+
+            /**
+             * Кадр plog из GridFS (логика как в api analytics camshot).
+             *
+             * @return array{contentType: string, base64: string}|null
+             */
+            private function loadPlogCamshotPreview(string $rawImageId): ?array {
+                $rawImageId = trim($rawImageId);
+                if ($rawImageId === "") {
+                    return null;
+                }
+                $files = loadBackend("files");
+                if (!$files) {
+                    return null;
+                }
+                $fromPlog = $files->plogImageIdToStorageId($rawImageId);
+                $fromLegacy = strtolower((string)$files->fromGUIDv4($rawImageId));
+                $candidates = [];
+                if ($fromLegacy !== "" && strlen($fromLegacy) === 24) {
+                    $candidates[] = $fromLegacy;
+                }
+                if ($fromPlog !== "" && strlen($fromPlog) === 24) {
+                    $p = strtolower($fromPlog);
+                    if (!in_array($p, $candidates, true)) {
+                        $candidates[] = $p;
+                    }
+                }
+                if (!count($candidates)) {
+                    return null;
+                }
+                $maxBytes = 12 * 1024 * 1024;
+                foreach ($candidates as $uuid) {
+                    if ($uuid === str_repeat("0", 24)) {
+                        continue;
+                    }
+                    try {
+                        $t = $files->getFile($uuid);
+                        if (!$t || empty($t["stream"])) {
+                            continue;
+                        }
+                        $fi = $t["fileInfo"] ?? null;
+                        $ct = "image/jpeg";
+                        if ($fi && isset($fi->metadata)) {
+                            $md = $fi->metadata;
+                            $cval = null;
+                            if (is_object($md) && isset($md->contentType)) {
+                                $cval = $md->contentType;
+                            } elseif (is_array($md) && isset($md["contentType"])) {
+                                $cval = $md["contentType"];
+                            }
+                            if ($cval !== null && $cval !== "") {
+                                $ct = (string)$cval;
+                            }
+                        }
+                        $body = stream_get_contents($t["stream"], $maxBytes + 1);
+                        if ($body === false || strlen($body) > $maxBytes || strlen($body) === 0) {
+                            continue;
+                        }
+                        if (str_starts_with(strtolower($ct), "video/")) {
+                            continue;
+                        }
+                        return [
+                            "contentType" => $this->normalizePreviewContentType($ct),
+                            "base64" => base64_encode($body),
+                        ];
+                    } catch (\Throwable $e) {
+                        error_log("analytics preview plog: " . $e->getMessage());
+                    }
+                }
+                return null;
+            }
+
+            /**
+             * @inheritDoc
+             */
+            public function getDvrArchiveVideoUrlForEvent(int $houseId, string $eventUuid) {
+                $row = $this->selectPlogEventForArchive($houseId, $eventUuid);
+                if ($row === null) {
                     return false;
                 }
-                $row = $rows[0];
                 $date = isset($row["date"]) ? (int)$row["date"] : 0;
                 if ($date <= 0) {
                     return false;
@@ -551,6 +746,102 @@
                     "url" => $url,
                     "start" => $start,
                     "finish" => $finish,
+                ];
+            }
+
+            /**
+             * @inheritDoc
+             */
+            public function getEventMediaPreview(int $houseId, string $eventUuid) {
+                $row = $this->selectPlogEventForArchive($houseId, $eventUuid);
+                if ($row === null) {
+                    return null;
+                }
+                $date = isset($row["date"]) ? (int)$row["date"] : 0;
+                $iuRaw = $row["image_uuid"] ?? null;
+                if ($iuRaw !== null && !is_scalar($iuRaw) && !(is_object($iuRaw) && method_exists($iuRaw, "__toString"))) {
+                    $iuRaw = null;
+                }
+                $imageUuid = $this->stripNilImageUuid($iuRaw !== null ? (string)$iuRaw : null);
+
+                $cameraId = 0;
+                if (isset($row["domophone"]) && is_string($row["domophone"]) && $row["domophone"] !== "") {
+                    $dj = json_decode($row["domophone"], true);
+                    if (is_array($dj) && isset($dj["camera_id"])) {
+                        $cameraId = (int)$dj["camera_id"];
+                    }
+                }
+
+                $cam = null;
+                if ($cameraId > 0) {
+                    $households = loadBackend("households");
+                    if ($households) {
+                        $cams = $households->getCameras("id", $cameraId);
+                        if ($cams && count($cams)) {
+                            $cam = $cams[0];
+                        }
+                    }
+                }
+
+                $half = $this->plogArchiveHalfDurationSec();
+                $midTime = $date;
+
+                $hasVideo = false;
+                if ($cam && !empty($cam["dvrStream"])) {
+                    $dvr = loadBackend("dvr");
+                    if ($dvr) {
+                        $start = $date - $half;
+                        $finish = $date + $half;
+                        $vurl = $dvr->getUrlOfRecord($cam, 0, $start, $finish);
+                        $hasVideo = $vurl && is_string($vurl);
+                    }
+                }
+
+                $preview = null;
+                $previewSource = "none";
+
+                if ($cam && !empty($cam["dvrStream"])) {
+                    $dvr = loadBackend("dvr");
+                    if ($dvr) {
+                        $shotUrl = $dvr->getUrlOfScreenshot($cam, $midTime);
+                        if ($shotUrl && is_string($shotUrl)) {
+                            $bin = $this->fetchBinaryFromUrl($shotUrl, 10 * 1024 * 1024);
+                            if ($bin && $this->isRasterImagePayload($bin["data"], $bin["contentType"])) {
+                                $preview = [
+                                    "contentType" => $this->normalizePreviewContentType($bin["contentType"]),
+                                    "base64" => base64_encode($bin["data"]),
+                                ];
+                                $previewSource = "dvr";
+                            } elseif ($bin && $this->isMp4Payload($bin["data"], $bin["contentType"])) {
+                                // Короткий *-preview.mp4 (Flussonic/Nimble) — кадр с начала ролика (-update 1 для image2).
+                                $jpeg = $this->rasterFromShortMp4($bin["data"], 0.0);
+                                if ($jpeg !== null) {
+                                    $preview = [
+                                        "contentType" => "image/jpeg",
+                                        "base64" => base64_encode($jpeg),
+                                    ];
+                                    $previewSource = "dvr";
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if ($preview === null && $imageUuid !== null && $imageUuid !== "") {
+                    $plogShot = $this->loadPlogCamshotPreview($imageUuid);
+                    if ($plogShot) {
+                        $preview = [
+                            "contentType" => $plogShot["contentType"],
+                            "base64" => $plogShot["base64"],
+                        ];
+                        $previewSource = "plog";
+                    }
+                }
+
+                return [
+                    "preview" => $preview,
+                    "previewSource" => $previewSource,
+                    "hasVideo" => $hasVideo,
                 ];
             }
         }
