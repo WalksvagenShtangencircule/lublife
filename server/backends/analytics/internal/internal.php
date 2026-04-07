@@ -44,6 +44,27 @@
             }
 
             /**
+             * Нулевой UUID в ClickHouse = «кадра нет»; не отдаём в UI, чтобы не дергать camshot (всегда 404).
+             */
+            private function stripNilImageUuid($v) {
+                if ($v === null || $v === "") {
+                    return null;
+                }
+                if (!is_scalar($v) || is_bool($v)) {
+                    return null;
+                }
+                $s = trim((string)$v);
+                if ($s === "") {
+                    return null;
+                }
+                $hex = strtolower(str_replace("-", "", $s));
+                if (strlen($hex) === 32 && ctype_xdigit($hex) && $hex === str_repeat("0", 32)) {
+                    return null;
+                }
+                return $s;
+            }
+
+            /**
              * SELECT в ClickHouse с увеличенным таймаутом (агрегации).
              */
             private function chSelect(string $query): ?array {
@@ -414,6 +435,20 @@
                         $row["addressLine"] = null;
                     }
                     $row["eventUserPhone"] = $this->extractPlogUserPhone($row["phones"] ?? null);
+                    if (isset($row["event_uuid"])) {
+                        $row["event_uuid"] = trim((string)$row["event_uuid"]);
+                    }
+                    if (array_key_exists("image_uuid", $row)) {
+                        $row["image_uuid"] = $this->stripNilImageUuid($row["image_uuid"]);
+                    }
+                    $row["camera_id"] = 0;
+                    if (isset($row["domophone"]) && is_string($row["domophone"]) && $row["domophone"] !== "") {
+                        $dj = json_decode($row["domophone"], true);
+                        if (is_array($dj) && isset($dj["camera_id"])) {
+                            $row["camera_id"] = (int)$dj["camera_id"];
+                        }
+                    }
+                    unset($row["domophone"]);
                 }
                 unset($row);
 
@@ -422,6 +457,100 @@
                     "since" => $since,
                     "until" => $until,
                     "limit" => $limit,
+                ];
+            }
+
+            /**
+             * Полуинтервал вокруг времени события (сек), из config backends.analytics.plog_archive_half_duration_sec.
+             */
+            private function plogArchiveHalfDurationSec(): int {
+                $h = (int)(@$this->config["backends"]["analytics"]["plog_archive_half_duration_sec"] ?? 20);
+                if ($h < 5) {
+                    $h = 5;
+                }
+                if ($h > 300) {
+                    $h = 300;
+                }
+                return $h;
+            }
+
+            /**
+             * @inheritDoc
+             */
+            public function getDvrArchiveVideoUrlForEvent(int $houseId, string $eventUuid) {
+                if ($houseId <= 0) {
+                    return false;
+                }
+                $eventUuid = trim($eventUuid);
+                if (!preg_match(
+                    '/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/',
+                    $eventUuid
+                )) {
+                    return false;
+                }
+                $flatIds = $this->flatIdsForHouse($houseId);
+                $flatFilter = $this->flatFilterSql($flatIds);
+                if ($flatFilter === "1=0") {
+                    return false;
+                }
+                $eu = strtolower($eventUuid);
+                $q = "
+                    select
+                        date,
+                        toJSONString(domophone) as domophone
+                    from plog
+                    where
+                        event_uuid = toUUID('" . $eu . "')
+                        and not hidden
+                        and (" . $flatFilter . ")
+                    limit 1
+                ";
+                $rows = $this->chSelect($q);
+                if ($rows === null || !count($rows)) {
+                    return false;
+                }
+                $row = $rows[0];
+                $date = isset($row["date"]) ? (int)$row["date"] : 0;
+                if ($date <= 0) {
+                    return false;
+                }
+                $cameraId = 0;
+                if (isset($row["domophone"]) && is_string($row["domophone"]) && $row["domophone"] !== "") {
+                    $dj = json_decode($row["domophone"], true);
+                    if (is_array($dj) && isset($dj["camera_id"])) {
+                        $cameraId = (int)$dj["camera_id"];
+                    }
+                }
+                if ($cameraId <= 0) {
+                    return false;
+                }
+                $households = loadBackend("households");
+                if (!$households) {
+                    return false;
+                }
+                $cams = $households->getCameras("id", $cameraId);
+                if (!$cams || !count($cams)) {
+                    return false;
+                }
+                $cam = $cams[0];
+                if (empty($cam["dvrStream"])) {
+                    return false;
+                }
+                $dvr = loadBackend("dvr");
+                if (!$dvr) {
+                    return false;
+                }
+                $half = $this->plogArchiveHalfDurationSec();
+                $start = $date - $half;
+                $finish = $date + $half;
+                $url = $dvr->getUrlOfRecord($cam, 0, $start, $finish);
+                if (!$url || !is_string($url)) {
+                    return false;
+                }
+                return [
+                    "url" => $url,
+                    "start" => $start,
+                    "finish" => $finish,
                 ];
             }
         }

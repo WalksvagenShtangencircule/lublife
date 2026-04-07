@@ -105,6 +105,16 @@
             .replace(/"/g, "&quot;");
     },
 
+    /** Только нулевой UUID из CH — запрос camshot всегда 404 */
+    isNilImageUuid: function (s) {
+        let t = String(s).trim().toLowerCase();
+        if (t === "00000000-0000-0000-0000-000000000000") {
+            return true;
+        }
+        let h = t.replace(/-/g, "");
+        return h.length === 32 && /^[0-9a-f]+$/.test(h) && /^0+$/.test(h);
+    },
+
     formatEventTime: function (unixSec) {
         let d = new Date(unixSec * 1000);
         function z(n) { return n < 10 ? "0" + n : String(n); }
@@ -132,9 +142,89 @@
         });
     },
 
+    attachEventArchiveVideos: function ($root) {
+        let $slots = $root.find(".analytics-event-video-slot");
+        if (!$slots.length) {
+            return;
+        }
+        if (typeof IntersectionObserver === "undefined") {
+            $slots.each(function () {
+                modules.analytics.loadArchiveVideoIntoSlot($(this));
+            });
+            return;
+        }
+        let io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (ent) {
+                if (!ent.isIntersecting) {
+                    return;
+                }
+                io.unobserve(ent.target);
+                modules.analytics.loadArchiveVideoIntoSlot($(ent.target));
+            });
+        }, { root: null, rootMargin: "80px", threshold: 0.01 });
+        $slots.each(function () {
+            io.observe(this);
+        });
+    },
+
+    loadArchiveVideoIntoSlot: function ($slot) {
+        let eventUuid = $.trim($slot.attr("data-event-uuid") || "");
+        let houseId = $.trim($slot.attr("data-house-id") || "");
+        if (!eventUuid || !houseId) {
+            return;
+        }
+        // #same(addresses) — после reindex обычно есть eventVideo; иначе как у camshot/stats
+        let canVideo = AVAIL("analytics", "eventVideo", "GET") || AVAIL("analytics", "camshot", "GET") || AVAIL("analytics", "stats", "GET");
+        if (!canVideo) {
+            $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.archiveVideoNoApi") + "</span>");
+            return;
+        }
+        $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.archiveVideoLoading") + "</span>");
+        let l = lStore("_lang") || config.defaultLanguage || "ru";
+        $.ajax({
+            url: lStore("_server") + "/analytics/eventVideo/" + encodeURIComponent(eventUuid) + "?" + $.param({ houseId: houseId, _: Math.random() }),
+            type: "GET",
+            timeout: 120000,
+            beforeSend: function (xhr) {
+                xhr.setRequestHeader("Authorization", "Bearer " + lStore("_token"));
+                xhr.setRequestHeader("Accept-Language", l);
+                xhr.setRequestHeader("X-Api-Refresh", "1");
+            },
+        }).
+            done(function (r) {
+                if (typeof r === "string") {
+                    try {
+                        r = JSON.parse(r);
+                    } catch (e1) {
+                        $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.archiveVideoError") + "</span>");
+                        return;
+                    }
+                }
+                let url = r && r.eventVideo && r.eventVideo.url ? String(r.eventVideo.url) : "";
+                if (!url) {
+                    $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.archiveVideoError") + "</span>");
+                    return;
+                }
+                $slot.empty().append(
+                    $("<video>", { controls: true, playsinline: true, preload: "metadata" }).attr("src", url).css({ maxWidth: "100%", maxHeight: "220px" }),
+                    $("<div>", { class: "small mt-1" }).append(
+                        $("<a>", { href: url, target: "_blank", rel: "noopener noreferrer" }).text(i18n("analytics.archiveVideoOpenTab"))
+                    )
+                );
+            }).
+            fail(function () {
+                $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.archiveVideoError") + "</span>");
+            });
+    },
+
     loadCamshotIntoSlot: function ($slot) {
-        let uuid = $.trim($slot.data("uuid") || "");
+        // attr: сырой data-uuid; .data("uuid") кэширует и может исказить строку с дефисами
+        let uuid = $.trim($slot.attr("data-uuid") || "");
         if (!uuid) {
+            return;
+        }
+        if (modules.analytics.isNilImageUuid(uuid)) {
+            $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.noPreview") + "</span>");
             return;
         }
         if (!AVAIL("analytics", "camshot", "GET")) {
@@ -142,27 +232,46 @@
             return;
         }
         $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.previewLoading") + "</span>");
-        QUERYID("analytics", "camshot", uuid, {}, true).
-        done(function (r) {
-            if (!r || !r.camshot || !r.camshot.base64) {
-                $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.previewError") + "</span>");
-                return;
-            }
-            let ct = r.camshot.contentType || "image/jpeg";
-            let src = "data:" + ct + ";base64," + r.camshot.base64;
-            if (ct.indexOf("video/") === 0) {
-                $slot.empty().append(
-                    $("<video>", { controls: true, playsinline: true }).attr("src", src).css({ maxWidth: "100%", maxHeight: "240px" })
-                );
-            } else {
-                $slot.empty().append(
-                    $("<img>", { alt: "" }).attr("src", src).css({ maxWidth: "100%", maxHeight: "240px", objectFit: "contain", display: "block" })
-                );
-            }
+        let l = lStore("_lang") || config.defaultLanguage || "ru";
+        // Без dataType: "json" (как в QUERYID): иначе при parsererror/не-JSON сразу fail, хотя ответ может быть валиден
+        $.ajax({
+            url: lStore("_server") + "/analytics/camshot/" + encodeURIComponent(uuid) + "?" + $.param({ _: Math.random() }),
+            type: "GET",
+            timeout: 120000,
+            beforeSend: function (xhr) {
+                xhr.setRequestHeader("Authorization", "Bearer " + lStore("_token"));
+                xhr.setRequestHeader("Accept-Language", l);
+                xhr.setRequestHeader("X-Api-Refresh", "1");
+            },
         }).
-        fail(function () {
-            $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.previewError") + "</span>");
-        });
+            done(function (r) {
+                if (typeof r === "string") {
+                    try {
+                        r = JSON.parse(r);
+                    } catch (e) {
+                        $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.previewError") + "</span>");
+                        return;
+                    }
+                }
+                if (!r || !r.camshot || !r.camshot.base64) {
+                    $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.previewError") + "</span>");
+                    return;
+                }
+                let ct = r.camshot.contentType || "image/jpeg";
+                let src = "data:" + ct + ";base64," + r.camshot.base64;
+                if (ct.indexOf("video/") === 0) {
+                    $slot.empty().append(
+                        $("<video>", { controls: true, playsinline: true }).attr("src", src).css({ maxWidth: "100%", maxHeight: "240px" })
+                    );
+                } else {
+                    $slot.empty().append(
+                        $("<img>", { alt: "" }).attr("src", src).css({ maxWidth: "100%", maxHeight: "240px", objectFit: "contain", display: "block" })
+                    );
+                }
+            }).
+            fail(function () {
+                $slot.html("<span class=\"text-muted small p-2\">" + i18n("analytics.previewError") + "</span>");
+            });
     },
 
     renderShell: function () {
@@ -374,6 +483,19 @@
                     extra.push("RFID " + modules.analytics.escapeHtml(String(e.rfid)));
                 }
                 let uuid = (e.image_uuid != null && String(e.image_uuid).trim() !== "") ? String(e.image_uuid).trim() : "";
+                let evUid = (e.event_uuid != null && String(e.event_uuid).trim() !== "") ? String(e.event_uuid).trim() : "";
+                let camId = e.camera_id != null ? parseInt(e.camera_id, 10) : 0;
+                if (isNaN(camId)) {
+                    camId = 0;
+                }
+                let videoCol = "";
+                if (camId > 0 && evUid !== "") {
+                    videoCol =
+                        "<div class=\"mt-2\"><div class=\"small text-muted mb-1\">" + modules.analytics.escapeHtml(i18n("analytics.archiveVideoTitle")) + "</div>" +
+                        "<div class=\"analytics-event-video-slot rounded border bg-light d-flex flex-column align-items-stretch justify-content-center\" style=\"min-height:120px;overflow:hidden;\" data-event-uuid=\"" +
+                        modules.analytics.escapeHtml(evUid) + "\" data-house-id=\"" + modules.analytics.escapeHtml(String(hid)) + "\">" +
+                        "<span class=\"text-muted small p-2\">" + i18n("analytics.archiveVideoWait") + "</span></div></div>";
+                }
                 let flatLine = "";
                 if (e.flatNumber != null && String(e.flatNumber).trim() !== "") {
                     flatLine = "<div class=\"small mt-1\">" + modules.analytics.escapeHtml(i18n("analytics.colFlat")) + ": " + modules.analytics.escapeHtml(String(e.flatNumber).trim()) + "</div>";
@@ -390,7 +512,7 @@
                     "<div class=\"analytics-camshot-slot rounded border bg-light d-flex align-items-center justify-content-center\" style=\"min-height:140px;overflow:hidden;\" data-uuid=\"" +
                     modules.analytics.escapeHtml(uuid) + "\">" +
                     (uuid ? ("<span class=\"text-muted small p-2\">" + i18n("analytics.previewWait") + "</span>") : ("<span class=\"text-muted small p-2\">" + i18n("analytics.noPreview") + "</span>")) +
-                    "</div></div>" +
+                    "</div>" + videoCol + "</div>" +
                     "<div class=\"col-md-8 col-lg-9\">" +
                     "<div class=\"small text-muted\">" + modules.analytics.escapeHtml(ts) + "</div>" +
                     "<div class=\"font-weight-bold\">" + modules.analytics.escapeHtml(String(addr)) + "</div>" +
@@ -405,6 +527,7 @@
             }
             el.html(parts.join(""));
             modules.analytics.attachEventCamshots(el);
+            modules.analytics.attachEventArchiveVideos(el);
         }).
         fail(FAIL).
         always(loadingDone);

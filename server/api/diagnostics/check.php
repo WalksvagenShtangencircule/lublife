@@ -22,7 +22,7 @@
 
             public static function index() {
                 return [
-                    'GET' => '#same(analytics,stats,GET)',
+                    'GET' => '#same(diagnostics,run,GET)',
                 ];
             }
         }

@@ -18,7 +18,7 @@
     "clearCache": "Сбросить кеш интерфейса",
     "bumpDiagCache": "Сбросить кеш сводки",
     "forbidden": "Доступно только администратору (uid 0 или логин admin)",
-    "accessDenied": "Нет прав на вызов API диагностики (проверьте группы и запись в core_api_methods)",
+    "accessDenied": "Нет права на модуль «Диагностика» (выдайте diagnostics / run / GET)",
     "loadError": "Не удалось загрузить диагностику",
     "loadErrorBadShape": "Ответ сервера без данных диагностики — проверьте версию backend и логи PHP",
     "groupConfig": "Конфигурация",
@@ -33,6 +33,7 @@
     "tgTest": "Тест Telegram (через прокси при настройке)",
     "tgTestOk": "Тестовое сообщение отправлено в Telegram",
     "tgTestFail": "Не удалось отправить в Telegram",
+    "tgArmFail": "Не удалось включить ожидание чата",
     "tgWaitChat": "Ждать чат (/start)",
     "tgWaitArmed": "В течение 3 мин отправьте боту команду /start — чат и ник будут записаны в config",
     "tgWaitAdded": "Добавлены получатели:",
@@ -54,5 +55,14 @@
     "tgSimAlertTitle": "Отправить в Telegram сообщение в том же формате, что после прогона диагностики, но только по учебным строкам симуляции",
     "tgSimAlertOk": "Учебный алерт (симуляция) отправлен в Telegram",
     "tgSimAlertFail": "Не удалось отправить учебный алерт",
-    "tgSimAlertNeedSimulate": "Сначала включите diagnostics.simulate.enabled в config.json на сервере"
+    "tgSimAlertNeedSimulate": "Сначала включите diagnostics.simulate.enabled в config.json на сервере",
+    "methods": {
+        "diagnostics": {
+            "_title": "Диагностика",
+            "run": {
+                "_title": "Модуль (все действия)",
+                "GET": "Доступ"
+            }
+        }
+    }
 }

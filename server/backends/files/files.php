@@ -114,6 +114,28 @@
             }
 
             /**
+             * Идентификатор кадра plog из API/ClickHouse/URL: 36 символов с дефисами, 32 hex без дефисов или 24 hex ObjectId.
+             *
+             * @param string $raw
+             * @return string внутренний id для getFile (24 hex) или пустая строка
+             */
+            public function plogImageIdToStorageId(string $raw): string {
+                $raw = trim($raw);
+                if ($raw === "") {
+                    return "";
+                }
+                if (preg_match("/^[0-9a-fA-F]{24}$/", $raw)) {
+                    return strtolower($raw);
+                }
+                $g = $raw;
+                if (preg_match("/^[0-9a-fA-F]{32}$/", $g)) {
+                    $g = strtolower($g);
+                    $g = substr($g, 0, 8) . "-" . substr($g, 8, 4) . "-" . substr($g, 12, 4) . "-" . substr($g, 16, 4) . "-" . substr($g, 20, 12);
+                }
+                return strtolower($this->fromGUIDv4($g));
+            }
+
+            /**
              * @param $contents
              * @return false|resource
              */

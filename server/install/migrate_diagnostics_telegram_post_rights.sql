@@ -1,0 +1,1 @@
+-- См. migrate_diagnostics_rights_from_run.sql — не требуется при модели «один модуль = run/GET».

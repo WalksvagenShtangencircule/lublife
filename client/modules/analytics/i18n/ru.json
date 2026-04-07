@@ -31,16 +31,12 @@
         "analytics": {
             "_title": "Аналитика",
             "stats": {
-                "_title": "Сводка",
-                "GET": "Просмотр"
+                "_title": "Модуль (сводка, события, превью, DVR)",
+                "GET": "Доступ"
             },
-            "events": {
-                "_title": "События",
-                "GET": "Просмотр"
-            },
-            "camshot": {
-                "_title": "Кадр события",
-                "GET": "Просмотр"
+            "eventVideo": {
+                "_title": "Видео архива по событию",
+                "GET": "Доступ"
             }
         }
     },
@@ -67,5 +63,11 @@
     "loadAllHouseEvents": "Все события дома",
     "eventOpenPhoneLabel": "Телефон открытия",
     "activeUsersPeriodLabel": "Уникальные, %d дн.",
-    "chartWauMauBarsDataset": "WAU и период (%d дн.)"
+    "chartWauMauBarsDataset": "WAU и период (%d дн.)",
+    "archiveVideoTitle": "Видео архива (DVR)",
+    "archiveVideoWait": "Загрузка…",
+    "archiveVideoLoading": "Загрузка видео…",
+    "archiveVideoError": "Не удалось получить ссылку на архив",
+    "archiveVideoNoApi": "Нет доступа к API архива",
+    "archiveVideoOpenTab": "Открыть видео в новой вкладке"
 }

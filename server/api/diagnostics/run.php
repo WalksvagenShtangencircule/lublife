@@ -51,8 +51,9 @@
             }
 
             public static function index() {
+                // Единственное право, которое вручную выдают в «Правах» (all=0); остальные diagnostics/* — #same(diagnostics,run,GET).
                 return [
-                    'GET' => '#same(analytics,stats,GET)',
+                    'GET' => false,
                 ];
             }
         }

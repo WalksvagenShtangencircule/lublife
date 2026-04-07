@@ -58,7 +58,7 @@ function QUERY(api, method, query, fresh) {
             }
         },
         type: "GET",
-        contentType: "json",
+        dataType: "json",
     });
 }
 
@@ -70,11 +70,12 @@ function QUERY(api, method, query, fresh) {
  * @param {string|number} id - The identifier for the resource.
  * @param {Object} [query] - Optional query parameters to include in the request.
  * @param {boolean} [fresh] - If true, adds a cache-busting parameter and a custom header to force a fresh response.
+ * @param {number} [timeoutMs] - Таймаут jQuery.ajax в мс (например 120000 для тяжёлых GET).
  *
  * @returns {jqXHR} A jQuery jqXHR object representing the AJAX request.
  */
 
-function QUERYID(api, method, id, query, fresh) {
+function QUERYID(api, method, id, query, fresh, timeoutMs) {
     let l = lStore("_lang");
     if (!l) {
         l = config.defaultLanguage;
@@ -88,7 +89,7 @@ function QUERYID(api, method, id, query, fresh) {
         }
         query["_"] = Math.random();
     }
-    return $.ajax({
+    let ajaxOpts = {
         url: lStore("_server") + "/" + encodeURIComponent(api) + "/" + encodeURIComponent(method) + "/" + encodeURIComponent(id) + (query ? ("?" + $.param(query)) : ""),
         beforeSend: xhr => {
             xhr.setRequestHeader("Authorization", "Bearer " + lStore("_token"));
@@ -98,8 +99,12 @@ function QUERYID(api, method, id, query, fresh) {
             }
         },
         type: "GET",
-        contentType: "json",
-    });
+        dataType: "json",
+    };
+    if (typeof timeoutMs === "number" && timeoutMs > 0) {
+        ajaxOpts.timeout = timeoutMs;
+    }
+    return $.ajax(ajaxOpts);
 }
 
 /**
@@ -135,7 +140,7 @@ function GET(api, method, id, fresh) {
             }
         },
         type: "GET",
-        contentType: "json",
+        dataType: "json",
     });
 }
 
@@ -166,7 +171,9 @@ function AJAX(type, api, method, id, data) {
             xhr.setRequestHeader("Accept-Language", l);
         },
         type: type,
-        contentType: "json",
+        // Важно: «json» не является валидным MIME — без этого тело JSON часто не попадает в php://input, POST теряет action → badRequest
+        contentType: "application/json; charset=UTF-8",
+        processData: false,
         data: data ? JSON.stringify(data) : null,
     });
 }
@@ -183,7 +190,7 @@ function AJAX(type, api, method, id, data) {
  */
 
 function POST(api, method, id, data) {
-    return AJAX(arguments.callee.name.toString(), api, method, id, data);
+    return AJAX("POST", api, method, id, data);
 }
 
 /**
@@ -198,7 +205,7 @@ function POST(api, method, id, data) {
  */
 
 function PUT(api, method, id, data) {
-    return AJAX(arguments.callee.name.toString(), api, method, id, data);
+    return AJAX("PUT", api, method, id, data);
 }
 
 /**
@@ -213,5 +220,5 @@ function PUT(api, method, id, data) {
  */
 
 function DELETE(api, method, id, data) {
-    return AJAX(arguments.callee.name.toString(), api, method, id, data);
+    return AJAX("DELETE", api, method, id, data);
 }

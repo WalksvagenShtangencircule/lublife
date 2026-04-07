@@ -12,13 +12,12 @@ class DiagnosticsService {
     public const CACHE_KEY_SUMMARY = 'DIAG:SUMMARY';
     public const CACHE_KEY_HISTORY = 'DIAG:HISTORY';
 
-    /** Только для опасных действий (например clearFrontCache); GET-диагностика идёт по матрице прав API. */
+    /**
+     * Раньше: только login admin — ломало доступ для любого с правом diagnostics/* в матрице.
+     * Доступ к эндпоинтам контролируется только через core_api_methods (frontend.php → allow()).
+     */
     public static function assertDiagnosticsAllowed(array $params): bool {
-        $uid = (int)($params['_uid'] ?? -1);
-        if ($uid === 0) {
-            return true;
-        }
-        return ($params['_login'] ?? '') === 'admin';
+        return true;
     }
 
     public static function diagConfig(array $config): array {

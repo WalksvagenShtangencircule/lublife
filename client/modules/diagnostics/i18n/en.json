@@ -18,7 +18,7 @@
     "clearCache": "Clear UI cache",
     "bumpDiagCache": "Clear summary cache",
     "forbidden": "Administrator only (uid 0 or login admin)",
-    "accessDenied": "No API permission for diagnostics (check groups and core_api_methods)",
+    "accessDenied": "No access to the Diagnostics module (grant diagnostics / run / GET)",
     "loadError": "Failed to load diagnostics",
     "loadErrorBadShape": "Server response has no diagnostics payload — check backend version and PHP logs",
     "groupConfig": "Configuration",
@@ -33,6 +33,7 @@
     "tgTest": "Telegram test (via proxy when configured)",
     "tgTestOk": "Test message sent to Telegram",
     "tgTestFail": "Telegram send failed",
+    "tgArmFail": "Could not arm wait mode",
     "tgWaitChat": "Wait for chat (/start)",
     "tgWaitArmed": "Within 3 minutes send /start to the bot — chat and username will be saved to server config",
     "tgWaitAdded": "Recipients added:",
@@ -54,5 +55,14 @@
     "tgSimAlertTitle": "Send a Telegram message in the same format as a real diagnostic alert, using only simulated rows",
     "tgSimAlertOk": "Simulated diagnostic alert sent to Telegram",
     "tgSimAlertFail": "Failed to send simulated alert",
-    "tgSimAlertNeedSimulate": "Enable diagnostics.simulate.enabled in server config.json first"
+    "tgSimAlertNeedSimulate": "Enable diagnostics.simulate.enabled in server config.json first",
+    "methods": {
+        "diagnostics": {
+            "_title": "Diagnostics",
+            "run": {
+                "_title": "Module (all actions)",
+                "GET": "Access"
+            }
+        }
+    }
 }

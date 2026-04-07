@@ -31,16 +31,12 @@
         "analytics": {
             "_title": "Analytics",
             "stats": {
-                "_title": "Summary",
-                "GET": "View"
+                "_title": "Module (stats, events, previews, DVR)",
+                "GET": "Access"
             },
-            "events": {
-                "_title": "Events",
-                "GET": "View"
-            },
-            "camshot": {
-                "_title": "Event camshot",
-                "GET": "View"
+            "eventVideo": {
+                "_title": "DVR clip for event",
+                "GET": "Access"
             }
         }
     },
@@ -67,5 +63,11 @@
     "loadAllHouseEvents": "All house events",
     "eventOpenPhoneLabel": "Opening phone",
     "activeUsersPeriodLabel": "Uniques, %d d",
-    "chartWauMauBarsDataset": "WAU vs %d-day window"
+    "chartWauMauBarsDataset": "WAU vs %d-day window",
+    "archiveVideoTitle": "DVR archive video",
+    "archiveVideoWait": "Loading…",
+    "archiveVideoLoading": "Loading video…",
+    "archiveVideoError": "Could not get archive URL",
+    "archiveVideoNoApi": "No access to archive API",
+    "archiveVideoOpenTab": "Open video in new tab"
 }

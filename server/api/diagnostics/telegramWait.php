@@ -12,12 +12,7 @@
         class telegramWait extends api {
 
             public static function GET($params) {
-                require_once __DIR__ . '/../../utils/DiagnosticsService.php';
                 require_once __DIR__ . '/../../utils/DiagnosticsTelegramNotifier.php';
-
-                if (!DiagnosticsService::assertDiagnosticsAllowed($params)) {
-                    return api::ANSWER(false, 'forbidden');
-                }
 
                 global $config;
                 $tc = DiagnosticsTelegramNotifier::telegramNotifyConfig($config);
@@ -149,7 +144,7 @@
 
             public static function index() {
                 return [
-                    'GET' => '#same(analytics,stats,GET)',
+                    'GET' => '#same(diagnostics,run,GET)',
                 ];
             }
         }

@@ -102,6 +102,46 @@
         return msg;
     },
 
+    /**
+     * POST /diagnostics/telegram: action дублируется в query (?action=…), чтобы работало,
+     * если тело JSON теряется (прокси/nginx) — в frontend.php $_GET всё равно попадает в $params.
+     */
+    postTelegram: function (payload) {
+        let q = $.param({ action: payload.action });
+        return $.ajax({
+            url: lStore("_server") + "/diagnostics/telegram?" + q,
+            type: "POST",
+            contentType: "application/json; charset=UTF-8",
+            processData: false,
+            data: JSON.stringify(payload),
+            dataType: "json",
+            beforeSend: function (xhr) {
+                xhr.setRequestHeader("Authorization", "Bearer " + lStore("_token"));
+                xhr.setRequestHeader("Accept-Language", lStore("_lang") || config.defaultLanguage || "ru");
+            },
+        });
+    },
+
+    /**
+     * POST /diagnostics/action: как postTelegram — action дублируется в query (?action=…),
+     * чтобы при потере тела JSON (MIME/прокси) параметр всё равно попал в $params из $_GET.
+     */
+    postDiagnosticsAction: function (payload) {
+        let q = $.param({ action: payload.action });
+        return $.ajax({
+            url: lStore("_server") + "/diagnostics/action?" + q,
+            type: "POST",
+            contentType: "application/json; charset=UTF-8",
+            processData: false,
+            data: JSON.stringify(payload),
+            dataType: "json",
+            beforeSend: function (xhr) {
+                xhr.setRequestHeader("Authorization", "Bearer " + lStore("_token"));
+                xhr.setRequestHeader("Accept-Language", lStore("_lang") || config.defaultLanguage || "ru");
+            },
+        });
+    },
+
     escapeHtml: function (s) {
         if (!s) {
             return "";
@@ -281,7 +321,7 @@
         });
         $("#diagClearCache").on("click", function () {
             loadingStart();
-            POST("diagnostics", "action", false, { action: "clearFrontCache" }).
+            modules.diagnostics.postDiagnosticsAction({ action: "clearFrontCache" }).
                 done(function () {
                     message(i18n("diagnostics.clearCache"));
                 }).
@@ -290,7 +330,7 @@
         });
         $("#diagBump").on("click", function () {
             loadingStart();
-            POST("diagnostics", "action", false, { action: "bumpDiagnosticsCache" }).
+            modules.diagnostics.postDiagnosticsAction({ action: "bumpDiagnosticsCache" }).
                 done(function () {
                     message(i18n("diagnostics.bumpDiagCache"));
                 }).
@@ -299,13 +339,14 @@
         });
         $("#diagTgTest").on("click", function () {
             loadingStart();
-            POST("diagnostics", "action", false, { action: "testTelegram" }).
+            modules.diagnostics.postTelegram({ action: "testTelegram" }).
                 done(function (r) {
                     let d = r && r.diagnosticsAction;
                     if (d && d.ok) {
                         message(i18n("diagnostics.tgTestOk"));
                     } else if (d && d.telegramError) {
-                        message(i18n("diagnostics.tgTestFail") + ": " + d.telegramError);
+                        let extra = d.telegramApiDescription ? (" — " + d.telegramApiDescription) : "";
+                        message(i18n("diagnostics.tgTestFail") + ": " + d.telegramError + extra);
                     } else {
                         message(i18n("diagnostics.tgTestFail"));
                     }
@@ -315,7 +356,7 @@
         });
         $("#diagTgSimAlert").on("click", function () {
             loadingStart();
-            POST("diagnostics", "action", false, { action: "telegramSimulateAlert" }).
+            modules.diagnostics.postTelegram({ action: "telegramSimulateAlert" }).
                 done(function (r) {
                     let d = r && r.diagnosticsAction;
                     if (d && d.ok) {
@@ -339,9 +380,13 @@
             modules.diagnostics._tgWhErrNoted = false;
             modules.diagnostics._tgWebhookBlockNoted = false;
             loadingStart();
-            POST("diagnostics", "action", false, { action: "telegramArmWait" }).
+            modules.diagnostics.postTelegram({ action: "telegramArmWait" }).
                 done(function (r) {
                     let d = r && r.diagnosticsAction;
+                    if (d && d.ok === false && d.telegramError) {
+                        message(i18n("diagnostics.tgArmFail") + ": " + d.telegramError);
+                        return;
+                    }
                     message(i18n("diagnostics.tgWaitArmed"));
                     if (d && d.telegramWebhookDeferred) {
                         message(i18n("diagnostics.tgWaitWebhookDeferred"));
