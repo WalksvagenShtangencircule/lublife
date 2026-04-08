@@ -3,7 +3,6 @@
 
     init: function () {
         if (AVAIL("assistant", "chat", "POST")) {
-            this.menu = true;
             leftSide("fas fa-fw fa-robot", i18n("moduleAssistant"), "?#assistant", "households");
         }
         moduleLoaded("assistant", this);

@@ -1,4 +1,5 @@
 {
+    "assistant": "Assistant",
     "title": "Assistant (DeepSeek)",
     "hint": "Ask about addresses, flats, keys, and events. Responses are built on the server using safe database queries.",
     "placeholder": "Type a question…",
