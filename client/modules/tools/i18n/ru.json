@@ -1,0 +1,60 @@
+{
+    "tools": "Утилиты",
+    "utilities": "Полезные утилиты",
+    "open": "Открыть",
+    "cardSubscribers": "Импорт абонентов",
+    "cardSubscribersHint": "Массовое добавление телефонных номеров в квартиры выбранного дома из CSV-файла.",
+    "cardKeys": "Импорт ключей",
+    "cardKeysHint": "Массовое добавление домофонных ключей (RFID) по квартирам из CSV-файла.",
+    "noUtilities": "Нет доступных утилит. Обратитесь к администратору для выдачи прав.",
+    "house": "Дом",
+    "selectHouse": "Выберите дом",
+    "csvFile": "Файл CSV",
+    "bulkSubscribersTitle": "Импорт абонентов по списку",
+    "bulkKeysTitle": "Импорт ключей по списку",
+    "runImport": "Загрузить и импортировать",
+    "needFile": "Выберите CSV-файл (кнопка «Добавить»).",
+    "selectHouseError": "Выберите дом из списка.",
+    "badResponse": "Не удалось разобрать ответ сервера.",
+    "sampleLoadFail": "Не удалось получить образец файла.",
+    "sampleDownloaded": "Образец сохранён.",
+    "downloadSample": "Скачать образец CSV",
+    "needAddressesRight": "Для выбора дома нужны права на просмотр адресов (API addresses / addresses / GET). Выдайте их группе или добавьте отдельное право.",
+    "backToList": "К списку утилит",
+    "resultTitle": "Результат импорта",
+    "importDone": "Успешно обработано строк: %s.",
+    "importErrors": "Ошибок: %s (показаны первые 50).",
+    "methods": {
+        "tools": {
+            "_title": "Утилиты",
+            "bulkImportSubscribers": {
+                "_title": "Импорт абонентов (CSV)",
+                "POST": "Выполнить импорт"
+            },
+            "bulkImportKeys": {
+                "_title": "Импорт ключей (CSV)",
+                "POST": "Выполнить импорт"
+            },
+            "sampleImportSubscribers": {
+                "_title": "Образец CSV (абоненты)",
+                "GET": "Скачать"
+            },
+            "sampleImportKeys": {
+                "_title": "Образец CSV (ключи)",
+                "GET": "Скачать"
+            }
+        }
+    },
+    "err": {
+        "needTwoColumns": "Нужны две колонки (квартира и телефон или ключ).",
+        "emptyFlat": "Пустой номер квартиры.",
+        "badPhone": "Неверный телефон (ожидается 11 цифр, с 7).",
+        "badRfid": "Неверный ключ (нужно 14 символов 0–9, A–F).",
+        "flatNotFound": "Квартира не найдена в этом доме.",
+        "addSubscriberFailed": "Не удалось добавить абонента.",
+        "addKeyFailed": "Не удалось добавить ключ.",
+        "subscribersLimitExceeded": "Лимит абонентов в квартире исчерпан.",
+        "invalidParams": "Неверные параметры.",
+        "invalidFlat": "Неверная квартира."
+    }
+}

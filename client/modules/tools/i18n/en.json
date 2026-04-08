@@ -1,0 +1,60 @@
+{
+    "tools": "Tools",
+    "utilities": "Utilities",
+    "open": "Open",
+    "cardSubscribers": "Import subscribers",
+    "cardSubscribersHint": "Bulk-add phone numbers to flats in the selected house from a CSV file.",
+    "cardKeys": "Import keys",
+    "cardKeysHint": "Bulk-add intercom keys (RFID) per flat from a CSV file.",
+    "noUtilities": "No utilities available. Ask an administrator to grant access.",
+    "house": "House",
+    "selectHouse": "Select a house",
+    "csvFile": "CSV file",
+    "bulkSubscribersTitle": "Bulk subscriber import",
+    "bulkKeysTitle": "Bulk key import",
+    "runImport": "Upload and import",
+    "needFile": "Choose a CSV file (Add).",
+    "selectHouseError": "Select a house from the list.",
+    "badResponse": "Could not parse the server response.",
+    "sampleLoadFail": "Could not download the sample file.",
+    "sampleDownloaded": "Sample saved.",
+    "downloadSample": "Download sample CSV",
+    "needAddressesRight": "Listing houses requires the addresses API (addresses / addresses / GET). Grant it to the user or group.",
+    "backToList": "Back to utilities",
+    "resultTitle": "Import result",
+    "importDone": "Rows processed successfully: %s.",
+    "importErrors": "Errors: %s (first 50 shown).",
+    "methods": {
+        "tools": {
+            "_title": "Utilities",
+            "bulkImportSubscribers": {
+                "_title": "Subscriber import (CSV)",
+                "POST": "Run import"
+            },
+            "bulkImportKeys": {
+                "_title": "Key import (CSV)",
+                "POST": "Run import"
+            },
+            "sampleImportSubscribers": {
+                "_title": "Sample CSV (subscribers)",
+                "GET": "Download"
+            },
+            "sampleImportKeys": {
+                "_title": "Sample CSV (keys)",
+                "GET": "Download"
+            }
+        }
+    },
+    "err": {
+        "needTwoColumns": "Two columns required (flat and phone or key).",
+        "emptyFlat": "Flat number is empty.",
+        "badPhone": "Invalid phone (expect 11 digits starting with 7).",
+        "badRfid": "Invalid key (14 hex characters required).",
+        "flatNotFound": "Flat not found in this house.",
+        "addSubscriberFailed": "Could not add subscriber.",
+        "addKeyFailed": "Could not add key.",
+        "subscribersLimitExceeded": "Subscriber limit for this flat exceeded.",
+        "invalidParams": "Invalid parameters.",
+        "invalidFlat": "Invalid flat."
+    }
+}
