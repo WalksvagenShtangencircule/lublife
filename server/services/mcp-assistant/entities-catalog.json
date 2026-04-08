@@ -45,7 +45,8 @@
     "diagnostics": "Проверки, история, Telegram, сводка.",
     "authentication": "Логин, logout, 2FA.",
     "assistant": "Чат с LLM (POST).",
-    "custom": "Пользовательские расширения API."
+    "custom": "Пользовательские расширения API.",
+    "mcp_data": "Глубокий read-only для MCP: схема PostgreSQL (information_schema), безопасный SELECT/WITH в PG и ClickHouse, конфиг с <redacted>, список core_api_methods, Redis INFO, среда PHP."
   },
   "entityNodes": [
     {
@@ -397,12 +398,36 @@
       ],
       "relation": "spreadsheet",
       "via": "cs/sheet, cs/cell — данные в таблицах по задачам"
+    },
+    {
+      "entities": [
+        "relational_db",
+        "mcp_tools"
+      ],
+      "relation": "read_only",
+      "via": "mcp_data/schema, mcp_data/pgSelect (лимит строк, транзакция READ ONLY)"
+    },
+    {
+      "entities": [
+        "clickhouse",
+        "mcp_tools"
+      ],
+      "relation": "read_only",
+      "via": "mcp_data/clickhouseSelect (max_result_rows)"
+    },
+    {
+      "entities": [
+        "server_config",
+        "mcp_tools"
+      ],
+      "relation": "snapshot",
+      "via": "mcp_data/configSnapshot (секреты вырезаны)"
     }
   ],
   "allEndpoints": [
     "accounts/group",
-    "accounts/groups",
     "accounts/groupUsers",
+    "accounts/groups",
     "accounts/user",
     "accounts/users",
     "addresses/addresses",
@@ -416,9 +441,9 @@
     "addresses/street",
     "analytics/camshot",
     "analytics/eventPreview",
-    "analytics/events",
     "analytics/eventVideo",
     "analytics/eventVideoPlay",
+    "analytics/events",
     "analytics/stats",
     "assistant/chat",
     "authentication/login",
@@ -468,6 +493,13 @@
     "houses/sharedEntrances",
     "houses/watch",
     "inbox/message",
+    "mcp_data/apiIndex",
+    "mcp_data/clickhouseSelect",
+    "mcp_data/configSnapshot",
+    "mcp_data/pgSelect",
+    "mcp_data/redisInfo",
+    "mcp_data/runtime",
+    "mcp_data/schema",
     "mediaserver/audit",
     "mediaserver/cameraStream",
     "mediaserver/deleteStreamAndCamera",
@@ -520,8 +552,8 @@
     "tt/file",
     "tt/filter",
     "tt/issue",
-    "tt/issues",
     "tt/issueTemplate",
+    "tt/issues",
     "tt/journal",
     "tt/json",
     "tt/lib",

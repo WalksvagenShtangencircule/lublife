@@ -14,7 +14,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const BASE = (process.env.SMARTACCESS_BASE_URL || "").replace(/\/$/, "");
 const TOKEN = process.env.SMARTACCESS_TOKEN || "";
 
-const RAW_METHODS = (process.env.SMARTACCESS_MCP_HTTP_METHODS || "GET").trim();
+/** По умолчанию GET+POST: нужно для mcp_data/pgSelect и типичных POST API. Ужесточить: SMARTACCESS_MCP_HTTP_METHODS=GET */
+const RAW_METHODS = (process.env.SMARTACCESS_MCP_HTTP_METHODS || "GET,POST").trim();
 /** @type {Set<string>} */
 let ALLOWED_METHODS;
 if (RAW_METHODS.toUpperCase() === "ALL") {
@@ -29,8 +30,8 @@ if (RAW_METHODS.toUpperCase() === "ALL") {
 
 const MAX_CHARS = parseInt(process.env.SMARTACCESS_MCP_MAX_RESPONSE_CHARS || "600000", 10);
 
-/** Два сегмента api/method, опционально /id, опционально ?query */
-const PATH_LINE_RE = /^[a-z][a-z0-9_]*\/[a-z][a-z0-9_]*(?:\/[^/?#]*)?(?:\?[^#]*)?$/;
+/** api/method: сегменты как в PHP (accounts, mcp_data, pgSelect), опционально /id, ?query */
+const PATH_LINE_RE = /^[a-zA-Z][a-zA-Z0-9_]*\/[a-zA-Z][a-zA-Z0-9_]*(?:\/[^/?#]*)?(?:\?[^#]*)?$/;
 
 function normalizePath(path) {
   let s = String(path || "").trim();
@@ -83,7 +84,7 @@ async function smapiRequest(method, path, body) {
     return JSON.stringify({
       error: "method_not_allowed",
       method: m,
-      hint: "По умолчанию только GET. Для POST/PUT/DELETE задайте SMARTACCESS_MCP_HTTP_METHODS=GET,POST или ALL.",
+      hint: "Задайте SMARTACCESS_MCP_HTTP_METHODS (например GET,POST или ALL).",
     });
   }
   const clean = normalizePath(path);
@@ -135,15 +136,15 @@ function loadCatalog() {
 
 const server = new McpServer({
   name: "smartaccess-mcp",
-  version: "1.1.0",
+  version: "1.2.0",
 });
 
 server.registerTool(
   "smapi_request",
   {
     description:
-      "Вызов SmartAccess HTTP API: путь относительно базы (как в клиенте), та же схема {api}/{method}[/{id}][?query]. " +
-      "Права ограничены токеном SMARTACCESS_TOKEN. По умолчанию разрешён только GET; для записи задайте переменную окружения SMARTACCESS_MCP_HTTP_METHODS (например GET,POST или ALL).",
+      "Вызов SmartAccess HTTP API: путь относительно базы (как в клиенте), схема {api}/{method}[/{id}][?query]. " +
+      "Права — токен SMARTACCESS_TOKEN. По умолчанию разрешены GET и POST (см. SMARTACCESS_MCP_HTTP_METHODS: GET, ALL, …).",
     inputSchema: {
       path: z
         .string()
@@ -204,6 +205,128 @@ server.registerTool(
     const out = await smapiRequest("GET", String(path || ""));
     return { content: [{ type: "text", text: out }] };
   }
+);
+
+/** Глубокий read-only доступ (модуль mcp_data на сервере). Права как у diagnostics: check GET / action POST. */
+server.registerTool(
+  "mcp_deep_schema",
+  {
+    description:
+      "PostgreSQL: таблицы и колонки из information_schema. Опционально tableLike=имя% (SQL LIKE). Требуется право как у GET diagnostics/check.",
+    inputSchema: {
+      tableLike: z
+        .string()
+        .optional()
+        .describe("Фильтр имени таблицы, допустимы % и _"),
+    },
+  },
+  async ({ tableLike }) => {
+    let path = "mcp_data/schema";
+    if (tableLike && String(tableLike).trim() !== "") {
+      path += "?tableLike=" + encodeURIComponent(String(tableLike).trim());
+    }
+    const out = await smapiRequest("GET", path);
+    return { content: [{ type: "text", text: out }] };
+  }
+);
+
+server.registerTool(
+  "mcp_deep_pg_select",
+  {
+    description:
+      "PostgreSQL: один запрос SELECT или WITH, только чтение, до ~500 строк, без комментариев и «;». Обёрнуто в подзапрос с лимитом. Право как у POST diagnostics/action.",
+    inputSchema: {
+      sql: z.string().describe("Один SELECT или WITH (без точки с запятой)"),
+    },
+  },
+  async ({ sql }) => {
+    const out = await smapiRequest("POST", "mcp_data/pgSelect", { sql: String(sql || "") });
+    return { content: [{ type: "text", text: out }] };
+  }
+);
+
+server.registerTool(
+  "mcp_deep_ch_select",
+  {
+    description:
+      "ClickHouse: один SELECT/WITH, лимит строк, без system.* таблиц. Право как у POST diagnostics/action.",
+    inputSchema: {
+      sql: z.string().describe("SELECT … (без FORMAT, его добавит сервер)"),
+    },
+  },
+  async ({ sql }) => {
+    const out = await smapiRequest("POST", "mcp_data/clickhouseSelect", { sql: String(sql || "") });
+    return { content: [{ type: "text", text: out }] };
+  }
+);
+
+server.registerTool(
+  "mcp_deep_config",
+  {
+    description: "Снимок server/config.json с заменой секретов на <redacted> (длина для строк).",
+    inputSchema: z.object({}),
+  },
+  async () => {
+    const out = await smapiRequest("GET", "mcp_data/configSnapshot");
+    return { content: [{ type: "text", text: out }] };
+  }
+);
+
+server.registerTool(
+  "mcp_deep_runtime",
+  {
+    description: "Среда PHP (версия, расширения, лимиты), корень server, ping Redis.",
+    inputSchema: z.object({}),
+  },
+  async () => {
+    const out = await smapiRequest("GET", "mcp_data/runtime");
+    return { content: [{ type: "text", text: out }] };
+  }
+);
+
+server.registerTool(
+  "mcp_deep_api_index",
+  {
+    description: "Список всех зарегистрированных HTTP-методов API из core_api_methods (после reindex).",
+    inputSchema: z.object({}),
+  },
+  async () => {
+    const out = await smapiRequest("GET", "mcp_data/apiIndex");
+    return { content: [{ type: "text", text: out }] };
+  }
+);
+
+server.registerTool(
+  "mcp_deep_redis",
+  {
+    description: "Redis INFO (без KEYS).",
+    inputSchema: z.object({}),
+  },
+  async () => {
+    const out = await smapiRequest("GET", "mcp_data/redisInfo");
+    return { content: [{ type: "text", text: out }] };
+  }
+);
+
+function loadQuestionBank() {
+  try {
+    const raw = readFileSync(join(__dirname, "suggested-questions-ru.json"), "utf8");
+    return truncate(raw);
+  } catch (e) {
+    return JSON.stringify({ error: "question_bank_missing", message: String(e) });
+  }
+}
+
+server.registerTool(
+  "smartaccess_suggested_questions",
+  {
+    description:
+      "Готовые формулировки вопросов на русском (обзор БД, API, конфига, бизнес-сущностей) для максимально полных ответов через инструменты.",
+    inputSchema: z.object({}),
+  },
+  async () => ({
+    content: [{ type: "text", text: loadQuestionBank() }],
+  })
 );
 
 const transport = new StdioServerTransport();
