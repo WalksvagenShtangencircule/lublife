@@ -147,8 +147,11 @@
              */
             private static function sanitizeMessages(array $messages): array {
                 $out = [];
-                $maxChars = 12000;
+                /** Контекст до 10 реплик user/assistant + system; бюджет символов под длинные ответы */
+                $maxChars = 36000;
+                $maxPerMessage = 6000;
                 $total = 0;
+
                 foreach ($messages as $m) {
                     if (!is_array($m)) {
                         continue;
@@ -161,8 +164,8 @@
                     if ($content === "") {
                         continue;
                     }
-                    if (mb_strlen($content) > 8000) {
-                        $content = mb_substr($content, 0, 8000) . "…";
+                    if (mb_strlen($content) > $maxPerMessage) {
+                        $content = mb_substr($content, 0, $maxPerMessage) . "…";
                     }
                     $total += mb_strlen($content);
                     if ($total > $maxChars) {

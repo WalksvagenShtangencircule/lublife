@@ -1,6 +1,11 @@
 ({
     menu: false,
 
+    /** История диалога для контекста (user/assistant). В запрос уходит только хвост CONTEXT_LIMIT. */
+    transcript: [],
+
+    CONTEXT_LIMIT: 10,
+
     init: function () {
         if (AVAIL("assistant", "chat", "POST")) {
             leftSide("fas fa-fw fa-robot", i18n("moduleAssistant"), "?#assistant", "households");
@@ -16,7 +21,13 @@
         $("#assistantInput").val("");
         modules.assistant.appendBubble("user", text);
         loadingStart();
-        POST("assistant", "chat", false, { message: text }).
+
+        let pendingUser = { role: "user", content: text };
+        let messagesPayload = modules.assistant.transcript
+            .concat([pendingUser])
+            .slice(-modules.assistant.CONTEXT_LIMIT);
+
+        POST("assistant", "chat", false, { messages: messagesPayload }).
             fail(FAIL).
             done(r => {
                 let p = r && r.assistantChat ? r.assistantChat : r;
@@ -28,6 +39,11 @@
                 if (!reply && p && p.error) {
                     warning(String(p.error));
                     return;
+                }
+                modules.assistant.transcript.push(pendingUser);
+                modules.assistant.transcript.push({ role: "assistant", content: reply || "—" });
+                while (modules.assistant.transcript.length > 100) {
+                    modules.assistant.transcript.shift();
                 }
                 modules.assistant.appendBubble("assistant", reply || "—");
             }).
@@ -64,6 +80,7 @@
             "<button type='button' class='btn btn-primary' id='assistantSend'>" + escapeHTML(i18n("assistant.send")) + "</button>" +
             "</div></div></div></div>"
         );
+        modules.assistant.transcript = [];
         $("#assistantSend").off("click").on("click", () => modules.assistant.send());
         $("#assistantInput").off("keydown").on("keydown", e => {
             if (e.key === "Enter" && !e.shiftKey) {
