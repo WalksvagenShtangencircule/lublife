@@ -5,6 +5,7 @@
     "appTagline": "Единая точка входа, учёт прав и безопасный доступ к инфраструктуре.",
     "moduleAddresses": "Адреса",
     "moduleTools": "Утилиты",
+    "moduleAssistant": "Ассистент",
     "error": "Ошибка",
     "errorCode": "Ошибка [%s]",
     "errorLoadingModule": "Ошибка загрузки модуля [%s]",

@@ -1,0 +1,6 @@
+{
+    "deepseekApiKey": "sk-замените_на_ключ",
+    "deepseekBaseUrl": "https://api.deepseek.com",
+    "model": "deepseek-chat",
+    "maxToolIterations": 5
+}

@@ -1,0 +1,16 @@
+{
+    "title": "Assistant (DeepSeek)",
+    "hint": "Ask about addresses, flats, keys, and events. Responses are built on the server using safe database queries.",
+    "placeholder": "Type a question…",
+    "send": "Send",
+    "deepseekUnreachable": "Could not reach DeepSeek. Check API key and server network.",
+    "methods": {
+        "assistant": {
+            "_title": "Assistant",
+            "chat": {
+                "_title": "Assistant chat",
+                "POST": "Send message"
+            }
+        }
+    }
+}

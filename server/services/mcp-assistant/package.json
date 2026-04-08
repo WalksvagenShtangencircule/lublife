@@ -1,0 +1,15 @@
+{
+  "name": "smartaccess-mcp-assistant",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP stdio: безопасные вызовы SmartAccess API (allowlist)",
+  "main": "index.mjs",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.1",
+    "zod": "^3.25.0"
+  }
+}

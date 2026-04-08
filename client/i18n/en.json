@@ -5,6 +5,7 @@
     "appTagline": "Single sign-on, permission management, and secure access to your infrastructure.",
     "moduleAddresses": "Addresses",
     "moduleTools": "Tools",
+    "moduleAssistant": "Assistant",
     "error": "Error",
     "errorCode": "Error [%s]",
     "errorLoadingModule": "Error loading module [%s]",

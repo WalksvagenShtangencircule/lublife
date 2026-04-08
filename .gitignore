@@ -51,6 +51,8 @@ client/version.app
 !server/services/intercom_provision/package.json
 !server/services/event/package.json
 !server/services/sys_exporter/package.json
+!server/services/mcp-assistant/package.json
+!server/services/mcp-assistant/package-lock.json
 
 server/db/mongo/
 server/storage/

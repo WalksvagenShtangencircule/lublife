@@ -19,7 +19,8 @@
         "darkmode",
         "custom",
         "diagnostics",
-        "tools"
+        "tools",
+        "assistant"
     ],
     "asterisk": {
         "ws": "wss://your-host.example/wss",
