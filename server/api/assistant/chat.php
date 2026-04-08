@@ -26,7 +26,7 @@
 
                 $baseUrl = isset($cfg["deepseekBaseUrl"]) ? rtrim(trim((string) $cfg["deepseekBaseUrl"]), "/") : "https://api.deepseek.com";
                 $model = isset($cfg["model"]) ? trim((string) $cfg["model"]) : "deepseek-chat";
-                $maxIter = isset($cfg["maxToolIterations"]) ? (int) $cfg["maxToolIterations"] : 5;
+                $maxIter = isset($cfg["maxToolIterations"]) ? (int) $cfg["maxToolIterations"] : 8;
                 if ($maxIter < 1) {
                     $maxIter = 1;
                 }
@@ -48,9 +48,15 @@
 
                 array_unshift($messages, [
                     "role" => "system",
-                    "content" => "Ты аналитический помощник SmartAccess. Отвечай по-русски, кратко. " .
-                        "Для адресов сначала вызывай resolve_house, затем используй house_id. " .
-                        "Время в инструментах rfid_events_in_period и flat_activity_in_house — unix-секунды (UTC эпоха).",
+                    "content" => "Ты встроенный аналитический помощник **этого конкретного сервера SmartAccess**. " .
+                        "Отвечай **только** на основе данных, полученных через инструменты (БД PostgreSQL, журнал plog в ClickHouse, конфигурация этого экземпляра). " .
+                        "Если вопрос выходит за пределы доступных данных или не относится к содержимому этого сервера — прямо скажи, что можешь отвечать лишь по фактам из системы, и не выдумывай. " .
+                        "Отвечай по-русски, структурированно. Дома ищи через resolve_house, затем используй house_id. " .
+                        "Время since_unix/until_unix — **unix-секунды** (эпоха). Для «за последнюю неделю»: until=текущее время, since=until-7*86400. " .
+                        "Типы событий plog: 1 пропущенный звонок, 2 ответ, 3 открыто ключом RFID, 4 открыто из приложения, 5 лицо, 6 код, 7 ворота по звонку, 9 транспорт. " .
+                        "Счёт квартир: flats_count. Мобильные учётки и активность приложения в plog: mobile_users_stats. " .
+                        "Карточка абонента (квартиры, устройства, ключи): subscriber_lookup. " .
+                        "Что открывалось и когда: plog_events_list (по дому; узкий фильтр по абоненту — house_subscriber_id).",
                 ]);
 
                 $messages = self::sanitizeMessages($messages);
@@ -183,6 +189,72 @@
                                     "search" => ["type" => "string", "description" => "Фрагмент адреса, например улица и номер дома"],
                                 ],
                                 "required" => ["search"],
+                            ],
+                        ],
+                    ],
+                    [
+                        "type" => "function",
+                        "function" => [
+                            "name" => "flats_count",
+                            "description" => "Сколько квартир в доме или сводка по всем домам: total_flats и топ домов по числу квартир.",
+                            "parameters" => [
+                                "type" => "object",
+                                "properties" => [
+                                    "house_id" => ["type" => "integer", "description" => "0 = все дома (сводка), иначе id дома"],
+                                    "top_houses_limit" => ["type" => "integer", "description" => "При house_id=0: сколько домов в топе, по умолчанию 35"],
+                                ],
+                                "required" => [],
+                            ],
+                        ],
+                    ],
+                    [
+                        "type" => "function",
+                        "function" => [
+                            "name" => "mobile_users_stats",
+                            "description" => "Учётные записи мобильного приложения в PostgreSQL (по дому или глобально) и оценка активных пользователей приложения по журналу plog (event=4, уникальные телефоны в JSON phones) за период unix-времени.",
+                            "parameters" => [
+                                "type" => "object",
+                                "properties" => [
+                                    "house_id" => ["type" => "integer", "description" => "0 = по всей базе, иначе только абоненты с квартирами в этом доме"],
+                                    "since_unix" => ["type" => "integer"],
+                                    "until_unix" => ["type" => "integer"],
+                                ],
+                                "required" => [],
+                            ],
+                        ],
+                    ],
+                    [
+                        "type" => "function",
+                        "function" => [
+                            "name" => "subscriber_lookup",
+                            "description" => "Данные абонента: ФИО/телефон, привязанные квартиры и дома, мобильные устройства (UA, last_seen), привязанные RFID-ключи.",
+                            "parameters" => [
+                                "type" => "object",
+                                "properties" => [
+                                    "phone" => ["type" => "string", "description" => "Телефон как в БД или фрагмент с цифрами"],
+                                    "house_subscriber_id" => ["type" => "integer", "description" => "id из houses_subscribers_mobile"],
+                                ],
+                                "required" => [],
+                            ],
+                        ],
+                    ],
+                    [
+                        "type" => "function",
+                        "function" => [
+                            "name" => "plog_events_list",
+                            "description" => "Журнал проходов/открытий из ClickHouse plog по квартирам дома за период: тип события, RFID, код, flat_id, domophone, телефон из приложения. Можно сузить до квартир конкретного house_subscriber_id в этом доме.",
+                            "parameters" => [
+                                "type" => "object",
+                                "properties" => [
+                                    "house_id" => ["type" => "integer"],
+                                    "since_unix" => ["type" => "integer"],
+                                    "until_unix" => ["type" => "integer"],
+                                    "house_subscriber_id" => ["type" => "integer", "description" => "Если указан — только квартиры этого абонента в этом доме"],
+                                    "phone" => ["type" => "string", "description" => "Опционально: только события с этим user_phone в plog"],
+                                    "rfid" => ["type" => "string", "description" => "Опционально: фильтр по ключу"],
+                                    "limit" => ["type" => "integer", "description" => "Макс. строк 5..80, по умолчанию 40"],
+                                ],
+                                "required" => ["house_id", "since_unix", "until_unix"],
                             ],
                         ],
                     ],

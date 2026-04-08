@@ -1,7 +1,7 @@
 {
     "assistant": "Assistant",
     "title": "Assistant (DeepSeek)",
-    "hint": "Ask about addresses, flats, keys, and events. Responses are built on the server using safe database queries.",
+    "hint": "About this SmartAccess server only: addresses, flats, subscribers & app, keys, access events (plog). Not for generic trivia—the assistant uses your DB and ClickHouse.",
     "placeholder": "Type a question…",
     "send": "Send",
     "deepseekUnreachable": "Could not reach DeepSeek. Check API key and server network.",
