@@ -592,17 +592,6 @@ function whoAmI(force) {
 }
 
 
-function brandExternalProfileUrl() {
-    if (config.brandLinkUrl) {
-        return config.brandLinkUrl;
-    }
-    let gh = config.brandGithubUser ? String(config.brandGithubUser).trim().replace(/^@/, "") : "";
-    if (gh) {
-        return "https://github.com/" + gh;
-    }
-    return "https://github.com/rosteleset";
-}
-
 function initAll() {
     if (config.brandLogoUrl || config.brandGithubUser) {
         let ghUser = config.brandGithubUser ? String(config.brandGithubUser).trim().replace(/^@/, "") : "";
@@ -632,17 +621,6 @@ function initAll() {
         $("#forgotBoxLogo").empty().append(loginBrandEl.clone());
         $("#2faBoxLogo").empty().append(loginBrandEl.clone());
     }
-
-    /* Внешняя ссылка профиля/репозитория — только по клику на заголовок бренда (не блокируем pushmenu на логотипе) */
-    $("#brandTitle").off("click.rbtBrand").on("click.rbtBrand", function (e) {
-        if (!config.brandLogoUrl && !config.brandGithubUser) {
-            return;
-        }
-        e.preventDefault();
-        e.stopPropagation();
-        window.open(brandExternalProfileUrl(), "_blank", "noopener,noreferrer").focus();
-        return false;
-    });
 
     $(document.body).css("background-color", '#e9ecef');
 
@@ -686,12 +664,12 @@ function initAll() {
     $(".back-to-top").attr("aria-label", i18n("scrollToTop"));
     $(".back-to-top").attr("title", i18n("scrollToTop"));
 
+    let brandTxt = config.brandSidebarTitle !== undefined ? config.brandSidebarTitle : i18n("windowTitleShort");
     if (config.brandHideSidebarTitle) {
         $("#brandTitle").hide().empty();
-        $("#brand").attr("title", brandExternalProfileUrl());
-        $("#leftSideToggler").attr("title", brandExternalProfileUrl());
+        $("#brand").attr("title", brandTxt);
+        $("#leftSideToggler").attr("title", brandTxt);
     } else {
-        let brandTxt = config.brandSidebarTitle !== undefined ? config.brandSidebarTitle : i18n("windowTitleShort");
         $("#brandTitle").text(brandTxt).show();
         $(".sidebarToggler").attr("title", brandTxt);
     }
