@@ -1,0 +1,549 @@
+{
+  "meta": {
+    "title": "SmartAccess — каталог HTTP API и модель сущностей",
+    "version": 1,
+    "urlShape": "{SMARTACCESS_BASE_URL}/{api}/{method}[/{id}][?query]",
+    "virtualEndpoints": [
+      {
+        "path": "server/ping",
+        "note": "Обрабатывается в frontend.php без api/server/ping.php; ответ 204."
+      }
+    ],
+    "mcpTools": {
+      "smapi_request": "Универсальный вызов API (метод задаётся телом; по умолчанию только GET, см. SMARTACCESS_MCP_HTTP_METHODS).",
+      "smartaccess_catalog": "Этот файл: список эндпоинтов, домены, пересечения сущностей.",
+      "smartaccess_capabilities": "GET authorization/available — какие методы разрешены текущему токену."
+    }
+  },
+  "domains": {
+    "addresses": "Иерархия адресов: регион → округ → город → населённый пункт → улица → дом (справочник и избранное).",
+    "houses": "Эксплуатационная модель дома: подъезды, квартиры, домофоны, камеры у дома, CMS, кастомные поля, поиск, автоконфиг железа.",
+    "subscribers": "Жильцы/абоненты, устройства, ключи, привязка к квартирам и камерам, поиск (в т.ч. RFID).",
+    "accounts": "Пользователи панели, группы, участники групп.",
+    "authorization": "Матрица прав: methods, rights, available.",
+    "companies": "УК / организации ↔ дома.",
+    "contacts": "Контакты.",
+    "cameras": "Камеры как объект доступа (частично дублирует houses/cameras).",
+    "analytics": "События, статистика, превью, видео, camshot.",
+    "cdr": "Call detail records.",
+    "queues": "Очереди.",
+    "providers": "Внешние провайдеры интеграций.",
+    "configs": "Конфигурации.",
+    "files": "Файлы.",
+    "geo": "Подсказки геопоиска.",
+    "inbox": "Входящие сообщения.",
+    "mediaserver": "Потоки, камера↔стрим, аудит.",
+    "mkb": "База знаний: столы, карточки.",
+    "mqtt": "MQTT-конфиг.",
+    "notes": "Заметки.",
+    "server": "Версия, systemInfo, clearCache.",
+    "tools": "Массовый импорт и образцы CSV.",
+    "tt": "Тикет-система: задачи, проекты, статусы, комментарии, вложения, фильтры, роли, SLA.",
+    "cs": "Ячейки/листы (связано с контекстом задач).",
+    "user": "Профиль, whoAmI, аватар, настройки, sudo.",
+    "ud363": "Загрузка/выгрузка файлов по протоколу ud363.",
+    "diagnostics": "Проверки, история, Telegram, сводка.",
+    "authentication": "Логин, logout, 2FA.",
+    "assistant": "Чат с LLM (POST).",
+    "custom": "Пользовательские расширения API."
+  },
+  "entityNodes": [
+    {
+      "id": "region",
+      "kind": "address",
+      "apis": [
+        "addresses/region",
+        "addresses/addresses",
+        "addresses/search"
+      ]
+    },
+    {
+      "id": "house",
+      "kind": "address+ops",
+      "apis": [
+        "addresses/house",
+        "houses/house",
+        "houses/path",
+        "houses/leaf",
+        "houses/search"
+      ]
+    },
+    {
+      "id": "entrance",
+      "kind": "housePart",
+      "apis": [
+        "houses/entrance",
+        "houses/sharedEntrances"
+      ]
+    },
+    {
+      "id": "flat",
+      "kind": "housePart",
+      "apis": [
+        "houses/flat",
+        "houses/flats"
+      ]
+    },
+    {
+      "id": "domophone",
+      "kind": "device",
+      "apis": [
+        "houses/domophone",
+        "houses/domophones"
+      ]
+    },
+    {
+      "id": "camera",
+      "kind": "device",
+      "apis": [
+        "houses/cameras",
+        "cameras/camera",
+        "cameras/cameras",
+        "subscribers/flatCameras",
+        "subscribers/subscriberCameras"
+      ]
+    },
+    {
+      "id": "subscriber",
+      "kind": "person",
+      "apis": [
+        "subscribers/subscriber",
+        "subscribers/subscribers",
+        "subscribers/search*"
+      ]
+    },
+    {
+      "id": "key",
+      "kind": "access",
+      "apis": [
+        "subscribers/key",
+        "subscribers/keys"
+      ]
+    },
+    {
+      "id": "device",
+      "kind": "subscriberEquip",
+      "apis": [
+        "subscribers/device",
+        "subscribers/devices"
+      ]
+    },
+    {
+      "id": "user",
+      "kind": "account",
+      "apis": [
+        "accounts/user",
+        "accounts/users",
+        "user/*"
+      ]
+    },
+    {
+      "id": "group",
+      "kind": "acl",
+      "apis": [
+        "accounts/group",
+        "accounts/groups",
+        "accounts/groupUsers"
+      ]
+    },
+    {
+      "id": "company",
+      "kind": "org",
+      "apis": [
+        "companies/company",
+        "companies/companies"
+      ]
+    },
+    {
+      "id": "tt_issue",
+      "kind": "ticket",
+      "apis": [
+        "tt/issue",
+        "tt/issues",
+        "tt/journal",
+        "tt/comment",
+        "tt/file"
+      ]
+    },
+    {
+      "id": "tt_project",
+      "kind": "ticket",
+      "apis": [
+        "tt/project",
+        "tt/catalog",
+        "tt/status",
+        "tt/workflow"
+      ]
+    },
+    {
+      "id": "media_stream",
+      "kind": "media",
+      "apis": [
+        "mediaserver/stream",
+        "mediaserver/streams",
+        "mediaserver/cameraStream"
+      ]
+    },
+    {
+      "id": "analytics_event",
+      "kind": "telemetry",
+      "apis": [
+        "analytics/events",
+        "analytics/stats",
+        "analytics/eventPreview"
+      ]
+    },
+    {
+      "id": "queue",
+      "kind": "ops",
+      "apis": [
+        "queues/queues"
+      ]
+    },
+    {
+      "id": "file_asset",
+      "kind": "blob",
+      "apis": [
+        "files/file",
+        "files/files",
+        "ud363/download",
+        "ud363/upload"
+      ]
+    },
+    {
+      "id": "note",
+      "kind": "content",
+      "apis": [
+        "notes/note",
+        "notes/notes",
+        "notes/search"
+      ]
+    },
+    {
+      "id": "mkb_card",
+      "kind": "knowledge",
+      "apis": [
+        "mkb/card",
+        "mkb/cards",
+        "mkb/desk"
+      ]
+    }
+  ],
+  "intersections": [
+    {
+      "entities": [
+        "house",
+        "flat"
+      ],
+      "relation": "1:N",
+      "via": "houses/flats, houses/flat; адресная привязка в addresses/*"
+    },
+    {
+      "entities": [
+        "house",
+        "entrance"
+      ],
+      "relation": "1:N",
+      "via": "houses/entrance; sharedEntrances для связных подъездов"
+    },
+    {
+      "entities": [
+        "flat",
+        "subscriber"
+      ],
+      "relation": "N:N",
+      "via": "subscribers/* (привязка абонента к квартире/дому)"
+    },
+    {
+      "entities": [
+        "flat",
+        "key"
+      ],
+      "relation": "1:N",
+      "via": "subscribers/keys — ключи в разрезе квартиры/дома"
+    },
+    {
+      "entities": [
+        "subscriber",
+        "device"
+      ],
+      "relation": "1:N",
+      "via": "subscribers/devices"
+    },
+    {
+      "entities": [
+        "flat",
+        "camera"
+      ],
+      "relation": "N:N",
+      "via": "subscribers/flatCameras; houses/cameras на уровне дома"
+    },
+    {
+      "entities": [
+        "house",
+        "domophone"
+      ],
+      "relation": "1:N",
+      "via": "houses/domophones, houses/domophone"
+    },
+    {
+      "entities": [
+        "house",
+        "company"
+      ],
+      "relation": "N:N",
+      "via": "компания как владелец/обслуживающая — companies/* + объекты дома"
+    },
+    {
+      "entities": [
+        "user",
+        "group"
+      ],
+      "relation": "N:N",
+      "via": "accounts/groupUsers; права — authorization/rights"
+    },
+    {
+      "entities": [
+        "tt_issue",
+        "tt_project"
+      ],
+      "relation": "N:1",
+      "via": "tt/issue, tt/issues, tt/project"
+    },
+    {
+      "entities": [
+        "tt_issue",
+        "file_asset"
+      ],
+      "relation": "N:N",
+      "via": "tt/file, files/* — вложения задач"
+    },
+    {
+      "entities": [
+        "analytics_event",
+        "house"
+      ],
+      "relation": "N:1",
+      "via": "analytics/events, stats — привязка к объекту/контексту доступа"
+    },
+    {
+      "entities": [
+        "camera",
+        "media_stream"
+      ],
+      "relation": "1:N",
+      "via": "mediaserver/cameraStream, stream"
+    },
+    {
+      "entities": [
+        "house",
+        "analytics_event"
+      ],
+      "relation": "observability",
+      "via": "analytics/* + diagnostics/*"
+    },
+    {
+      "entities": [
+        "subscriber",
+        "inbox"
+      ],
+      "relation": "message",
+      "via": "inbox/message"
+    },
+    {
+      "entities": [
+        "address_node",
+        "geo"
+      ],
+      "relation": "lookup",
+      "via": "geo/suggestions + адресные PUT в addresses/*"
+    },
+    {
+      "entities": [
+        "config",
+        "provider"
+      ],
+      "relation": "integration",
+      "via": "configs/* + providers/* + mqtt/config"
+    },
+    {
+      "entities": [
+        "cdr",
+        "subscriber"
+      ],
+      "relation": "call",
+      "via": "cdr/cdr — соотнесение с абонентом/номером в данных биллинга"
+    },
+    {
+      "entities": [
+        "mkb_card",
+        "tt_issue"
+      ],
+      "relation": "optional",
+      "via": "ссылки из карточек базы знаний в контексте поддержки (зависит от внедрения)"
+    },
+    {
+      "entities": [
+        "note",
+        "house"
+      ],
+      "relation": "annotation",
+      "via": "notes/* к объектам (если поддерживается клиентом)"
+    },
+    {
+      "entities": [
+        "cs_cell",
+        "tt_issue"
+      ],
+      "relation": "spreadsheet",
+      "via": "cs/sheet, cs/cell — данные в таблицах по задачам"
+    }
+  ],
+  "allEndpoints": [
+    "accounts/group",
+    "accounts/groups",
+    "accounts/groupUsers",
+    "accounts/user",
+    "accounts/users",
+    "addresses/addresses",
+    "addresses/area",
+    "addresses/city",
+    "addresses/favorites",
+    "addresses/house",
+    "addresses/region",
+    "addresses/search",
+    "addresses/settlement",
+    "addresses/street",
+    "analytics/camshot",
+    "analytics/eventPreview",
+    "analytics/events",
+    "analytics/eventVideo",
+    "analytics/eventVideoPlay",
+    "analytics/stats",
+    "assistant/chat",
+    "authentication/login",
+    "authentication/logout",
+    "authentication/twoFa",
+    "authorization/available",
+    "authorization/methods",
+    "authorization/rights",
+    "cameras/camera",
+    "cameras/cameras",
+    "cameras/camshot",
+    "cdr/cdr",
+    "companies/companies",
+    "companies/company",
+    "configs/configs",
+    "contacts/contact",
+    "contacts/contacts",
+    "cs/cell",
+    "cs/reserveCell",
+    "cs/sheet",
+    "cs/sheets",
+    "custom/custom",
+    "diagnostics/action",
+    "diagnostics/check",
+    "diagnostics/history",
+    "diagnostics/run",
+    "diagnostics/summary",
+    "diagnostics/telegram",
+    "diagnostics/telegramWait",
+    "files/file",
+    "files/files",
+    "geo/suggestions",
+    "houses/autoconfigure",
+    "houses/cameras",
+    "houses/cms",
+    "houses/customFields",
+    "houses/customFieldsConfiguration",
+    "houses/domophone",
+    "houses/domophones",
+    "houses/entrance",
+    "houses/flat",
+    "houses/flats",
+    "houses/house",
+    "houses/leaf",
+    "houses/path",
+    "houses/search",
+    "houses/sharedEntrances",
+    "houses/watch",
+    "inbox/message",
+    "mediaserver/audit",
+    "mediaserver/cameraStream",
+    "mediaserver/deleteStreamAndCamera",
+    "mediaserver/stream",
+    "mediaserver/streams",
+    "mediaserver/updateCameraStream",
+    "mkb/card",
+    "mkb/cards",
+    "mkb/desk",
+    "mkb/desks",
+    "mkb/otherCards",
+    "mkb/otherDesks",
+    "mkb/send",
+    "mqtt/config",
+    "notes/check",
+    "notes/note",
+    "notes/notes",
+    "notes/reorder",
+    "notes/search",
+    "providers/json",
+    "providers/provider",
+    "queues/queues",
+    "server/clearCache",
+    "server/systemInfo",
+    "server/version",
+    "subscribers/device",
+    "subscribers/devices",
+    "subscribers/flatCameras",
+    "subscribers/key",
+    "subscribers/keys",
+    "subscribers/search",
+    "subscribers/searchFlat",
+    "subscribers/searchRf",
+    "subscribers/subscriber",
+    "subscribers/subscriberCameras",
+    "subscribers/subscribers",
+    "tools/bulkImportKeys",
+    "tools/bulkImportSubscribers",
+    "tools/sampleImportKeys",
+    "tools/sampleImportSubscribers",
+    "tt/action",
+    "tt/arrays",
+    "tt/bulkAction",
+    "tt/catalog",
+    "tt/comment",
+    "tt/crontab",
+    "tt/customField",
+    "tt/customFilter",
+    "tt/favoriteFilter",
+    "tt/file",
+    "tt/filter",
+    "tt/issue",
+    "tt/issues",
+    "tt/issueTemplate",
+    "tt/journal",
+    "tt/json",
+    "tt/lib",
+    "tt/link",
+    "tt/printIssue",
+    "tt/prints",
+    "tt/project",
+    "tt/resolution",
+    "tt/role",
+    "tt/status",
+    "tt/suggestions",
+    "tt/tag",
+    "tt/tt",
+    "tt/viewer",
+    "tt/workflow",
+    "ud363/download",
+    "ud363/upload",
+    "user/avatar",
+    "user/notify",
+    "user/personal",
+    "user/settings",
+    "user/sudo",
+    "user/whoAmI"
+  ]
+}
