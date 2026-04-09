@@ -388,9 +388,11 @@
             html += "<a href='#' class='d-block mb-2 assistant-quick-link' data-idx='" + i + "'>" +
                 "<i class='fas fa-link mr-1'></i>" +
                 "<span title='" + escapeHTML(tip) + "'>" + escapeHTML(modules.assistant.t(x.key)) + "</span>" +
+                "<i class='fas fa-circle-question text-muted ml-1' title='" + escapeHTML(tip) + "'></i>" +
                 "</a>";
         }
         $("#assistantQuickLinks").html(html);
+        $("#assistantQuickHintLive").text(modules.assistant.t("hint"));
         $(".assistant-quick-link").off("click").on("click", function (e) {
             e.preventDefault();
             let idx = parseInt($(this).attr("data-idx"), 10);
@@ -400,6 +402,22 @@
             }
             if (!key) return;
             modules.assistant.runScenarioWizard(key);
+        }).on("mouseenter", function () {
+            let idx = parseInt($(this).attr("data-idx"), 10);
+            if (isNaN(idx) || !modules.assistant._quickCache || !modules.assistant._quickCache[idx]) {
+                return;
+            }
+            let key = String(modules.assistant._quickCache[idx].key || "");
+            if (!key) {
+                return;
+            }
+            let tip = modules.assistant.t(key + "Desc");
+            if (!tip || tip === ("assistant.quick." + key + "Desc")) {
+                tip = modules.assistant._quickCache[idx].prompt || "";
+            }
+            $("#assistantQuickHintLive").text(tip);
+        }).on("mouseleave", function () {
+            $("#assistantQuickHintLive").text(modules.assistant.t("hint"));
         });
     },
 
@@ -429,6 +447,8 @@
             "<div class='card-body small'>" +
             "<p class='text-muted'>" + escapeHTML(modules.assistant.t("hint")) + "</p>" +
             "<div id='assistantQuickLinks'></div>" +
+            "<hr class='my-2'>" +
+            "<div id='assistantQuickHintLive' class='text-muted small'></div>" +
             "</div></div></div></div>"
         );
         modules.assistant.transcript = [];
