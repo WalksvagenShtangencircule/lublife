@@ -166,15 +166,17 @@
                     }
 
                     $content = isset($msg["content"]) ? (string) $msg["content"] : "";
-                    if (strpos($content, "DSML") !== false && self::containsDsmlInvoke($content)) {
-                        // Модель вернула сырые DSML-теги как "ответ". Просим переформулировать обычным текстом.
+                    if (self::containsRawToolMarkup($content)) {
+                        // Модель вернула сырые теги function_calls/function_results как "ответ".
+                        // Просим переформулировать обычным текстом по уже полученным данным.
                         $messages[] = [
                             "role" => "assistant",
                             "content" => $content,
                         ];
                         $messages[] = [
                             "role" => "system",
-                            "content" => "Не выводи DSML/XML/теги. Дай только финальный ответ пользователю обычным русским текстом, используя уже полученные результаты инструментов.",
+                            "content" => "Не выводи DSML/XML/служебные теги (function_calls/function_results/result/parameter). " .
+                                "Дай только финальный ответ пользователю обычным русским текстом, используя уже полученные результаты инструментов.",
                         ];
                         continue;
                     }
@@ -462,12 +464,36 @@
                 return (bool) preg_match('/invoke\\s+name=\"[a-zA-Z0-9_]+\"/i', $text);
             }
 
+            private static function containsRawToolMarkup(string $text): bool {
+                if ($text === "") {
+                    return false;
+                }
+                if (self::containsDsmlInvoke($text)) {
+                    return true;
+                }
+                if (preg_match('/<\\s*function_results\\s*>/i', $text)) {
+                    return true;
+                }
+                if (preg_match('/<\\s*result\\s*>/i', $text)) {
+                    return true;
+                }
+                if (preg_match('/DSML\\s*\\|\\s*function_calls/i', $text)) {
+                    return true;
+                }
+                return false;
+            }
+
             private static function stripDsmlMarkup(string $text): string {
                 $out = $text;
                 // Удаляем DSML-блоки целиком, если вдруг модель добавила их в финальный ответ.
                 $out = preg_replace('/<\\|\\s*DSML\\s*\\|\\s*function_calls\\s*>.*?<\\|\\s*\\/\\s*DSML\\s*\\|\\s*function_calls\\s*>/isu', '', $out);
                 // Подстраховка на "голые" invoke/parameter без внешних тегов.
                 $out = preg_replace('/invoke\\s+name=\"[a-zA-Z0-9_]+\"\\s*>.*?\\/\\s*invoke\\s*>/isu', '', $out);
+                // Удаляем function_results/result XML-like блоки.
+                $out = preg_replace('/<\\s*function_results\\s*>.*?<\\s*\\/\\s*function_results\\s*>/isu', '', $out);
+                $out = preg_replace('/<\\s*result\\s*>.*?<\\s*\\/\\s*result\\s*>/isu', '', $out);
+                // На случай фрагментированных тегов — прибираем одиночные.
+                $out = preg_replace('/<\\s*\\/??\\s*(function_results|result|parameter|invoke)\\b[^>]*>/isu', '', $out);
                 return trim((string) $out);
             }
 
