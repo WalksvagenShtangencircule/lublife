@@ -610,9 +610,13 @@
                             $plStr = $pl === null ? "н/д" : (string) (int) $pl;
                             $su = isset($w["since_unix"]) ? (int) $w["since_unix"] : 0;
                             $uu = isset($w["until_unix"]) ? (int) $w["until_unix"] : 0;
-                            $funnelWindows[] = "• Окно " . ($days > 0 ? $days . " дн." : "?") . " (" . self::fmtUnix($su) . " — " . self::fmtUnix($uu) .
+                            $line = "• Окно " . ($days > 0 ? $days . " дн." : "?") . " (" . self::fmtUnix($su) . " — " . self::fmtUnix($uu) .
                                 "): учёток " . ($pgM !== null ? $pgM : "—") . ", устройств " . ($pgD !== null ? $pgD : "—") .
                                 ", активных (event=4) " . $plStr . ".";
+                            if (!empty($w["error"])) {
+                                $line .= " Ошибка: " . (string) $w["error"] . ".";
+                            }
+                            $funnelWindows[] = $line;
                         }
                     }
 
