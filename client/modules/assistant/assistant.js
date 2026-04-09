@@ -381,8 +381,14 @@
         let html = "";
         for (let i = 0; i < items.length; i++) {
             let x = items[i];
+            let tip = modules.assistant.t(x.key + "Desc");
+            if (!tip || tip === ("assistant.quick." + x.key + "Desc")) {
+                tip = x.prompt;
+            }
             html += "<a href='#' class='d-block mb-2 assistant-quick-link' data-idx='" + i + "'>" +
-                "<i class='fas fa-link mr-1'></i>" + escapeHTML(modules.assistant.t(x.key)) + "</a>";
+                "<i class='fas fa-link mr-1'></i>" +
+                "<span title='" + escapeHTML(tip) + "'>" + escapeHTML(modules.assistant.t(x.key)) + "</span>" +
+                "</a>";
         }
         $("#assistantQuickLinks").html(html);
         $(".assistant-quick-link").off("click").on("click", function (e) {
