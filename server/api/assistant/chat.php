@@ -70,16 +70,23 @@
 
                 $iter = 0;
                 $assistantMeta = [];
+                $toolCallLoop = [];
 
                 while ($iter < $maxIter) {
                     $iter++;
+                    $forceNoTools = ($iter >= $maxIter - 1);
                     $payload = [
                         "model" => $model,
                         "messages" => $messages,
-                        "tools" => $tools,
-                        "tool_choice" => "auto",
                         "temperature" => 0.2,
                     ];
+                    if (!$forceNoTools) {
+                        $payload["tools"] = $tools;
+                        $payload["tool_choice"] = "auto";
+                    } else {
+                        // Последний проход: принудительно без новых инструментов, чтобы получить финальный ответ.
+                        $payload["tool_choice"] = "none";
+                    }
 
                     $raw = self::httpJson("POST", $baseUrl . "/chat/completions", $apiKey, $payload);
                     if ($raw === null) {
@@ -105,25 +112,52 @@
 
                     $finish = @$choice["finish_reason"];
                     $toolCalls = @$msg["tool_calls"];
+                    if ((!is_array($toolCalls) || !count($toolCalls)) && isset($msg["content"]) && is_string($msg["content"])) {
+                        $toolCalls = self::parseDsmlToolCalls($msg["content"]);
+                    }
 
-                    if (is_array($toolCalls) && count($toolCalls) && ($finish === "tool_calls" || isset($msg["tool_calls"]))) {
+                    if (is_array($toolCalls) && count($toolCalls) && ($finish === "tool_calls" || isset($msg["tool_calls"]) || strpos((string)@$msg["content"], "DSML") !== false)) {
+                        if ($forceNoTools) {
+                            // Модель продолжает просить инструменты даже на финальном проходе.
+                            // Добавляем жёсткую подсказку и делаем ещё одну попытку без tools.
+                            $messages[] = [
+                                "role" => "system",
+                                "content" => "Новых вызовов инструментов больше делать нельзя. Ответь пользователю итогом на основании уже полученных результатов инструментов.",
+                            ];
+                            continue;
+                        }
                         $messages[] = $msg;
                         foreach ($toolCalls as $tc) {
                             $id = @$tc["id"];
-                            $fn = @$tc["function"]["name"];
-                            $argsJson = @$tc["function"]["arguments"];
+                            $fn = "";
                             $args = [];
-                            if (is_string($argsJson)) {
-                                $args = json_decode($argsJson, true);
-                                if (!is_array($args)) {
-                                    $args = [];
+                            if (isset($tc["function"])) {
+                                $fn = (string) (@$tc["function"]["name"] ?: "");
+                                $argsJson = @$tc["function"]["arguments"];
+                                if (is_string($argsJson)) {
+                                    $args = json_decode($argsJson, true);
+                                    if (!is_array($args)) {
+                                        $args = [];
+                                    }
                                 }
+                            } else {
+                                $fn = (string) (@$tc["name"] ?: "");
+                                $args = is_array(@$tc["arguments"]) ? $tc["arguments"] : [];
+                            }
+                            $sig = md5((string)$fn . "|" . json_encode($args, JSON_UNESCAPED_UNICODE));
+                            $toolCallLoop[$sig] = isset($toolCallLoop[$sig]) ? ($toolCallLoop[$sig] + 1) : 1;
+                            if ($toolCallLoop[$sig] > 2) {
+                                $messages[] = [
+                                    "role" => "system",
+                                    "content" => "Одинаковый вызов инструмента уже повторялся. Не повторяй его снова, а сформируй ответ по уже полученным данным.",
+                                ];
+                                continue;
                             }
                             $result = assistant_tools_run((string) $fn, $args, $db, $config);
                             $assistantMeta[] = ["tool" => $fn, "args" => $args, "result" => $result];
                             $messages[] = [
                                 "role" => "tool",
-                                "tool_call_id" => (string) $id,
+                                "tool_call_id" => (string) ($id ?: ("dsml_" . md5($fn . json_encode($args)))),
                                 "content" => json_encode($result, JSON_UNESCAPED_UNICODE),
                             ];
                         }
@@ -352,6 +386,58 @@
                 }
                 $dec = json_decode($resp, true);
                 return is_array($dec) ? $dec : null;
+            }
+
+            /**
+             * DeepSeek иногда возвращает function call не в tool_calls JSON, а DSML-текстом.
+             * Конвертируем в унифицированный массив вызовов.
+             *
+             * @return array<int, array{name:string,arguments:array<string,mixed>}>
+             */
+            private static function parseDsmlToolCalls(string $content): array {
+                if (strpos($content, "invoke name=") === false || strpos($content, "DSML") === false) {
+                    return [];
+                }
+                $calls = [];
+                if (!preg_match_all('/<\\|\\s*DSML\\s*\\|\\s*invoke\\s+name=\"([a-zA-Z0-9_]+)\"\\s*>(.*?)<\\|\\s*\\/\\s*DSML\\s*\\|\\s*invoke\\s*>/su', $content, $invokes, PREG_SET_ORDER)) {
+                    return [];
+                }
+                foreach ($invokes as $inv) {
+                    $name = (string) $inv[1];
+                    $body = (string) $inv[2];
+                    $args = [];
+                    if (preg_match_all('/<\\|\\s*DSML\\s*\\|\\s*parameter\\s+name=\"([a-zA-Z0-9_]+)\"([^>]*)>(.*?)<\\|\\s*\\/\\s*DSML\\s*\\|\\s*parameter\\s*>/su', $body, $params, PREG_SET_ORDER)) {
+                        foreach ($params as $p) {
+                            $k = (string) $p[1];
+                            $attrs = (string) $p[2];
+                            $vRaw = trim(html_entity_decode((string) $p[3], ENT_QUOTES | ENT_HTML5));
+                            $isString = false;
+                            if (preg_match('/\\bstring=\"(true|false)\"/i', $attrs, $m)) {
+                                $isString = (strtolower((string) $m[1]) === "true");
+                            }
+                            if ($isString) {
+                                $args[$k] = $vRaw;
+                            } else {
+                                if ($vRaw === "true") {
+                                    $args[$k] = true;
+                                } elseif ($vRaw === "false") {
+                                    $args[$k] = false;
+                                } elseif (preg_match('/^-?\\d+$/', $vRaw)) {
+                                    $args[$k] = (int) $vRaw;
+                                } elseif (preg_match('/^-?\\d+\\.\\d+$/', $vRaw)) {
+                                    $args[$k] = (float) $vRaw;
+                                } else {
+                                    $args[$k] = $vRaw;
+                                }
+                            }
+                        }
+                    }
+                    $calls[] = [
+                        "name" => $name,
+                        "arguments" => $args,
+                    ];
+                }
+                return $calls;
             }
 
             public static function index() {
