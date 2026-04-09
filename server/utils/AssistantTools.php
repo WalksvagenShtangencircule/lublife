@@ -96,6 +96,8 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
                 return assistant_tool_flats_count($db, $args);
             case "mobile_users_stats":
                 return assistant_tool_mobile_users_stats($db, $config, $args);
+            case "mobile_access_funnel":
+                return assistant_tool_mobile_access_funnel($db, $config, $args);
             case "subscriber_lookup":
                 return assistant_tool_subscriber_lookup($db, $args);
             case "plog_events_list":
@@ -422,15 +424,72 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
             $plogUniqPhones = isset($pr[0]["c"]) ? (int) $pr[0]["c"] : null;
         }
 
+        $plogNote = "plog_distinct_app_phones_event4 — число разных нормализованных user_phone с открытиями из приложения (event=4) в ClickHouse за период.";
+        if ($houseId > 0 && !count($flatIds)) {
+            $plogNote .= " Для этого дома нет квартир в houses_flats — счётчик plog по квартирам недоступен.";
+        }
+
         return [
             "house_id" => $houseId > 0 ? $houseId : null,
             "pg_mobile_subscribers_distinct" => (int) $cnt,
             "pg_subscribers_with_device_row" => (int) $dev,
             "platform_breakdown" => $plat,
             "plog_distinct_app_phones_event4" => $plogUniqPhones,
-            "plog_note" => "plog_distinct_app_phones_event4 — число разных нормализованных user_phone с открытиями из приложения (event=4) в ClickHouse за период.",
+            "plog_note" => $plogNote,
             "since_unix" => $since,
             "until_unix" => $until,
+        ];
+    }
+
+    /**
+     * Несколько временных окон для воронки (меньше итераций LLM, чем серия mobile_users_stats).
+     *
+     * @param object $db
+     * @return array<string, mixed>
+     */
+    function assistant_tool_mobile_access_funnel($db, array $config, array $args): array {
+        $houseId = isset($args["house_id"]) ? (int) $args["house_id"] : 0;
+        $until = isset($args["until_unix"]) ? (int) $args["until_unix"] : time();
+        if ($until <= 0) {
+            $until = time();
+        }
+        $periods = [7, 30];
+        if (isset($args["periods_days"]) && is_array($args["periods_days"])) {
+            $periods = [];
+            foreach ($args["periods_days"] as $d) {
+                $periods[] = min(366, max(1, (int) $d));
+            }
+        }
+        $periods = array_values(array_unique($periods));
+        if (!count($periods)) {
+            $periods = [7, 30];
+        }
+        if (count($periods) > 6) {
+            $periods = array_slice($periods, 0, 6);
+        }
+        $windows = [];
+        foreach ($periods as $days) {
+            $since = $until - $days * 86400;
+            $stats = assistant_tool_mobile_users_stats($db, $config, [
+                "house_id" => $houseId,
+                "since_unix" => $since,
+                "until_unix" => $until,
+            ]);
+            $windows[] = [
+                "days" => $days,
+                "since_unix" => $since,
+                "until_unix" => $until,
+                "pg_mobile_subscribers_distinct" => isset($stats["pg_mobile_subscribers_distinct"]) ? (int) $stats["pg_mobile_subscribers_distinct"] : null,
+                "pg_subscribers_with_device_row" => isset($stats["pg_subscribers_with_device_row"]) ? (int) $stats["pg_subscribers_with_device_row"] : null,
+                "plog_distinct_app_phones_event4" => isset($stats["plog_distinct_app_phones_event4"]) ? $stats["plog_distinct_app_phones_event4"] : null,
+                "error" => isset($stats["error"]) ? (string) $stats["error"] : null,
+            ];
+        }
+        return [
+            "house_id" => $houseId > 0 ? $houseId : null,
+            "until_unix" => $until,
+            "windows" => $windows,
+            "note" => "Сводка по окнам: учётки и устройства — PostgreSQL; активные по приложению — uniq user_phone в plog при event=4 за каждый интервал.",
         ];
     }
 

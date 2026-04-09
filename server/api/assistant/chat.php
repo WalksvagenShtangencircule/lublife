@@ -55,6 +55,7 @@
                         "Время since_unix/until_unix — **unix-секунды** (эпоха). Для «за последнюю неделю»: until=текущее время, since=until-7*86400. " .
                         "Типы событий plog: 1 пропущенный звонок, 2 ответ, 3 открыто ключом RFID, 4 открыто из приложения, 5 лицо, 6 код, 7 ворота по звонку, 9 транспорт. " .
                         "Счёт квартир: flats_count. Мобильные учётки и активность приложения в plog: mobile_users_stats. " .
+                        "Если просят воронку сразу за **несколько периодов** (например 7 и 30 дней) — один вызов **mobile_access_funnel** (house_id + periods_days), не делай десяток одинаковых вызовов. " .
                         "Карточка абонента (квартиры, устройства, ключи): subscriber_lookup. " .
                         "Что открывалось и когда: plog_events_list (по дому; узкий фильтр по абоненту — house_subscriber_id).",
                 ]);
@@ -111,14 +112,15 @@
                         return api::ANSWER(["error" => "bad_message_shape"], "assistantChat");
                     }
 
-                    $finish = @$choice["finish_reason"];
                     $toolCalls = @$msg["tool_calls"];
                     $msgContent = isset($msg["content"]) && is_string($msg["content"]) ? (string)$msg["content"] : "";
                     if ((!is_array($toolCalls) || !count($toolCalls)) && $msgContent !== "") {
                         $toolCalls = self::parseDsmlToolCalls($msgContent);
                     }
 
-                    if (is_array($toolCalls) && count($toolCalls) && ($finish === "tool_calls" || isset($msg["tool_calls"]) || strpos($msgContent, "DSML") !== false)) {
+                    // Важно: DeepSeek иногда кладёт вызовы в текст DSML при finish_reason=stop/stop_generation.
+                    // Раньше мы требовали подстроку "DSML" или finish=tool_calls — из-за этого инструменты не выполнялись.
+                    if (is_array($toolCalls) && count($toolCalls)) {
                         if ($forceNoTools) {
                             // Модель продолжает просить инструменты даже на финальном проходе.
                             // Добавляем жёсткую подсказку и делаем ещё одну попытку без tools.
@@ -293,6 +295,26 @@
                                     "house_id" => ["type" => "integer", "description" => "0 = по всей базе, иначе только абоненты с квартирами в этом доме"],
                                     "since_unix" => ["type" => "integer"],
                                     "until_unix" => ["type" => "integer"],
+                                ],
+                                "required" => [],
+                            ],
+                        ],
+                    ],
+                    [
+                        "type" => "function",
+                        "function" => [
+                            "name" => "mobile_access_funnel",
+                            "description" => "Воронка мобильного доступа за **несколько окон** (например 7 и 30 дней) за один вызов: для каждого окна — учётки (distinct), устройства, уникальные телефоны в plog при event=4. Правая граница until_unix по умолчанию «сейчас».",
+                            "parameters" => [
+                                "type" => "object",
+                                "properties" => [
+                                    "house_id" => ["type" => "integer", "description" => "0 = вся база, иначе дом"],
+                                    "periods_days" => [
+                                        "type" => "array",
+                                        "items" => ["type" => "integer"],
+                                        "description" => "Длины окон в днях, напр. [7, 30]. Максимум 6 значений.",
+                                    ],
+                                    "until_unix" => ["type" => "integer", "description" => "Правая граница периода (эпоха), по умолчанию time()"],
                                 ],
                                 "required" => [],
                             ],
@@ -528,33 +550,74 @@
                 $parts = [];
                 $parts[] = "Не удалось завершить формулировку модели, но вот что уже подтверждено по данным сервера:";
 
-                $tail = array_slice($meta, -5);
+                $scan = array_slice($meta, -25);
                 $period = null;
                 $houseId = null;
                 $flatsCount = null;
                 $eventsReturned = null;
                 $errors = [];
+                $mobileLines = [];
+                $funnelWindows = [];
+                $subscriberFound = false;
 
-                foreach ($tail as $m) {
-                    $tool = isset($m["tool"]) ? (string)$m["tool"] : "unknown_tool";
+                foreach ($scan as $m) {
+                    $tool = isset($m["tool"]) ? (string) $m["tool"] : "unknown_tool";
                     $result = isset($m["result"]) && is_array($m["result"]) ? $m["result"] : [];
-                    if (isset($result["house_id"]) && (int)$result["house_id"] > 0) {
-                        $houseId = (int)$result["house_id"];
+                    if (isset($result["house_id"]) && (int) $result["house_id"] > 0) {
+                        $houseId = (int) $result["house_id"];
                     }
                     if (isset($result["since_unix"], $result["until_unix"])) {
                         $period = [
-                            "since" => (int)$result["since_unix"],
-                            "until" => (int)$result["until_unix"],
+                            "since" => (int) $result["since_unix"],
+                            "until" => (int) $result["until_unix"],
                         ];
                     }
                     if (isset($result["flats_count"])) {
-                        $flatsCount = (int)$result["flats_count"];
+                        $flatsCount = (int) $result["flats_count"];
                     }
                     if ($tool === "plog_events_list" && isset($result["returned"])) {
-                        $eventsReturned = (int)$result["returned"];
+                        $eventsReturned = (int) $result["returned"];
                     }
                     if (isset($result["error"])) {
-                        $errors[] = $tool . ": " . (string)$result["error"];
+                        $errors[] = $tool . ": " . (string) $result["error"];
+                    }
+
+                    if ($tool === "mobile_users_stats" && !isset($result["error"])) {
+                        $hid = isset($result["house_id"]) && $result["house_id"] !== null ? (int) $result["house_id"] : 0;
+                        $pgM = isset($result["pg_mobile_subscribers_distinct"]) ? (int) $result["pg_mobile_subscribers_distinct"] : null;
+                        $pgD = isset($result["pg_subscribers_with_device_row"]) ? (int) $result["pg_subscribers_with_device_row"] : null;
+                        $pl = array_key_exists("plog_distinct_app_phones_event4", $result) ? $result["plog_distinct_app_phones_event4"] : null;
+                        $plStr = $pl === null ? "н/д" : (string) (int) $pl;
+                        $su = isset($result["since_unix"]) ? (int) $result["since_unix"] : 0;
+                        $uu = isset($result["until_unix"]) ? (int) $result["until_unix"] : 0;
+                        $scope = $hid > 0 ? "дом " . $hid : "вся база";
+                        $mobileLines[] = "• Мобильная воронка (" . $scope . ", " . self::fmtUnix($su) . " — " . self::fmtUnix($uu) .
+                            "): учёток " . ($pgM !== null ? $pgM : "—") . ", с устройствами " . ($pgD !== null ? $pgD : "—") .
+                            ", активных приложений (plog event=4, uniq телефонов) " . $plStr . ".";
+                    }
+
+                    if ($tool === "mobile_access_funnel" && !isset($result["error"]) && isset($result["windows"]) && is_array($result["windows"])) {
+                        foreach ($result["windows"] as $w) {
+                            if (!is_array($w)) {
+                                continue;
+                            }
+                            $days = isset($w["days"]) ? (int) $w["days"] : 0;
+                            $pgM = isset($w["pg_mobile_subscribers_distinct"]) && $w["pg_mobile_subscribers_distinct"] !== null
+                                ? (int) $w["pg_mobile_subscribers_distinct"] : null;
+                            $pgD = isset($w["pg_subscribers_with_device_row"]) && $w["pg_subscribers_with_device_row"] !== null
+                                ? (int) $w["pg_subscribers_with_device_row"] : null;
+                            $pl = array_key_exists("plog_distinct_app_phones_event4", $w) ? $w["plog_distinct_app_phones_event4"] : null;
+                            $plStr = $pl === null ? "н/д" : (string) (int) $pl;
+                            $su = isset($w["since_unix"]) ? (int) $w["since_unix"] : 0;
+                            $uu = isset($w["until_unix"]) ? (int) $w["until_unix"] : 0;
+                            $funnelWindows[] = "• Окно " . ($days > 0 ? $days . " дн." : "?") . " (" . self::fmtUnix($su) . " — " . self::fmtUnix($uu) .
+                                "): учёток " . ($pgM !== null ? $pgM : "—") . ", устройств " . ($pgD !== null ? $pgD : "—") .
+                                ", активных (event=4) " . $plStr . ".";
+                        }
+                    }
+
+                    if ($tool === "subscriber_lookup" && !isset($result["error"]) && isset($result["subscriber"]) && is_array($result["subscriber"])) {
+                        $subscriberFound = true;
                     }
                 }
 
@@ -562,11 +625,25 @@
                     $parts[] = "• Дом: house_id=" . $houseId . ".";
                 }
                 if ($period !== null) {
-                    $parts[] = "• Период: " . self::fmtUnix($period["since"]) . " — " . self::fmtUnix($period["until"]) .
+                    $parts[] = "• Последний зафиксированный период в инструментах: " . self::fmtUnix($period["since"]) . " — " . self::fmtUnix($period["until"]) .
                         " (unix: " . $period["since"] . "…" . $period["until"] . ").";
                 }
                 if ($flatsCount !== null) {
                     $parts[] = "• Количество квартир в доме: " . $flatsCount . ".";
+                }
+                if (count($funnelWindows)) {
+                    $parts[] = "Сводка воронки мобильного доступа:";
+                    foreach ($funnelWindows as $ln) {
+                        $parts[] = $ln;
+                    }
+                } elseif (count($mobileLines)) {
+                    $parts[] = "Сводка по мобильной аналитике:";
+                    foreach ($mobileLines as $ln) {
+                        $parts[] = $ln;
+                    }
+                }
+                if ($subscriberFound) {
+                    $parts[] = "• Запрос по абоненту (subscriber_lookup) выполнялся — при необходимости повторите узкий вопрос только по нему.";
                 }
                 if ($eventsReturned !== null) {
                     if ($eventsReturned > 0) {
@@ -580,7 +657,7 @@
                     $parts[] = "• Ошибки инструментов: " . implode("; ", $errors) . ".";
                 }
 
-                $parts[] = "Что сделать дальше: уточните период (например 30/90 дней) или задайте конкретный фильтр (абонент/квартира/RFID), и я сразу продолжу.";
+                $parts[] = "Если данных в ответе мало — повторите запрос; для сравнения 7 и 30 дней достаточно одного вызова mobile_access_funnel.";
                 return implode("\n", $parts);
             }
 
