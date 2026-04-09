@@ -62,6 +62,60 @@
         );
     },
 
+    resolveHouseSmart: function (callback) {
+        let A = modules.assistant;
+        A.askText(i18n("assistant.quick.askHouseSearch"), "", search => {
+            loadingStart();
+            QUERY("houses", "search", { search: search }, true).
+                fail(() => {
+                    FAIL();
+                    A.askNumber(i18n("assistant.quick.askHouseIdFallback"), "", callback);
+                }).
+                done(r => {
+                    let rows = (r && r.houses && Array.isArray(r.houses)) ? r.houses : [];
+                    if (!rows.length) {
+                        warning(i18n("assistant.quick.houseNotFound"));
+                        A.askNumber(i18n("assistant.quick.askHouseIdFallback"), "", callback);
+                        return;
+                    }
+                    if (rows.length === 1) {
+                        let hid = parseInt(rows[0].houseId, 10);
+                        if (hid > 0) {
+                            message(i18n("assistant.quick.houseResolved", rows[0].houseFull || ("#" + hid)));
+                            callback(hid);
+                            return;
+                        }
+                    }
+
+                    let top = rows.slice(0, 10);
+                    let variants = [];
+                    for (let i = 0; i < top.length; i++) {
+                        let h = top[i];
+                        variants.push((i + 1) + ") " + (h.houseFull || ("#" + h.houseId)));
+                    }
+                    mPrompt(
+                        i18n("assistant.quick.pickHouseFromList") + "<br><br>" + escapeHTML(variants.join("\n")).replace(/\n/g, "<br>"),
+                        i18n("assistant.quick.wizardTitle"),
+                        "1",
+                        v => {
+                            let idx = parseInt($.trim(String(v || "")), 10);
+                            if (!idx || idx < 1 || idx > top.length) {
+                                warning(i18n("assistant.quick.invalidNumber"));
+                                return;
+                            }
+                            let hid = parseInt(top[idx - 1].houseId, 10);
+                            if (!hid) {
+                                warning(i18n("assistant.quick.invalidNumber"));
+                                return;
+                            }
+                            callback(hid);
+                        }
+                    );
+                }).
+                always(loadingDone);
+        });
+    },
+
     sendPrompt: function (prompt) {
         $("#assistantInput").val(String(prompt || ""));
         modules.assistant.send();
@@ -88,7 +142,7 @@
             return;
         }
 
-        A.askNumber(i18n("assistant.quick.askHouseId"), "", houseId => {
+        A.resolveHouseSmart(houseId => {
             if (key === "mobileFunnel") {
                 A.sendPrompt(i18n("assistant.quick.mobileFunnelPrompt") + " house_id=" + houseId + ".");
                 return;
