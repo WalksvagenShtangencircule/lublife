@@ -112,11 +112,12 @@
 
                     $finish = @$choice["finish_reason"];
                     $toolCalls = @$msg["tool_calls"];
-                    if ((!is_array($toolCalls) || !count($toolCalls)) && isset($msg["content"]) && is_string($msg["content"])) {
-                        $toolCalls = self::parseDsmlToolCalls($msg["content"]);
+                    $msgContent = isset($msg["content"]) && is_string($msg["content"]) ? (string)$msg["content"] : "";
+                    if ((!is_array($toolCalls) || !count($toolCalls)) && $msgContent !== "") {
+                        $toolCalls = self::parseDsmlToolCalls($msgContent);
                     }
 
-                    if (is_array($toolCalls) && count($toolCalls) && ($finish === "tool_calls" || isset($msg["tool_calls"]) || strpos((string)@$msg["content"], "DSML") !== false)) {
+                    if (is_array($toolCalls) && count($toolCalls) && ($finish === "tool_calls" || isset($msg["tool_calls"]) || strpos($msgContent, "DSML") !== false)) {
                         if ($forceNoTools) {
                             // Модель продолжает просить инструменты даже на финальном проходе.
                             // Добавляем жёсткую подсказку и делаем ещё одну попытку без tools.
@@ -395,18 +396,19 @@
              * @return array<int, array{name:string,arguments:array<string,mixed>}>
              */
             private static function parseDsmlToolCalls(string $content): array {
-                if (strpos($content, "invoke name=") === false || strpos($content, "DSML") === false) {
+                if (strpos($content, "invoke name=") === false) {
                     return [];
                 }
                 $calls = [];
-                if (!preg_match_all('/<\\|\\s*DSML\\s*\\|\\s*invoke\\s+name=\"([a-zA-Z0-9_]+)\"\\s*>(.*?)<\\|\\s*\\/\\s*DSML\\s*\\|\\s*invoke\\s*>/su', $content, $invokes, PREG_SET_ORDER)) {
+                // Универсальный разбор: ищем каждый invoke-блок и параметры внутри него, не опираясь жёстко на spacing DSML.
+                if (!preg_match_all('/invoke\\s+name=\"([a-zA-Z0-9_]+)\"\\s*>(.*?)\\/\\s*invoke\\s*>/isu', $content, $invokes, PREG_SET_ORDER)) {
                     return [];
                 }
                 foreach ($invokes as $inv) {
                     $name = (string) $inv[1];
                     $body = (string) $inv[2];
                     $args = [];
-                    if (preg_match_all('/<\\|\\s*DSML\\s*\\|\\s*parameter\\s+name=\"([a-zA-Z0-9_]+)\"([^>]*)>(.*?)<\\|\\s*\\/\\s*DSML\\s*\\|\\s*parameter\\s*>/su', $body, $params, PREG_SET_ORDER)) {
+                    if (preg_match_all('/parameter\\s+name=\"([a-zA-Z0-9_]+)\"([^>]*)>(.*?)\\/\\s*parameter\\s*>/isu', $body, $params, PREG_SET_ORDER)) {
                         foreach ($params as $p) {
                             $k = (string) $p[1];
                             $attrs = (string) $p[2];

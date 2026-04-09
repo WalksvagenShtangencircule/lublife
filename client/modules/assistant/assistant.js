@@ -83,7 +83,14 @@
             $i.attr("spellcheck", "false");
             $i.attr("data-lpignore", "true");
             $i.attr("data-form-type", "other");
-            $i.attr("name", "assistantPromptInput");
+            $i.attr("name", "assistantPromptInput_" + Date.now());
+            // Анти-автозаполнение: временный readonly снимаем на фокусе.
+            $i.prop("readonly", true);
+            $i.off("focus.assistantAutofill").on("focus.assistantAutofill", function () {
+                $(this).prop("readonly", false);
+            });
+            // На мобильных иногда first focus не приходит, снимаем через tick.
+            setTimeout(() => $i.prop("readonly", false), 180);
         }, 20);
     },
 
@@ -470,14 +477,20 @@
         );
         modules.assistant.transcript = [];
         modules.assistant.renderQuickLinks();
-        $("#assistantInput")
+        let $ai = $("#assistantInput");
+        $ai
             .attr("autocomplete", "off")
             .attr("autocapitalize", "off")
             .attr("autocorrect", "off")
             .attr("spellcheck", "false")
             .attr("data-lpignore", "true")
             .attr("data-form-type", "other")
-            .attr("name", "assistantChatInput");
+            .attr("name", "assistantChatInput_" + Date.now())
+            .prop("readonly", true);
+        $ai.off("focus.assistantAutofill").on("focus.assistantAutofill", function () {
+            $(this).prop("readonly", false);
+        });
+        setTimeout(() => $ai.prop("readonly", false), 180);
         $("#assistantSend").off("click").on("click", () => modules.assistant.send());
         $("#assistantInput").off("keydown").on("keydown", e => {
             if (e.key === "Enter" && !e.shiftKey) {
