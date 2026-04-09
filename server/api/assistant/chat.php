@@ -166,6 +166,22 @@
                     }
 
                     $content = isset($msg["content"]) ? (string) $msg["content"] : "";
+                    if (strpos($content, "DSML") !== false && self::containsDsmlInvoke($content)) {
+                        // Модель вернула сырые DSML-теги как "ответ". Просим переформулировать обычным текстом.
+                        $messages[] = [
+                            "role" => "assistant",
+                            "content" => $content,
+                        ];
+                        $messages[] = [
+                            "role" => "system",
+                            "content" => "Не выводи DSML/XML/теги. Дай только финальный ответ пользователю обычным русским текстом, используя уже полученные результаты инструментов.",
+                        ];
+                        continue;
+                    }
+                    $content = self::stripDsmlMarkup($content);
+                    if (trim($content) === "") {
+                        $content = "Не удалось корректно сформировать ответ в текстовом виде. Повторите запрос, пожалуйста.";
+                    }
                     return api::ANSWER([
                         "reply" => $content,
                         "iterations" => $iter,
@@ -440,6 +456,19 @@
                     ];
                 }
                 return $calls;
+            }
+
+            private static function containsDsmlInvoke(string $text): bool {
+                return (bool) preg_match('/invoke\\s+name=\"[a-zA-Z0-9_]+\"/i', $text);
+            }
+
+            private static function stripDsmlMarkup(string $text): string {
+                $out = $text;
+                // Удаляем DSML-блоки целиком, если вдруг модель добавила их в финальный ответ.
+                $out = preg_replace('/<\\|\\s*DSML\\s*\\|\\s*function_calls\\s*>.*?<\\|\\s*\\/\\s*DSML\\s*\\|\\s*function_calls\\s*>/isu', '', $out);
+                // Подстраховка на "голые" invoke/parameter без внешних тегов.
+                $out = preg_replace('/invoke\\s+name=\"[a-zA-Z0-9_]+\"\\s*>.*?\\/\\s*invoke\\s*>/isu', '', $out);
+                return trim((string) $out);
             }
 
             public static function index() {
