@@ -81,7 +81,14 @@
             "5) " + A.t("periodCustom"),
         ];
         mPrompt(
-            A.t("askPeriodPreset") + "<br><br>" + escapeHTML(variants.join("\n")).replace(/\n/g, "<br>"),
+            A.t("askPeriodPreset") +
+            "<div class='mt-2 mb-2'>" +
+            "<button type='button' class='btn btn-sm btn-outline-primary mr-1 mb-1 assistant-period-btn' data-days='1'>1</button>" +
+            "<button type='button' class='btn btn-sm btn-outline-primary mr-1 mb-1 assistant-period-btn' data-days='7'>7</button>" +
+            "<button type='button' class='btn btn-sm btn-outline-primary mr-1 mb-1 assistant-period-btn' data-days='14'>14</button>" +
+            "<button type='button' class='btn btn-sm btn-outline-primary mr-1 mb-1 assistant-period-btn' data-days='30'>30</button>" +
+            "</div>" +
+            escapeHTML(variants.join("\n")).replace(/\n/g, "<br>"),
             A.t("wizardTitle"),
             "2",
             v => {
@@ -94,6 +101,16 @@
                 warning(A.t("invalidNumber"));
             }
         );
+        setTimeout(() => {
+            $(".assistant-period-btn").off("click").on("click", function () {
+                let d = parseInt($(this).attr("data-days"), 10);
+                if (!d) {
+                    return;
+                }
+                $("#promptModalInput").val(String(d));
+                $("#promptModalButton").click();
+            });
+        }, 20);
     },
 
     resolveHouseSmart: function (callback) {
