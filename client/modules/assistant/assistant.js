@@ -44,6 +44,7 @@
                 callback(x);
             }
         );
+        modules.assistant.hardenPromptInput();
     },
 
     askText: function (label, defValue, callback) {
@@ -60,6 +61,7 @@
                 callback(x);
             }
         );
+        modules.assistant.hardenPromptInput();
     },
 
     askOptionalText: function (label, defValue, callback) {
@@ -69,6 +71,20 @@
             defValue || "",
             v => callback($.trim(String(v || "")))
         );
+        modules.assistant.hardenPromptInput();
+    },
+
+    hardenPromptInput: function () {
+        setTimeout(() => {
+            let $i = $("#promptModalInput");
+            $i.attr("autocomplete", "new-password");
+            $i.attr("autocapitalize", "off");
+            $i.attr("autocorrect", "off");
+            $i.attr("spellcheck", "false");
+            $i.attr("data-lpignore", "true");
+            $i.attr("data-form-type", "other");
+            $i.attr("name", "assistantPromptInput");
+        }, 20);
     },
 
     askPeriodDays: function (defDays, callback) {
@@ -101,14 +117,15 @@
                 warning(A.t("invalidNumber"));
             }
         );
+        A.hardenPromptInput();
         setTimeout(() => {
             $(".assistant-period-btn").off("click").on("click", function () {
                 let d = parseInt($(this).attr("data-days"), 10);
                 if (!d) {
                     return;
                 }
-                $("#promptModalInput").val(String(d));
-                $("#promptModalButton").click();
+                $("#promptModal").modal("hide");
+                callback(d);
             });
         }, 20);
     },
@@ -453,6 +470,14 @@
         );
         modules.assistant.transcript = [];
         modules.assistant.renderQuickLinks();
+        $("#assistantInput")
+            .attr("autocomplete", "off")
+            .attr("autocapitalize", "off")
+            .attr("autocorrect", "off")
+            .attr("spellcheck", "false")
+            .attr("data-lpignore", "true")
+            .attr("data-form-type", "other")
+            .attr("name", "assistantChatInput");
         $("#assistantSend").off("click").on("click", () => modules.assistant.send());
         $("#assistantInput").off("keydown").on("keydown", e => {
             if (e.key === "Enter" && !e.shiftKey) {
