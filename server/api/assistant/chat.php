@@ -71,6 +71,7 @@
                 $iter = 0;
                 $assistantMeta = [];
                 $toolCallLoop = [];
+                $rawMarkupLoops = 0;
 
                 while ($iter < $maxIter) {
                     $iter++;
@@ -167,6 +168,16 @@
 
                     $content = isset($msg["content"]) ? (string) $msg["content"] : "";
                     if (self::containsRawToolMarkup($content)) {
+                        $rawMarkupLoops++;
+                        if ($rawMarkupLoops >= 2 || $iter >= $maxIter - 1) {
+                            $fallback = self::buildFallbackFromMeta($assistantMeta);
+                            return api::ANSWER([
+                                "reply" => $fallback,
+                                "iterations" => $iter,
+                                "meta" => $assistantMeta,
+                                "fallback" => true,
+                            ], "assistantChat");
+                        }
                         // Модель вернула сырые теги function_calls/function_results как "ответ".
                         // Просим переформулировать обычным текстом по уже полученным данным.
                         $messages[] = [
@@ -191,6 +202,14 @@
                     ], "assistantChat");
                 }
 
+                if (count($assistantMeta)) {
+                    return api::ANSWER([
+                        "reply" => self::buildFallbackFromMeta($assistantMeta),
+                        "iterations" => $iter,
+                        "meta" => $assistantMeta,
+                        "fallback" => true,
+                    ], "assistantChat");
+                }
                 return api::ANSWER(["error" => "max_iterations", "meta" => $assistantMeta], "assistantChat");
             }
 
@@ -495,6 +514,47 @@
                 // На случай фрагментированных тегов — прибираем одиночные.
                 $out = preg_replace('/<\\s*\\/??\\s*(function_results|result|parameter|invoke)\\b[^>]*>/isu', '', $out);
                 return trim((string) $out);
+            }
+
+            /**
+             * Формирует безопасный итог, если модель зациклилась/вернула сырой markup.
+             *
+             * @param array<int, array<string,mixed>> $meta
+             */
+            private static function buildFallbackFromMeta(array $meta): string {
+                if (!count($meta)) {
+                    return "Не удалось получить итог модели. Повторите запрос, пожалуйста.";
+                }
+                $parts = [];
+                $parts[] = "Сформирован автоматический итог по результатам инструментов:";
+                $tail = array_slice($meta, -3);
+                foreach ($tail as $m) {
+                    $tool = isset($m["tool"]) ? (string)$m["tool"] : "unknown_tool";
+                    $result = isset($m["result"]) && is_array($m["result"]) ? $m["result"] : [];
+                    $line = "- " . $tool . ": ";
+                    if (isset($result["error"])) {
+                        $line .= "ошибка " . (string)$result["error"];
+                    } elseif (isset($result["count"])) {
+                        $line .= "count=" . (string)$result["count"];
+                    } elseif (isset($result["event_count"])) {
+                        $line .= "event_count=" . (string)$result["event_count"];
+                    } elseif (isset($result["flats_count"])) {
+                        $line .= "flats_count=" . (string)$result["flats_count"];
+                    } elseif (isset($result["pg_mobile_subscribers_distinct"])) {
+                        $line .= "mobile_users=" . (string)$result["pg_mobile_subscribers_distinct"];
+                    } elseif (isset($result["returned"])) {
+                        $line .= "returned=" . (string)$result["returned"];
+                    } else {
+                        $json = json_encode($result, JSON_UNESCAPED_UNICODE);
+                        if (!is_string($json)) {
+                            $json = "{}";
+                        }
+                        $line .= mb_substr($json, 0, 300);
+                    }
+                    $parts[] = $line;
+                }
+                $parts[] = "Если нужен полный разбор, уточните период/дом/абонента — продолжу теми же инструментами.";
+                return implode("\n", $parts);
             }
 
             public static function index() {
