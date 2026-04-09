@@ -6,30 +6,39 @@
 
     CONTEXT_LIMIT: 10,
 
+    t: function (key) {
+        let a = lang && lang.assistant ? lang.assistant : null;
+        if (a && a.quick && Object.prototype.hasOwnProperty.call(a.quick, key)) {
+            return String(a.quick[key]);
+        }
+        return i18n("assistant.quick." + key);
+    },
+
     quickScenarios: function () {
+        let t = modules.assistant.t;
         return [
-            { key: "houseOverview", prompt: i18n("assistant.quick.houseOverviewPrompt") },
-            { key: "subscriberTimeline", prompt: i18n("assistant.quick.subscriberTimelinePrompt") },
-            { key: "keyUsage", prompt: i18n("assistant.quick.keyUsagePrompt") },
-            { key: "mobileFunnel", prompt: i18n("assistant.quick.mobileFunnelPrompt") },
-            { key: "crossHouse", prompt: i18n("assistant.quick.crossHousePrompt") },
-            { key: "entranceLoad", prompt: i18n("assistant.quick.entranceLoadPrompt") },
-            { key: "flatRisk", prompt: i18n("assistant.quick.flatRiskPrompt") },
-            { key: "anomalies", prompt: i18n("assistant.quick.anomaliesPrompt") },
-            { key: "apiRights", prompt: i18n("assistant.quick.apiRightsPrompt") },
-            { key: "schemaAudit", prompt: i18n("assistant.quick.schemaAuditPrompt") },
+            { key: "houseOverview", prompt: t("houseOverviewPrompt") },
+            { key: "subscriberTimeline", prompt: t("subscriberTimelinePrompt") },
+            { key: "keyUsage", prompt: t("keyUsagePrompt") },
+            { key: "mobileFunnel", prompt: t("mobileFunnelPrompt") },
+            { key: "crossHouse", prompt: t("crossHousePrompt") },
+            { key: "entranceLoad", prompt: t("entranceLoadPrompt") },
+            { key: "flatRisk", prompt: t("flatRiskPrompt") },
+            { key: "anomalies", prompt: t("anomaliesPrompt") },
+            { key: "apiRights", prompt: t("apiRightsPrompt") },
+            { key: "schemaAudit", prompt: t("schemaAuditPrompt") },
         ];
     },
 
     askNumber: function (label, defValue, callback) {
         mPrompt(
             label,
-            i18n("assistant.quick.wizardTitle"),
+            modules.assistant.t("wizardTitle"),
             defValue || "",
             v => {
                 let x = parseInt($.trim(String(v || "")), 10);
                 if (!x || x < 0) {
-                    warning(i18n("assistant.quick.invalidNumber"));
+                    warning(modules.assistant.t("invalidNumber"));
                     return;
                 }
                 callback(x);
@@ -40,12 +49,12 @@
     askText: function (label, defValue, callback) {
         mPrompt(
             label,
-            i18n("assistant.quick.wizardTitle"),
+            modules.assistant.t("wizardTitle"),
             defValue || "",
             v => {
                 let x = $.trim(String(v || ""));
                 if (!x) {
-                    warning(i18n("assistant.quick.invalidText"));
+                    warning(modules.assistant.t("invalidText"));
                     return;
                 }
                 callback(x);
@@ -56,7 +65,7 @@
     askOptionalText: function (label, defValue, callback) {
         mPrompt(
             label,
-            i18n("assistant.quick.wizardTitle"),
+            modules.assistant.t("wizardTitle"),
             defValue || "",
             v => callback($.trim(String(v || "")))
         );
@@ -64,24 +73,24 @@
 
     resolveHouseSmart: function (callback) {
         let A = modules.assistant;
-        A.askText(i18n("assistant.quick.askHouseSearch"), "", search => {
+        A.askText(A.t("askHouseSearch"), "", search => {
             loadingStart();
             QUERY("houses", "search", { search: search }, true).
                 fail(() => {
                     FAIL();
-                    A.askNumber(i18n("assistant.quick.askHouseIdFallback"), "", callback);
+                    A.askNumber(A.t("askHouseIdFallback"), "", callback);
                 }).
                 done(r => {
                     let rows = (r && r.houses && Array.isArray(r.houses)) ? r.houses : [];
                     if (!rows.length) {
-                        warning(i18n("assistant.quick.houseNotFound"));
-                        A.askNumber(i18n("assistant.quick.askHouseIdFallback"), "", callback);
+                        warning(A.t("houseNotFound"));
+                        A.askNumber(A.t("askHouseIdFallback"), "", callback);
                         return;
                     }
                     if (rows.length === 1) {
                         let hid = parseInt(rows[0].houseId, 10);
                         if (hid > 0) {
-                            message(i18n("assistant.quick.houseResolved", rows[0].houseFull || ("#" + hid)));
+                            message(sprintf(A.t("houseResolved"), rows[0].houseFull || ("#" + hid)));
                             callback(hid);
                             return;
                         }
@@ -94,21 +103,68 @@
                         variants.push((i + 1) + ") " + (h.houseFull || ("#" + h.houseId)));
                     }
                     mPrompt(
-                        i18n("assistant.quick.pickHouseFromList") + "<br><br>" + escapeHTML(variants.join("\n")).replace(/\n/g, "<br>"),
-                        i18n("assistant.quick.wizardTitle"),
+                        A.t("pickHouseFromList") + "<br><br>" + escapeHTML(variants.join("\n")).replace(/\n/g, "<br>"),
+                        A.t("wizardTitle"),
                         "1",
                         v => {
                             let idx = parseInt($.trim(String(v || "")), 10);
                             if (!idx || idx < 1 || idx > top.length) {
-                                warning(i18n("assistant.quick.invalidNumber"));
+                                warning(A.t("invalidNumber"));
                                 return;
                             }
                             let hid = parseInt(top[idx - 1].houseId, 10);
                             if (!hid) {
-                                warning(i18n("assistant.quick.invalidNumber"));
+                                warning(A.t("invalidNumber"));
                                 return;
                             }
                             callback(hid);
+                        }
+                    );
+                }).
+                always(loadingDone);
+        });
+    },
+
+    resolveSubscriberSmart: function (callback) {
+        let A = modules.assistant;
+        A.askText(A.t("askSubscriberSearch"), "", search => {
+            loadingStart();
+            QUERY("subscribers", "search", { search: search }, true).
+                fail(() => {
+                    FAIL();
+                    A.askText(A.t("askSubscriberIdFallback"), "", sid => {
+                        callback(sid);
+                    });
+                }).
+                done(r => {
+                    let rows = (r && r.subscribers && Array.isArray(r.subscribers)) ? r.subscribers : [];
+                    if (!rows.length) {
+                        warning(A.t("subscriberNotFound"));
+                        A.askText(A.t("askSubscriberIdFallback"), "", sid => callback(sid));
+                        return;
+                    }
+                    if (rows.length === 1 && rows[0].subscriberId) {
+                        callback(String(rows[0].subscriberId));
+                        return;
+                    }
+                    let top = rows.slice(0, 10);
+                    let variants = [];
+                    for (let i = 0; i < top.length; i++) {
+                        let s = top[i];
+                        let label = "#" + s.subscriberId + " " + (s.subscriberFull || "") + (s.mobile ? (" (" + s.mobile + ")") : "");
+                        variants.push((i + 1) + ") " + label);
+                    }
+                    mPrompt(
+                        A.t("pickSubscriberFromList") + "<br><br>" + escapeHTML(variants.join("\n")).replace(/\n/g, "<br>"),
+                        A.t("wizardTitle"),
+                        "1",
+                        v => {
+                            let idx = parseInt($.trim(String(v || "")), 10);
+                            if (!idx || idx < 1 || idx > top.length) {
+                                warning(A.t("invalidNumber"));
+                                return;
+                            }
+                            callback(String(top[idx - 1].subscriberId));
                         }
                     );
                 }).
@@ -124,19 +180,19 @@
     runScenarioWizard: function (key) {
         let A = modules.assistant;
         if (key === "apiRights" || key === "schemaAudit") {
-            A.sendPrompt(i18n("assistant.quick." + key + "Prompt"));
+            A.sendPrompt(A.t(key + "Prompt"));
             return;
         }
         if (key === "crossHouse") {
-            A.askText(i18n("assistant.quick.askPhone"), "", phone => {
-                A.sendPrompt(i18n("assistant.quick.crossHousePrompt") + " Телефон: " + phone + ".");
+            A.askText(A.t("askPhone"), "", phone => {
+                A.sendPrompt(A.t("crossHousePrompt") + " Телефон: " + phone + ".");
             });
             return;
         }
         if (key === "subscriberTimeline") {
-            A.askText(i18n("assistant.quick.askPhone"), "", phone => {
-                A.askNumber(i18n("assistant.quick.askDays"), "30", days => {
-                    A.sendPrompt(i18n("assistant.quick.subscriberTimelinePrompt") + " Телефон: " + phone + ". Период: последние " + days + " дней.");
+            A.resolveSubscriberSmart(subscriberId => {
+                A.askNumber(A.t("askDays"), "30", days => {
+                    A.sendPrompt(A.t("subscriberTimelinePrompt") + " house_subscriber_id=" + subscriberId + ". Период: последние " + days + " дней.");
                 });
             });
             return;
@@ -144,29 +200,29 @@
 
         A.resolveHouseSmart(houseId => {
             if (key === "mobileFunnel") {
-                A.sendPrompt(i18n("assistant.quick.mobileFunnelPrompt") + " house_id=" + houseId + ".");
+                A.sendPrompt(A.t("mobileFunnelPrompt") + " house_id=" + houseId + ".");
                 return;
             }
             if (key === "entranceLoad") {
-                A.askNumber(i18n("assistant.quick.askDays"), "14", days => {
-                    A.sendPrompt(i18n("assistant.quick.entranceLoadPrompt") + " house_id=" + houseId + ", период " + days + " дней.");
+                A.askNumber(A.t("askDays"), "14", days => {
+                    A.sendPrompt(A.t("entranceLoadPrompt") + " house_id=" + houseId + ", период " + days + " дней.");
                 });
                 return;
             }
             if (key === "flatRisk" || key === "anomalies" || key === "houseOverview") {
-                A.askNumber(i18n("assistant.quick.askDays"), key === "houseOverview" ? "7" : "14", days => {
-                    A.sendPrompt(i18n("assistant.quick." + key + "Prompt") + " house_id=" + houseId + ", период " + days + " дней.");
+                A.askNumber(A.t("askDays"), key === "houseOverview" ? "7" : "14", days => {
+                    A.sendPrompt(A.t(key + "Prompt") + " house_id=" + houseId + ", период " + days + " дней.");
                 });
                 return;
             }
             if (key === "keyUsage") {
-                A.askOptionalText(i18n("assistant.quick.askRfidOptional"), "", rfid => {
-                    A.askNumber(i18n("assistant.quick.askDays"), "14", days => {
+                A.askOptionalText(A.t("askRfidOptional"), "", rfid => {
+                    A.askNumber(A.t("askDays"), "14", days => {
                         let tail = " house_id=" + houseId + ", период " + days + " дней.";
                         if (rfid) {
                             tail += " RFID=" + rfid + ".";
                         }
-                        A.sendPrompt(i18n("assistant.quick.keyUsagePrompt") + tail);
+                        A.sendPrompt(A.t("keyUsagePrompt") + tail);
                     });
                 });
                 return;
@@ -236,7 +292,7 @@
         for (let i = 0; i < items.length; i++) {
             let x = items[i];
             html += "<a href='#' class='d-block mb-2 assistant-quick-link' data-idx='" + i + "'>" +
-                "<i class='fas fa-link mr-1'></i>" + escapeHTML(i18n("assistant.quick." + x.key)) + "</a>";
+                "<i class='fas fa-link mr-1'></i>" + escapeHTML(modules.assistant.t(x.key)) + "</a>";
         }
         $("#assistantQuickLinks").html(html);
         $(".assistant-quick-link").off("click").on("click", function (e) {
@@ -273,9 +329,9 @@
             "</div></div></div></div></div>" +
             "<div class='col-lg-4 mb-3'>" +
             "<div class='card card-outline card-secondary h-100'>" +
-            "<div class='card-header'><h3 class='card-title mb-0'>" + escapeHTML(i18n("assistant.quick.title")) + "</h3></div>" +
+            "<div class='card-header'><h3 class='card-title mb-0'>" + escapeHTML(modules.assistant.t("title")) + "</h3></div>" +
             "<div class='card-body small'>" +
-            "<p class='text-muted'>" + escapeHTML(i18n("assistant.quick.hint")) + "</p>" +
+            "<p class='text-muted'>" + escapeHTML(modules.assistant.t("hint")) + "</p>" +
             "<div id='assistantQuickLinks'></div>" +
             "</div></div></div></div>"
         );
