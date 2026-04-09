@@ -526,35 +526,69 @@
                     return "Не удалось получить итог модели. Повторите запрос, пожалуйста.";
                 }
                 $parts = [];
-                $parts[] = "Сформирован автоматический итог по результатам инструментов:";
-                $tail = array_slice($meta, -3);
+                $parts[] = "Не удалось завершить формулировку модели, но вот что уже подтверждено по данным сервера:";
+
+                $tail = array_slice($meta, -5);
+                $period = null;
+                $houseId = null;
+                $flatsCount = null;
+                $eventsReturned = null;
+                $errors = [];
+
                 foreach ($tail as $m) {
                     $tool = isset($m["tool"]) ? (string)$m["tool"] : "unknown_tool";
                     $result = isset($m["result"]) && is_array($m["result"]) ? $m["result"] : [];
-                    $line = "- " . $tool . ": ";
-                    if (isset($result["error"])) {
-                        $line .= "ошибка " . (string)$result["error"];
-                    } elseif (isset($result["count"])) {
-                        $line .= "count=" . (string)$result["count"];
-                    } elseif (isset($result["event_count"])) {
-                        $line .= "event_count=" . (string)$result["event_count"];
-                    } elseif (isset($result["flats_count"])) {
-                        $line .= "flats_count=" . (string)$result["flats_count"];
-                    } elseif (isset($result["pg_mobile_subscribers_distinct"])) {
-                        $line .= "mobile_users=" . (string)$result["pg_mobile_subscribers_distinct"];
-                    } elseif (isset($result["returned"])) {
-                        $line .= "returned=" . (string)$result["returned"];
-                    } else {
-                        $json = json_encode($result, JSON_UNESCAPED_UNICODE);
-                        if (!is_string($json)) {
-                            $json = "{}";
-                        }
-                        $line .= mb_substr($json, 0, 300);
+                    if (isset($result["house_id"]) && (int)$result["house_id"] > 0) {
+                        $houseId = (int)$result["house_id"];
                     }
-                    $parts[] = $line;
+                    if (isset($result["since_unix"], $result["until_unix"])) {
+                        $period = [
+                            "since" => (int)$result["since_unix"],
+                            "until" => (int)$result["until_unix"],
+                        ];
+                    }
+                    if (isset($result["flats_count"])) {
+                        $flatsCount = (int)$result["flats_count"];
+                    }
+                    if ($tool === "plog_events_list" && isset($result["returned"])) {
+                        $eventsReturned = (int)$result["returned"];
+                    }
+                    if (isset($result["error"])) {
+                        $errors[] = $tool . ": " . (string)$result["error"];
+                    }
                 }
-                $parts[] = "Если нужен полный разбор, уточните период/дом/абонента — продолжу теми же инструментами.";
+
+                if ($houseId !== null) {
+                    $parts[] = "• Дом: house_id=" . $houseId . ".";
+                }
+                if ($period !== null) {
+                    $parts[] = "• Период: " . self::fmtUnix($period["since"]) . " — " . self::fmtUnix($period["until"]) .
+                        " (unix: " . $period["since"] . "…" . $period["until"] . ").";
+                }
+                if ($flatsCount !== null) {
+                    $parts[] = "• Количество квартир в доме: " . $flatsCount . ".";
+                }
+                if ($eventsReturned !== null) {
+                    if ($eventsReturned > 0) {
+                        $parts[] = "• Найдено событий в журнале plog: " . $eventsReturned . ".";
+                    } else {
+                        $parts[] = "• В журнале plog за указанный период событий не найдено (0).";
+                        $parts[] = "  Возможные причины: выбран не тот период, дом без активности в plog, либо фильтр слишком узкий.";
+                    }
+                }
+                if (count($errors)) {
+                    $parts[] = "• Ошибки инструментов: " . implode("; ", $errors) . ".";
+                }
+
+                $parts[] = "Что сделать дальше: уточните период (например 30/90 дней) или задайте конкретный фильтр (абонент/квартира/RFID), и я сразу продолжу.";
                 return implode("\n", $parts);
+            }
+
+            private static function fmtUnix(int $ts): string {
+                if ($ts <= 0) {
+                    return "—";
+                }
+                return gmdate("Y-m-d H:i", $ts) . " UTC";
             }
 
             public static function index() {
