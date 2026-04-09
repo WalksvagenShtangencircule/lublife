@@ -71,6 +71,31 @@
         );
     },
 
+    askPeriodDays: function (defDays, callback) {
+        let A = modules.assistant;
+        let variants = [
+            "1) " + A.t("periodYesterday"),
+            "2) " + A.t("period7"),
+            "3) " + A.t("period14"),
+            "4) " + A.t("period30"),
+            "5) " + A.t("periodCustom"),
+        ];
+        mPrompt(
+            A.t("askPeriodPreset") + "<br><br>" + escapeHTML(variants.join("\n")).replace(/\n/g, "<br>"),
+            A.t("wizardTitle"),
+            "2",
+            v => {
+                let x = parseInt($.trim(String(v || "")), 10);
+                if (x === 1) return callback(1);
+                if (x === 2) return callback(7);
+                if (x === 3) return callback(14);
+                if (x === 4) return callback(30);
+                if (x === 5) return A.askNumber(A.t("askDays"), String(defDays || 14), callback);
+                warning(A.t("invalidNumber"));
+            }
+        );
+    },
+
     resolveHouseSmart: function (callback) {
         let A = modules.assistant;
         A.askText(A.t("askHouseSearch"), "", search => {
@@ -172,6 +197,54 @@
         });
     },
 
+    resolveRfidSmart: function (callback) {
+        let A = modules.assistant;
+        A.askOptionalText(A.t("askRfidOptional"), "", search => {
+            if (!search) {
+                callback("");
+                return;
+            }
+            loadingStart();
+            QUERY("subscribers", "searchRf", { search: search }, true).
+                fail(() => {
+                    FAIL();
+                    A.askOptionalText(A.t("askRfidOptional"), search, callback);
+                }).
+                done(r => {
+                    let rows = (r && r.rfs && Array.isArray(r.rfs)) ? r.rfs : [];
+                    if (!rows.length) {
+                        warning(A.t("rfidNotFound"));
+                        callback(search);
+                        return;
+                    }
+                    if (rows.length === 1 && rows[0].rfId) {
+                        callback(String(rows[0].rfId));
+                        return;
+                    }
+                    let top = rows.slice(0, 10);
+                    let variants = [];
+                    for (let i = 0; i < top.length; i++) {
+                        let x = top[i];
+                        variants.push((i + 1) + ") " + (x.rfId || ("#" + (x.keyId || i + 1))));
+                    }
+                    mPrompt(
+                        A.t("pickRfidFromList") + "<br><br>" + escapeHTML(variants.join("\n")).replace(/\n/g, "<br>"),
+                        A.t("wizardTitle"),
+                        "1",
+                        v => {
+                            let idx = parseInt($.trim(String(v || "")), 10);
+                            if (!idx || idx < 1 || idx > top.length) {
+                                warning(A.t("invalidNumber"));
+                                return;
+                            }
+                            callback(String(top[idx - 1].rfId || ""));
+                        }
+                    );
+                }).
+                always(loadingDone);
+        });
+    },
+
     sendPrompt: function (prompt) {
         $("#assistantInput").val(String(prompt || ""));
         modules.assistant.send();
@@ -191,7 +264,7 @@
         }
         if (key === "subscriberTimeline") {
             A.resolveSubscriberSmart(subscriberId => {
-                A.askNumber(A.t("askDays"), "30", days => {
+                A.askPeriodDays(30, days => {
                     A.sendPrompt(A.t("subscriberTimelinePrompt") + " house_subscriber_id=" + subscriberId + ". Период: последние " + days + " дней.");
                 });
             });
@@ -204,20 +277,20 @@
                 return;
             }
             if (key === "entranceLoad") {
-                A.askNumber(A.t("askDays"), "14", days => {
+                A.askPeriodDays(14, days => {
                     A.sendPrompt(A.t("entranceLoadPrompt") + " house_id=" + houseId + ", период " + days + " дней.");
                 });
                 return;
             }
             if (key === "flatRisk" || key === "anomalies" || key === "houseOverview") {
-                A.askNumber(A.t("askDays"), key === "houseOverview" ? "7" : "14", days => {
+                A.askPeriodDays(key === "houseOverview" ? 7 : 14, days => {
                     A.sendPrompt(A.t(key + "Prompt") + " house_id=" + houseId + ", период " + days + " дней.");
                 });
                 return;
             }
             if (key === "keyUsage") {
-                A.askOptionalText(A.t("askRfidOptional"), "", rfid => {
-                    A.askNumber(A.t("askDays"), "14", days => {
+                A.resolveRfidSmart(rfid => {
+                    A.askPeriodDays(14, days => {
                         let tail = " house_id=" + houseId + ", период " + days + " дней.";
                         if (rfid) {
                             tail += " RFID=" + rfid + ".";
