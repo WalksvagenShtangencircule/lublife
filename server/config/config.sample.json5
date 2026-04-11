@@ -15,6 +15,8 @@
     // Виртуальная панель: DTMF в разговоре → GET по URL из doorOpeningUrls. Служба rbt-vdom-ami-dtmf + секция [rbtdom] в asterisk/manager.conf (секрет = ami.secret). См. install/10.asterisk.md §6.
     "vdom_dtmf": {
         "open_api_key": "change_me_long_random_string",
+        // true (по умолчанию): в stderr слушателя писать DTMF без контекста в Redis (диагностика). false — только matched.
+        "log_unmatched_dtmf": true,
         "ami": {
             "host": "127.0.0.1",
             "port": 5038,
