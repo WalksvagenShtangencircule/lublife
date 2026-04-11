@@ -34,6 +34,9 @@
                 if (strcasecmp((string)$params["_path"]["api"], "vdom") === 0 && strcasecmp((string)$params["_path"]["method"], "openDoorOnce") === 0 && $params["_request_method"] === "GET") {
                     return true;
                 }
+                if (strcasecmp((string)$params["_path"]["api"], "vdom") === 0 && strcasecmp((string)$params["_path"]["method"], "doorTestHook") === 0 && $params["_request_method"] === "GET") {
+                    return true;
+                }
 
                 if (!checkInt($params["_uid"])) {
                     return false;

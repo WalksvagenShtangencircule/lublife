@@ -196,6 +196,8 @@
             $method = "issueDoorTokens";
         } elseif (strcasecmp((string)$method, "openDoorOnce") === 0) {
             $method = "openDoorOnce";
+        } elseif (strcasecmp((string)$method, "doorTestHook") === 0) {
+            $method = "doorTestHook";
         }
         $api = "vdom";
         $m[0] = $api;
@@ -314,6 +316,12 @@
         $params["_ip"] = $ip;
     } else
     if ($api == "vdom" && $method == "openDoorOnce" && $params["_request_method"] === "GET") {
+        $params["_login"] = "guest";
+        $params["_uid"] = 0;
+        $params["_realUid"] = 0;
+        $params["_ip"] = $ip;
+    } else
+    if ($api == "vdom" && $method == "doorTestHook" && $params["_request_method"] === "GET") {
         $params["_login"] = "guest";
         $params["_uid"] = 0;
         $params["_realUid"] = 0;
