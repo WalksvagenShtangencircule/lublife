@@ -1,4 +1,24 @@
 {
+    "methods": {
+        "houses": {
+            "_title": "Houses & devices (API)",
+            "virtualDomophones": {
+                "_title": "Virtual QR panels — list",
+                "GET": "View list"
+            },
+            "virtualDomophone": {
+                "_title": "Virtual QR panel",
+                "GET": "View",
+                "POST": "Create",
+                "PUT": "Edit",
+                "DELETE": "Delete"
+            },
+            "virtualDomophoneRotateToken": {
+                "_title": "Virtual QR panel — rotate access code",
+                "PUT": "Rotate code"
+            }
+        }
+    },
     "virtualDomophones": "Virtual QR panels",
     "menuTitle": "Virtual QR panels",
     "listTitle": "Courier virtual panels",

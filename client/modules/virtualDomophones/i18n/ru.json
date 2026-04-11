@@ -1,4 +1,24 @@
 {
+    "methods": {
+        "houses": {
+            "_title": "Дома и устройства (API)",
+            "virtualDomophones": {
+                "_title": "Виртуальные панели (QR) — список",
+                "GET": "Просмотр списка"
+            },
+            "virtualDomophone": {
+                "_title": "Виртуальная панель (QR)",
+                "GET": "Просмотр карточки",
+                "POST": "Создание",
+                "PUT": "Изменение",
+                "DELETE": "Удаление"
+            },
+            "virtualDomophoneRotateToken": {
+                "_title": "Виртуальная панель — смена кода QR",
+                "PUT": "Сменить код доступа"
+            }
+        }
+    },
     "virtualDomophones": "Виртуальные панели (QR)",
     "menuTitle": "Вирт. панели QR",
     "listTitle": "Виртуальные панели для курьеров",

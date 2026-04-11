@@ -198,10 +198,10 @@
 
             public static function index() {
                 return [
-                    "GET" => "#same(addresses,house,GET)",
-                    "POST" => "#same(addresses,house,PUT)",
-                    "PUT" => "#same(addresses,house,PUT)",
-                    "DELETE" => "#same(addresses,house,PUT)",
+                    "GET" => false,
+                    "POST" => false,
+                    "PUT" => false,
+                    "DELETE" => false,
                 ];
             }
         }

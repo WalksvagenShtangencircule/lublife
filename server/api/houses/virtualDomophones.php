@@ -42,7 +42,7 @@
 
             public static function index() {
                 return [
-                    "GET" => "#same(addresses,house,GET)",
+                    "GET" => false,
                 ];
             }
         }

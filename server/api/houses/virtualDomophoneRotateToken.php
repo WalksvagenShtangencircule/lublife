@@ -28,7 +28,7 @@
 
             public static function index() {
                 return [
-                    "PUT" => "#same(addresses,house,PUT)",
+                    "PUT" => false,
                 ];
             }
         }
