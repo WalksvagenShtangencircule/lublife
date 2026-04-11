@@ -25,7 +25,9 @@
                     $tag = substr($tag, 0, 128);
                 }
                 $line = date("c") . "\t" . $ip . "\t" . $tag . "\t" . $ua . "\n";
-                @file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
+                if (file_put_contents($file, $line, FILE_APPEND | LOCK_EX) === false) {
+                    error_log("vdom doorTestHook: cannot write to $file (check www-data write on server/logs)");
+                }
             }
 
             public static function GET($params) {
