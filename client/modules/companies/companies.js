@@ -3,7 +3,7 @@
 
     init: function () {
         if (AVAIL("companies", "companies")) {
-            leftSide("fas fa-fw fa-building", i18n("companies.companies"), "?#companies", "households");
+            leftSide("fas fa-fw fa-building", i18n("companies.menuSidebar"), "?#companies", "households");
         }
         moduleLoaded("companies", this);
     },

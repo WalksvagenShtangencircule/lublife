@@ -1,6 +1,7 @@
 {
     "company": "Company",
     "companies": "Companies",
+    "menuSidebar": "HOAs & MC",
     "companyId": "#",
     "type": "Type",
     "name": "Name",

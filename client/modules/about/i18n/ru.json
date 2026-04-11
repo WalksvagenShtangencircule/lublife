@@ -1,6 +1,7 @@
 {
     "about": "SmartAccess",
     "systemInfo": "Системная информация",
+    "systemInfoSidebar": "Система",
     "hostname": "Имя сервера",
     "os": "ОС",
     "php": "Версия PHP",

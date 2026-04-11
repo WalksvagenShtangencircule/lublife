@@ -973,7 +973,7 @@ code {
   justify-content: flex-start;
   gap: 0.45rem;
   position: relative;
-  text-align: center;
+  text-align: left;
   padding: 0.5rem 0.65rem 0.5rem 0.55rem;
   margin: 0 0.35rem;
   border-radius: 0.5rem;
@@ -1013,7 +1013,7 @@ code {
 .main-sidebar #leftside-menu .nav-link.nav-link-text-only > .sidebar-module-label {
   flex: 1 1 auto;
   min-width: 0;
-  text-align: center;
+  text-align: left;
   line-height: 1.35;
   font-size: 0.97rem;
   font-weight: 600;
@@ -1021,6 +1021,8 @@ code {
   white-space: normal;
   word-break: break-word;
   hyphens: auto;
+  /* Одна колонка текста после иконки: визуально ровнее, чем center при разной длине названий */
+  padding-right: 0.15rem;
 }
 
 .main-sidebar #leftside-menu .nav-link.nav-link-text-only:hover {
@@ -1094,6 +1096,7 @@ body.sidebar-collapse .main-sidebar:hover #leftside-menu .nav-link.nav-link-text
 .main-sidebar #leftside-menu a[data-rbt-sidebar="addresses-domophones"] .nav-icon { color: #ffab91 !important; }
 .main-sidebar #leftside-menu a[data-rbt-sidebar="addresses-cameras"] .nav-icon { color: #a5d6a7 !important; }
 .main-sidebar #leftside-menu a[data-rbt-sidebar="addresses-keys"] .nav-icon { color: #ffe082 !important; }
+.main-sidebar #leftside-menu a[data-rbt-sidebar="virtualDomophones"] .nav-icon { color: #4fc3f7 !important; }
 .main-sidebar #leftside-menu a[data-rbt-sidebar="companies"] .nav-icon { color: #b39ddb !important; }
 .main-sidebar #leftside-menu a[data-rbt-sidebar="queues"] .nav-icon { color: #ce93d8 !important; }
 .main-sidebar #leftside-menu a[data-rbt-sidebar="analytics"] .nav-icon { color: #80cbc4 !important; }

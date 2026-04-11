@@ -1,6 +1,7 @@
 {
     "about": "SmartAccess",
     "systemInfo": "System info",
+    "systemInfoSidebar": "System",
     "hostname": "Hostname",
     "os": "OS",
     "php": "PHP version",

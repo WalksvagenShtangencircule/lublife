@@ -1,5 +1,8 @@
 {
     "tt": "Менеджер задач",
+    "menuSidebar": "Задачи",
+    "customFilterSidebar": "Расшир. поиск",
+    "workspacesSidebar": "Раб. столы",
     "settings": "Настройки менеджера задач",
     "projects": "Проекты",
     "issueTypes": "Типы задач",
