@@ -1,0 +1,22 @@
+[Unit]
+Description=RBT: AMI listener — DTMF из мобильного для виртуальной QR-панели (virtual.json)
+Documentation=file:///opt/rbt/install/16.vdom_qr_dtmf.md
+After=network.target asterisk.service
+Wants=asterisk.service
+
+[Service]
+Type=simple
+SyslogIdentifier=rbt_vdom_ami_dtmf
+WorkingDirectory=/opt/rbt/server
+ExecStart=/usr/bin/php /opt/rbt/server/cli/vdom_ami_dtmf_listener.php
+Restart=always
+RestartSec=5
+User=rbt
+Group=rbt
+LimitCORE=infinity
+KillMode=process
+StandardOutput=null
+StandardError=append:/opt/rbt/server/logs/vdom_ami_dtmf.stderr.log
+
+[Install]
+WantedBy=multi-user.target

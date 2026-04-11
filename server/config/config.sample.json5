@@ -63,6 +63,18 @@
         "backends_cache_ttl": 604800,
     },
 
+    // Виртуальная QR-панель (model virtual.json): DTMF из мобильного в разговоре → AMI → doorOpeningUrls
+    // Секрет [rbtdom] в asterisk/manager.conf должен совпадать с ami.secret
+    "vdom_dtmf": {
+        "open_api_key": "<!-- зарезервировано для внутренних POST, если понадобится --!>",
+        "ami": {
+            "host": "127.0.0.1",
+            "port": 5038,
+            "username": "rbtdom",
+            "secret": "CHANGE_ME_VDOM_AMI_SECRET",
+        },
+    },
+
     "clickhouse": {
         "host": "localhost",
         "port": "8123",

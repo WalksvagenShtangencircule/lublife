@@ -15,7 +15,8 @@
 13. [Push service](13.push.md)
 14. [Mosquitto](14.mosquitto.md)
 15. [ONLYOFFICE Document Builder](15.onlyoffice.md)
-16. [Post install](99.post_install.md)
+16. [Виртуальная QR-панель — AMI/DTMF из приложения](16.vdom_qr_dtmf.md)
+17. [Post install](99.post_install.md)
 
 ___
 

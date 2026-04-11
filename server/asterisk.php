@@ -200,7 +200,7 @@
                             "timers" => "no",
                             "direct_media" => "no",
                             "allow_subscribe" => "yes",
-                            "dtmf_mode" => "rfc4733",
+                            "dtmf_mode" => "auto",
                             "ice_support" => "yes",
                         ];
                     }

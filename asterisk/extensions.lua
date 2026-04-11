@@ -162,9 +162,13 @@ function mobileIntercom(flatId, flatNumber, domophoneId)
     local devices = dm("devices", flatId)
 
     local dtmf = '1'
+    local domophoneData = false
 
     if domophoneId >= 0 then
-        dtmf = dm("domophone", domophoneId).dtmf
+        domophoneData = dm("domophone", domophoneId)
+        if domophoneData then
+            dtmf = domophoneData.dtmf
+        end
         if not dtmf or dtmf == '' then
             dtmf = '1'
         end
@@ -256,6 +260,36 @@ function mobileIntercom(flatId, flatNumber, domophoneId)
                     end
                 end
             end
+        end
+    end
+
+    -- Виртуальная QR-панель (model virtual.json): контекст для AMI → DTMF → doorOpeningUrls
+    if domophoneData and domophoneData.model == "virtual.json" then
+        local doorUrl = ""
+        if type(domophoneData.ext) == "table" and type(domophoneData.ext.doorOpeningUrls) == "table" then
+            local u = domophoneData.ext.doorOpeningUrls
+            doorUrl = u[1] or u["1"] or ""
+            if doorUrl == "" then
+                for _, v in pairs(u) do
+                    if type(v) == "string" and v ~= "" then
+                        doorUrl = v
+                        break
+                    end
+                end
+            end
+        end
+        local linked = channel.CDR("linkedid"):get()
+        if linked and linked ~= "" then
+            redis:setex("vdom_dtmf_ctx:" .. linked, 600, cjson.encode({
+                domophoneId = domophoneId,
+                flatId = flatId,
+                flatNumber = flatNumber,
+                dtmf = dtmf,
+                doorUrl = doorUrl,
+            }))
+            logDebug("vdom_dtmf_ctx set for virtual.json linkedid " .. linked .. " doorUrl_len=" .. tostring(doorUrl:len()))
+        else
+            logDebug("vdom_dtmf_ctx skip: empty linkedid")
         end
     end
 
