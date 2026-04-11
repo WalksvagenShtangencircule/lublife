@@ -66,16 +66,8 @@
             response(404, false, i18n('mobile.error'), i18n('mobile.unavailable'));
         }
 
-        $response = @file_get_contents($url, false, stream_context_create([
-            'http' => [
-                'timeout' => 8.0,
-                'method' => 'GET',
-                'ignore_errors' => true,
-            ],
-            'ssl' => [
-                'verify_peer' => true,
-                'verify_peer_name' => true,
-            ],
+        $response = @file_get_contents($url, context: stream_context_create([
+            'http' => ['timeout' => 3.0],
         ]));
 
         if ($response === false) {

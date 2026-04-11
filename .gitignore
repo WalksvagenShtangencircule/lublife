@@ -125,9 +125,6 @@ asterisk/http.conf
 asterisk/pjsip.conf
 asterisk/logger.conf
 
-server/logs/
-server/logs/**
-
 # Локальные бэкапы конфигов и моделей (не публиковать — возможны секреты)
 server/config/config_backup*.json
 server/config/config_bacup.json

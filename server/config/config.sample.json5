@@ -12,17 +12,6 @@
         "wh": "https://example.com/wh",
     },
 
-    // Виртуальная панель: DTMF в разговоре → GET по URL из doorOpeningUrls. Служба rbt-vdom-ami-dtmf + секция [rbtdom] в asterisk/manager.conf (секрет = ami.secret). См. install/10.asterisk.md §6.
-    "vdom_dtmf": {
-        "open_api_key": "change_me_long_random_string",
-        "ami": {
-            "host": "127.0.0.1",
-            "port": 5038,
-            "username": "rbtdom",
-            "secret": "change_me_same_as_manager_rbtdom_secret",
-        },
-    },
-
     "mobile": {
         "web_server_base_path": "https://example.com/static/",
         "payments": true,
