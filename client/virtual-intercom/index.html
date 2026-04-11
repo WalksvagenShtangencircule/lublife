@@ -155,8 +155,6 @@
     let manifest = null;
     let ua = null;
     let session = null;
-    /** Локальный поток только с микрофоном (без ключа video в getUserMedia) — иначе на части ПК с отключённой камерой падает и answer(), и исходящий вызов. */
-    let localMicStream = null;
 
     function renderDisp() {
         dispEl.textContent = digits ? digits : '—';
@@ -238,47 +236,27 @@
         }
     }
 
-    function stopLocalMicTracks() {
-        if (!localMicStream) {
-            return;
-        }
-        try {
-            localMicStream.getTracks().forEach(function (t) {
-                try { t.stop(); } catch (e) {}
-            });
-        } catch (e) {}
-        localMicStream = null;
-    }
-
     function hangup() {
         if (session && !session.isEnded()) {
             try { session.terminate(); } catch (e) {}
         }
         session = null;
         setCallUi(false);
-        stopLocalMicTracks();
         try { remote.srcObject = null; } catch (e) {}
         try { remoteAudio.srcObject = null; } catch (e) {}
         remote.style.display = 'none';
         previewStatic.style.display = 'block';
     }
 
-    function acquireMicOnly() {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            return Promise.reject(new Error('getUserMedia не поддерживается'));
-        }
-        return navigator.mediaDevices.getUserMedia({ audio: true });
-    }
-
-    function rtcPeerOptions(micStream) {
+    function rtcOptionsForCall() {
         var iceGatherDone = false;
         function signalIceReady(ev) {
             if (iceGatherDone) return;
             iceGatherDone = true;
             try { ev.ready(); } catch (e) {}
         }
-        var opt = {
-            mediaConstraints: { audio: true, video: false },
+        return {
+            mediaConstraints: { audio: true, video: true },
             pcConfig: {
                 iceServers: manifest.ice || [],
                 iceCandidatePoolSize: 10,
@@ -297,10 +275,6 @@
                 },
             },
         };
-        if (micStream) {
-            opt.mediaStream = micStream;
-        }
-        return opt;
     }
 
     function placeCall() {
@@ -314,44 +288,34 @@
             return;
         }
         hangup();
-        setStatus('Запрос доступа к микрофону…');
+        setStatus('Вызов…');
         const ext = digits;
-        acquireMicOnly().
-            then(function (mic) {
-                localMicStream = mic;
-                setStatus('Вызов…');
-                var opt = rtcPeerOptions(mic);
-                session = ua.call('sip:' + ext + '@' + manifest.sipDomain, opt);
-                setCallUi(true);
-                session.on('accepted', function () {
-                    setStatus('Соединено');
-                });
-                session.on('confirmed', function () {
-                    setStatus('Разговор');
-                });
-                session.on('ended', function () {
-                    setStatus('Завершено');
-                    hangup();
-                });
-                session.on('failed', function (e) {
-                    setStatus('');
-                    setErr('Вызов не удался: ' + (e.cause || 'ошибка'));
-                    hangup();
-                });
-                session.connection.addEventListener('addstream', function (ev) {
-                    attachRemoteMedia(ev.stream);
-                });
-                session.connection.addEventListener('track', function (ev) {
-                    if (ev.streams && ev.streams[0]) {
-                        attachRemoteMedia(ev.streams[0]);
-                    }
-                });
-            }).
-            catch(function (e) {
-                setStatus('');
-                setErr('Микрофон недоступен: ' + (e && (e.message || e.name) ? (e.message || e.name) : 'ошибка'));
-                stopLocalMicTracks();
-            });
+        const opt = rtcOptionsForCall();
+        session = ua.call('sip:' + ext + '@' + manifest.sipDomain, opt);
+        setCallUi(true);
+        session.on('accepted', function () {
+            setStatus('Соединено');
+        });
+        session.on('confirmed', function () {
+            setStatus('Разговор');
+        });
+        session.on('ended', function () {
+            setStatus('Завершено');
+            hangup();
+        });
+        session.on('failed', function (e) {
+            setStatus('');
+            setErr('Вызов не удался: ' + (e.cause || 'ошибка'));
+            hangup();
+        });
+        session.connection.addEventListener('addstream', function (ev) {
+            attachRemoteMedia(ev.stream);
+        });
+        session.connection.addEventListener('track', function (ev) {
+            if (ev.streams && ev.streams[0]) {
+                attachRemoteMedia(ev.streams[0]);
+            }
+        });
     }
 
     function wireIncomingSession(sess) {
@@ -456,38 +420,17 @@
                     try { sess.terminate(); } catch (x) {}
                     return;
                 }
-                setErr('');
+                session = sess;
                 setCallUi(true);
-                setStatus('Входящий вызов… — запрос микрофона…');
-                acquireMicOnly().
-                    then(function (mic) {
-                        if (sess.isEnded()) {
-                            try {
-                                mic.getTracks().forEach(function (t) {
-                                    t.stop();
-                                });
-                            } catch (e) {}
-                            return;
-                        }
-                        localMicStream = mic;
-                        session = sess;
-                        setStatus('Входящий вызов…');
-                        wireIncomingSession(sess);
-                        try {
-                            sess.answer(rtcPeerOptions(mic));
-                        } catch (err) {
-                            setErr('Не удалось ответить');
-                            try { sess.terminate(); } catch (x2) {}
-                            stopLocalMicTracks();
-                            setCallUi(false);
-                        }
-                    }).
-                    catch(function (err) {
-                        setStatus('');
-                        setErr('Не удалось ответить (микрофон): ' + (err && (err.message || err.name) ? (err.message || err.name) : 'ошибка'));
-                        setCallUi(false);
-                        try { sess.terminate(); } catch (x3) {}
-                    });
+                setStatus('Входящий вызов…');
+                setErr('');
+                wireIncomingSession(sess);
+                try {
+                    sess.answer(rtcOptionsForCall());
+                } catch (err) {
+                    setErr('Не удалось ответить');
+                    try { sess.terminate(); } catch (x2) {}
+                }
             });
             ua.start();
         })
