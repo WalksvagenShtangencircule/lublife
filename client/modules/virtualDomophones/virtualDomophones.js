@@ -340,6 +340,8 @@
             page404();
             return;
         }
+        /* Сразу убираем правую колонку от прошлого экрана (например подъезд с камерами/ключами). */
+        $("#altForm").hide().empty();
         document.title = i18n("windowTitle") + " :: " + i18n("virtualDomophones.virtualDomophones");
         modules.virtualDomophones.loadMeta(() => {
             subTop();

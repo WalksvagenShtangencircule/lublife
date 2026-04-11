@@ -66,17 +66,40 @@
             box-shadow: 0 4px 0 #7a3320;
             font-size: 1rem;
         }
+        button.hangup {
+            display: none;
+            width: 100%;
+            margin-top: 10px;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 0;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            background: linear-gradient(180deg, #c24a4a 0%, #7a2828 100%);
+            color: #fff;
+            box-shadow: 0 4px 0 #3d1515;
+        }
+        button.hangup:active { transform: translateY(2px); box-shadow: none; }
         button.del { background: #4a3a32; box-shadow: 0 3px 0 #2e241f; font-size: .9rem; }
         .status { margin-top: 14px; font-size: .78rem; opacity: .65; min-height: 2.4em; }
         .video-wrap {
             margin-top: 12px;
             border-radius: 12px;
             overflow: hidden;
-            background: #000;
+            background: #0e1014;
             aspect-ratio: 4/3;
-            display: none;
+            display: block;
+            position: relative;
         }
-        .video-wrap video { width: 100%; height: 100%; object-fit: cover; }
+        .video-wrap .preview-static {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .video-wrap video { display: none; width: 100%; height: 100%; object-fit: cover; }
+        .video-wrap audio { display: none; }
         .err { color: #f88; font-size: .85rem; margin-top: 10px; }
     </style>
 </head>
@@ -87,8 +110,13 @@
             <div class="sub" id="subLine">Наберите номер квартиры</div>
             <div class="display" id="disp">—</div>
             <div class="keys" id="keys"></div>
+            <button type="button" class="hangup" id="hangupBtn" aria-label="Отбой">Отбой</button>
             <div class="status" id="status"></div>
-            <div class="video-wrap" id="vwrap"><video id="remote" autoplay playsinline></video></div>
+            <div class="video-wrap" id="vwrap" aria-hidden="true">
+                <img id="previewStatic" class="preview-static" alt="" width="400" height="300" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232a3140'/%3E%3Cstop offset='1' stop-color='%23101824'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill='url(%23g)' width='400' height='300'/%3E%3Ctext x='50%25' y='46%25' fill='%23a8b0c4' font-family='system-ui,sans-serif' font-size='15' text-anchor='middle'%3EВидеопревью отключено%3C/text%3E%3Ctext x='50%25' y='58%25' fill='%237884a8' font-family='system-ui,sans-serif' font-size='12' text-anchor='middle'%3Eтолько звук%3C/text%3E%3C/svg%3E"/>
+                <video id="remote" playsinline muted></video>
+                <audio id="remoteAudio" autoplay playsinline></audio>
+            </div>
             <div class="err" id="err"></div>
         </div>
     </div>
@@ -111,6 +139,9 @@
     const keysEl = document.getElementById('keys');
     const vwrap = document.getElementById('vwrap');
     const remote = document.getElementById('remote');
+    const remoteAudio = document.getElementById('remoteAudio');
+    const previewStatic = document.getElementById('previewStatic');
+    const hangupBtn = document.getElementById('hangupBtn');
 
     function setErr(t) { errEl.textContent = t || ''; }
     function setStatus(t) { statusEl.textContent = t || ''; }
@@ -124,6 +155,8 @@
     let manifest = null;
     let ua = null;
     let session = null;
+    /** Локальный поток только с микрофоном (без ключа video в getUserMedia) — иначе на части ПК с отключённой камерой падает и answer(), и исходящий вызов. */
+    let localMicStream = null;
 
     function renderDisp() {
         dispEl.textContent = digits ? digits : '—';
@@ -176,36 +209,76 @@
         keysEl.appendChild(call);
     }
 
+    function attachRemoteMedia(stream) {
+        if (!stream) return;
+        try {
+            var at = stream.getAudioTracks();
+            if (at.length) {
+                remoteAudio.srcObject = new MediaStream(at);
+                remoteAudio.play().catch(function () {});
+            }
+            var vt = stream.getVideoTracks();
+            if (vt.length) {
+                remote.srcObject = new MediaStream(vt);
+                remote.style.display = 'block';
+                previewStatic.style.display = 'none';
+            } else {
+                try { remote.srcObject = null; } catch (e2) {}
+                remote.style.display = 'none';
+                previewStatic.style.display = 'block';
+            }
+        } catch (e) {
+            previewStatic.style.display = 'block';
+        }
+    }
+
+    function setCallUi(active) {
+        if (hangupBtn) {
+            hangupBtn.style.display = active ? 'block' : 'none';
+        }
+    }
+
+    function stopLocalMicTracks() {
+        if (!localMicStream) {
+            return;
+        }
+        try {
+            localMicStream.getTracks().forEach(function (t) {
+                try { t.stop(); } catch (e) {}
+            });
+        } catch (e) {}
+        localMicStream = null;
+    }
+
     function hangup() {
         if (session && !session.isEnded()) {
             try { session.terminate(); } catch (e) {}
         }
         session = null;
-        vwrap.style.display = 'none';
+        setCallUi(false);
+        stopLocalMicTracks();
         try { remote.srcObject = null; } catch (e) {}
+        try { remoteAudio.srcObject = null; } catch (e) {}
+        remote.style.display = 'none';
+        previewStatic.style.display = 'block';
     }
 
-    function placeCall() {
-        setErr('');
-        if (!ua || !ua.isRegistered()) {
-            setErr('Нет соединения с сервером вызовов.');
-            return;
+    function acquireMicOnly() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            return Promise.reject(new Error('getUserMedia не поддерживается'));
         }
-        if (!digits || digits.length < 1) {
-            setErr('Введите номер квартиры.');
-            return;
-        }
-        hangup();
-        setStatus('Вызов…');
-        const ext = digits;
-        let iceGatherDone = false;
+        return navigator.mediaDevices.getUserMedia({ audio: true });
+    }
+
+    function rtcPeerOptions(micStream) {
+        var iceGatherDone = false;
         function signalIceReady(ev) {
             if (iceGatherDone) return;
             iceGatherDone = true;
             try { ev.ready(); } catch (e) {}
         }
-        const opt = {
-            mediaConstraints: { audio: true, video: { facingMode: 'user' } },
+        var opt = {
+            mediaConstraints: { audio: true, video: false },
             pcConfig: {
                 iceServers: manifest.ice || [],
                 iceCandidatePoolSize: 10,
@@ -224,30 +297,83 @@
                 },
             },
         };
-        session = ua.call('sip:' + ext + '@' + manifest.sipDomain, opt);
-        session.on('accepted', function () {
-            setStatus('Соединено');
-        });
-        session.on('confirmed', function () {
-            setStatus('Разговор');
-        });
-        session.on('ended', function () {
+        if (micStream) {
+            opt.mediaStream = micStream;
+        }
+        return opt;
+    }
+
+    function placeCall() {
+        setErr('');
+        if (!ua || !ua.isRegistered()) {
+            setErr('Нет соединения с сервером вызовов.');
+            return;
+        }
+        if (!digits || digits.length < 1) {
+            setErr('Введите номер квартиры.');
+            return;
+        }
+        hangup();
+        setStatus('Запрос доступа к микрофону…');
+        const ext = digits;
+        acquireMicOnly().
+            then(function (mic) {
+                localMicStream = mic;
+                setStatus('Вызов…');
+                var opt = rtcPeerOptions(mic);
+                session = ua.call('sip:' + ext + '@' + manifest.sipDomain, opt);
+                setCallUi(true);
+                session.on('accepted', function () {
+                    setStatus('Соединено');
+                });
+                session.on('confirmed', function () {
+                    setStatus('Разговор');
+                });
+                session.on('ended', function () {
+                    setStatus('Завершено');
+                    hangup();
+                });
+                session.on('failed', function (e) {
+                    setStatus('');
+                    setErr('Вызов не удался: ' + (e.cause || 'ошибка'));
+                    hangup();
+                });
+                session.connection.addEventListener('addstream', function (ev) {
+                    attachRemoteMedia(ev.stream);
+                });
+                session.connection.addEventListener('track', function (ev) {
+                    if (ev.streams && ev.streams[0]) {
+                        attachRemoteMedia(ev.streams[0]);
+                    }
+                });
+            }).
+            catch(function (e) {
+                setStatus('');
+                setErr('Микрофон недоступен: ' + (e && (e.message || e.name) ? (e.message || e.name) : 'ошибка'));
+                stopLocalMicTracks();
+            });
+    }
+
+    function wireIncomingSession(sess) {
+        sess.on('accepted', function () { setStatus('Соединено'); });
+        sess.on('confirmed', function () { setStatus('Разговор'); });
+        sess.on('ended', function () {
             setStatus('Завершено');
+            session = null;
             hangup();
         });
-        session.on('failed', function (e) {
+        sess.on('failed', function (e) {
             setStatus('');
-            setErr('Вызов не удался: ' + (e.cause || 'ошибка'));
+            setErr('Входящий: ' + (e.cause || 'ошибка'));
+            session = null;
             hangup();
         });
-        session.connection.addEventListener('addstream', function (ev) {
-            vwrap.style.display = 'block';
-            remote.srcObject = ev.stream;
+        sess.connection.addEventListener('addstream', function (ev) {
+            attachRemoteMedia(ev.stream);
         });
-        session.connection.addEventListener('track', function (ev) {
+        sess.connection.addEventListener('track', function (ev) {
             if (ev.streams && ev.streams[0]) {
-                vwrap.style.display = 'block';
-                remote.srcObject = ev.streams[0];
+                attachRemoteMedia(ev.streams[0]);
             }
         });
     }
@@ -298,6 +424,15 @@
             }
             buildKeys();
             renderDisp();
+            if (hangupBtn) {
+                hangupBtn.addEventListener('click', function () {
+                    setErr('');
+                    hangup();
+                    if (ua && ua.isRegistered()) {
+                        setStatus('Готов к вызову');
+                    }
+                });
+            }
             if (typeof JsSIP === 'undefined') throw new Error('JsSIP не загружен');
             JsSIP.debug.disable('JsSIP:*');
             ua = new JsSIP.UA({
@@ -311,6 +446,48 @@
             });
             ua.on('registrationFailed', function (e) {
                 setErr('Регистрация SIP не удалась: ' + (e.cause || ''));
+            });
+            ua.on('newRTCSession', function (e) {
+                var sess = e.session;
+                if (sess.direction !== 'incoming') {
+                    return;
+                }
+                if (session && session !== sess && !session.isEnded()) {
+                    try { sess.terminate(); } catch (x) {}
+                    return;
+                }
+                setErr('');
+                setCallUi(true);
+                setStatus('Входящий вызов… — запрос микрофона…');
+                acquireMicOnly().
+                    then(function (mic) {
+                        if (sess.isEnded()) {
+                            try {
+                                mic.getTracks().forEach(function (t) {
+                                    t.stop();
+                                });
+                            } catch (e) {}
+                            return;
+                        }
+                        localMicStream = mic;
+                        session = sess;
+                        setStatus('Входящий вызов…');
+                        wireIncomingSession(sess);
+                        try {
+                            sess.answer(rtcPeerOptions(mic));
+                        } catch (err) {
+                            setErr('Не удалось ответить');
+                            try { sess.terminate(); } catch (x2) {}
+                            stopLocalMicTracks();
+                            setCallUi(false);
+                        }
+                    }).
+                    catch(function (err) {
+                        setStatus('');
+                        setErr('Не удалось ответить (микрофон): ' + (err && (err.message || err.name) ? (err.message || err.name) : 'ошибка'));
+                        setCallUi(false);
+                        try { sess.terminate(); } catch (x3) {}
+                    });
             });
             ua.start();
         })
