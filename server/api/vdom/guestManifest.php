@@ -63,6 +63,17 @@
                     }
                 }
 
+                $ext = $panel["ext"];
+                if (is_object($ext)) {
+                    $ext = json_decode(json_encode($ext), true) ?: [];
+                } elseif (!is_array($ext)) {
+                    $ext = [];
+                }
+                $du = $ext["doorOpeningUrls"] ?? [];
+                $door0 = isset($du[0]) ? trim((string)$du[0]) : "";
+                $door1 = isset($du[1]) ? trim((string)$du[1]) : "";
+                $doorOpenConfigured = ($door0 !== "" || $door1 !== "");
+
                 $payload = [
                     "sipUser" => $sipUser,
                     "sipPassword" => (string)($panel["credentials"] ?? ""),
@@ -71,6 +82,7 @@
                     "ice" => $asteriskClient["ice"] ?? [],
                     "panelName" => (string)($panel["name"] ?? ""),
                     "guestPageUrl" => $guestPageUrl,
+                    "doorOpenConfigured" => $doorOpenConfigured,
                 ];
 
                 if ($payload["sipDomain"] === "" || $payload["ws"] === "") {

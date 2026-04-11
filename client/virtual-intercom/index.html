@@ -218,14 +218,82 @@
         }
     }
 
+    function issueDoorTokensFetch() {
+        return fetch(apiRoot() + '/vdom/issueDoorTokens', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ t: slug }),
+        }).then(function (r) {
+            return r.json().then(function (body) {
+                if (!r.ok) {
+                    throw new Error((body && body.error) ? body.error : 'issueDoorTokens');
+                }
+                return body.doors || [];
+            });
+        });
+    }
+
+    function wireDoorDtmf(sess) {
+        if (!sess || sess._doorDtmfWired) {
+            return;
+        }
+        sess._doorDtmfWired = true;
+        sess.on('accepted', function () {
+            issueDoorTokensFetch().
+                then(function (doors) {
+                    var map = {};
+                    if (doors && doors.length) {
+                        for (var i = 0; i < doors.length; i++) {
+                            var d = doors[i];
+                            if (d && d.digit && d.token) {
+                                map[String(d.digit)] = d.token;
+                            }
+                        }
+                    }
+                    sess._doorDigitToToken = map;
+                }).
+                catch(function () {});
+        });
+        sess.on('newDTMF', function (data) {
+            var map = sess._doorDigitToToken || {};
+            var tone = (data && data.dtmf && data.dtmf.tone) ? String(data.dtmf.tone) : '';
+            var tok = map[tone];
+            if (!tok) {
+                return;
+            }
+            delete map[tone];
+            fetch(apiRoot() + '/vdom/openDoorOnce/' + encodeURIComponent(tok), { method: 'GET', headers: { 'Accept': 'application/json' } }).
+                then(function (r) {
+                    return r.json().catch(function () {
+                        return {};
+                    });
+                }).
+                then(function (j) {
+                    if (j && j.ok) {
+                        setErr('');
+                        setStatus('Открытие: команда отправлена');
+                    } else {
+                        setErr((j && j.error) ? ('Открытие: ' + j.error) : 'Открытие не удалось');
+                    }
+                }).
+                catch(function () {
+                    setErr('Открытие: ошибка сети');
+                });
+        });
+    }
+
     function hangup() {
+        if (session) {
+            try { delete session._doorDigitToToken; } catch (e) {}
+            try { delete session._doorDtmfWired; } catch (e1) {}
+        }
         if (session && !session.isEnded()) {
-            try { session.terminate(); } catch (e) {}
+            try { session.terminate(); } catch (e2) {}
         }
         session = null;
         setCallUi(false);
         setCallButtonLocked(false);
-        try { remoteAudio.srcObject = null; } catch (e) {}
+        try { remoteAudio.srcObject = null; } catch (e3) {}
     }
 
     function rtcOptionsForCall() {
@@ -312,6 +380,7 @@
                 attachRemoteMedia(ev.streams[0]);
             }
         });
+        wireDoorDtmf(session);
     }
 
     function wireIncomingSession(sess) {
@@ -341,6 +410,7 @@
                 attachRemoteMedia(ev.streams[0]);
             }
         });
+        wireDoorDtmf(sess);
     }
 
     function explainManifestError(status, bodyText) {
@@ -386,6 +456,9 @@
             }
             if (manifest.panelName) {
                 document.getElementById('titleLine').textContent = manifest.panelName;
+            }
+            if (manifest.doorOpenConfigured) {
+                document.getElementById('subLine').textContent = 'Наберите квартиру. Открытие калитки с трубки — DTMF (цифры подставятся после соединения).';
             }
             buildKeys();
             renderDisp();

@@ -189,9 +189,15 @@
     $method = @$m[1];
 
     // Публичный guestManifest: nginx/прокси иногда приводят сегмент пути к нижнему регистру — иначе не срабатывает bypass Bearer и отдаётся noToken.
-    if (strcasecmp((string)$api, "vdom") === 0 && strcasecmp((string)$method, "guestManifest") === 0) {
+    if (strcasecmp((string)$api, "vdom") === 0) {
+        if (strcasecmp((string)$method, "guestManifest") === 0) {
+            $method = "guestManifest";
+        } elseif (strcasecmp((string)$method, "issueDoorTokens") === 0) {
+            $method = "issueDoorTokens";
+        } elseif (strcasecmp((string)$method, "openDoorOnce") === 0) {
+            $method = "openDoorOnce";
+        }
         $api = "vdom";
-        $method = "guestManifest";
         $m[0] = $api;
         $m[1] = $method;
     }
@@ -296,6 +302,18 @@
         response(204);
     } else
     if ($api == "vdom" && $method == "guestManifest") {
+        $params["_login"] = "guest";
+        $params["_uid"] = 0;
+        $params["_realUid"] = 0;
+        $params["_ip"] = $ip;
+    } else
+    if ($api == "vdom" && $method == "issueDoorTokens" && $params["_request_method"] === "POST") {
+        $params["_login"] = "guest";
+        $params["_uid"] = 0;
+        $params["_realUid"] = 0;
+        $params["_ip"] = $ip;
+    } else
+    if ($api == "vdom" && $method == "openDoorOnce" && $params["_request_method"] === "GET") {
         $params["_login"] = "guest";
         $params["_uid"] = 0;
         $params["_realUid"] = 0;
