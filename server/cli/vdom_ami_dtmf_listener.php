@@ -58,7 +58,6 @@
     }
 
     $postUrl = rtrim($asteriskApi, "/") . "/extensions/vdomDtmfDoor";
-    $logUnmatched = !isset($config["vdom_dtmf"]["log_unmatched_dtmf"]) || $config["vdom_dtmf"]["log_unmatched_dtmf"] !== false;
 
     $redis = new Redis();
     $redis->connect((string)$redisCfg["host"], (int)($redisCfg["port"] ?? 6379));
@@ -140,32 +139,6 @@
         fwrite($fp, $buf);
     }
 
-    /**
-     * Ищет контекст звонка в Redis по полям AMI (разные ноги моста дают разные Linkedid/Uniqueid).
-     *
-     * @return array<string, mixed>|null
-     */
-    function vdom_lookup_call_ctx(Redis $redis, array $msg): ?array {
-        $candidates = [];
-        foreach (["Linkedid", "Uniqueid", "BridgeUniqueid"] as $f) {
-            $v = isset($msg[$f]) ? trim((string)$msg[$f]) : "";
-            if ($v !== "") {
-                $candidates[] = $v;
-            }
-        }
-        foreach ($candidates as $k) {
-            $raw = $redis->get("vdom_call_ctx:" . $k);
-            if ($raw !== false && $raw !== null && $raw !== "") {
-                $ctx = json_decode((string)$raw, true);
-                if (is_array($ctx)) {
-                    return $ctx;
-                }
-            }
-        }
-
-        return null;
-    }
-
     function vdom_post_door(string $url, string $auth, int $domophoneId, int $flatId, string $digit): void {
         $payload = json_encode([
             "auth" => $auth,
@@ -234,37 +207,40 @@
                 continue;
             }
 
-            $digit = trim((string)($msg["Digit"] ?? ""));
+            $digit = (string)($msg["Digit"] ?? "");
             if ($digit === "") {
                 continue;
             }
 
-            $ctx = vdom_lookup_call_ctx($redis, $msg);
-            if ($ctx === null) {
-                if ($logUnmatched) {
-                    $ch = (string)($msg["Channel"] ?? "");
-                    $lid = trim((string)($msg["Linkedid"] ?? ""));
-                    $uid = trim((string)($msg["Uniqueid"] ?? ""));
-                    $bid = trim((string)($msg["BridgeUniqueid"] ?? ""));
-                    fwrite(STDERR, date("c") . " DTMF unmatched digit={$digit} channel={$ch} Linkedid={$lid} Uniqueid={$uid} BridgeUniqueid={$bid}\n");
-                }
-
+            $lid = (string)($msg["Linkedid"] ?? "");
+            if ($lid === "") {
+                $lid = (string)($msg["Uniqueid"] ?? "");
+            }
+            if ($lid === "") {
                 continue;
             }
 
+            $ctxJson = $redis->get("vdom_call_ctx:" . $lid);
+            if ($ctxJson === false || $ctxJson === null || $ctxJson === "") {
+                continue;
+            }
+            $ctx = json_decode((string)$ctxJson, true);
+            if (!is_array($ctx)) {
+                continue;
+            }
             $domophoneId = (int)($ctx["domophoneId"] ?? 0);
             $flatId = (int)($ctx["flatId"] ?? 0);
             if ($domophoneId <= 0 || $flatId <= 0) {
                 continue;
             }
 
-            $debKey = "vdom_dtmf_db:" . $domophoneId . ":" . $flatId . ":" . $digit;
+            $debKey = "vdom_dtmf_db:" . $lid . ":" . $digit;
             if (!$redis->setnx($debKey, "1")) {
                 continue;
             }
             $redis->expire($debKey, 4);
 
-            fwrite(STDERR, date("c") . " DTMF matched digit={$digit} domophone={$domophoneId} flat={$flatId}\n");
+            fwrite(STDERR, date("c") . " DTMF digit={$digit} linkedid={$lid} domophone={$domophoneId} flat={$flatId}\n");
             vdom_post_door($postUrl, $apiKey, $domophoneId, $flatId, $digit);
         }
 

@@ -596,23 +596,12 @@ function handleOtherCases(context, extension)
                 local panelForDtmf = dm("domophone", domophoneId)
                 local panelEnabled = panelForDtmf and (panelForDtmf.enabled == true or panelForDtmf.enabled == 1 or tonumber(panelForDtmf.enabled) == 1)
                 if panelForDtmf and panelForDtmf.model == "virtual.json" and panelEnabled then
-                    -- AMI DTMF часто приходит на ноге абонента: Linkedid/Uniqueid на событии могут отличаться от «канала панели» до Dial.
-                    -- Кладём один JSON по всем уникальным ключам linkedid/uniqueid текущего канала.
                     local lid = channel.CDR("linkedid"):get()
-                    local uid = channel.CDR("uniqueid"):get()
-                    local payload = cjson.encode({
-                        domophoneId = domophoneId,
-                        flatId = flatId,
-                    })
-                    local kmap = {}
                     if lid and lid ~= "" then
-                        kmap[lid] = true
-                    end
-                    if uid and uid ~= "" then
-                        kmap[uid] = true
-                    end
-                    for k, _ in pairs(kmap) do
-                        redis:setex("vdom_call_ctx:" .. k, 600, payload)
+                        redis:setex("vdom_call_ctx:" .. lid, 600, cjson.encode({
+                            domophoneId = domophoneId,
+                            flatId = flatId,
+                        }))
                     end
                 end
                 app.Dial(dest, 120)
