@@ -592,6 +592,18 @@ function handleOtherCases(context, extension)
 
             if dest ~= "" then
                 logDebug("dialing: " .. dest)
+                -- Виртуальная панель: контекст для AMI-слушателя DTMF → HTTP doorOpeningUrls (см. server/cli/vdom_ami_dtmf_listener.php).
+                local panelForDtmf = dm("domophone", domophoneId)
+                local panelEnabled = panelForDtmf and (panelForDtmf.enabled == true or panelForDtmf.enabled == 1 or tonumber(panelForDtmf.enabled) == 1)
+                if panelForDtmf and panelForDtmf.model == "virtual.json" and panelEnabled then
+                    local lid = channel.CDR("linkedid"):get()
+                    if lid and lid ~= "" then
+                        redis:setex("vdom_call_ctx:" .. lid, 600, cjson.encode({
+                            domophoneId = domophoneId,
+                            flatId = flatId,
+                        }))
+                    end
+                end
                 app.Dial(dest, 120)
             else
                 logDebug("nothing to dial")

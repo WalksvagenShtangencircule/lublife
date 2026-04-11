@@ -562,6 +562,140 @@
 
                     break;
 
+                /**
+                 * Открытие шлагбаума/калитки по DTMF во время звонка с виртуальной панели (model virtual.json).
+                 * Вызывается только из доверенного контура (CLI AMI-слушатель + секрет в config).
+                 */
+                case "vdomDtmfDoor":
+                    $cfgKey = @$config["vdom_dtmf"]["open_api_key"];
+                    if (!is_string($cfgKey) || $cfgKey === "") {
+                        http_response_code(503);
+                        echo json_encode(["ok" => false, "error" => "notConfigured"]);
+
+                        break;
+                    }
+                    $auth = isset($params["auth"]) && is_string($params["auth"]) ? $params["auth"] : "";
+                    if (strlen($auth) !== strlen($cfgKey) || !hash_equals($cfgKey, $auth)) {
+                        http_response_code(403);
+                        echo json_encode(["ok" => false, "error" => "forbidden"]);
+
+                        break;
+                    }
+                    $domophoneId = (int)@$params["domophoneId"];
+                    $flatId = (int)@$params["flatId"];
+                    $digit = trim((string)@$params["digit"]);
+                    if ($domophoneId <= 0 || $flatId <= 0 || strlen($digit) !== 1 || !preg_match('/^[0-9*#]$/', $digit)) {
+                        http_response_code(400);
+                        echo json_encode(["ok" => false, "error" => "badRequest"]);
+
+                        break;
+                    }
+                    $households = loadBackend("households");
+                    if (!$households) {
+                        http_response_code(500);
+                        echo json_encode(["ok" => false, "error" => "backend"]);
+
+                        break;
+                    }
+                    $panel = $households->getDomophone($domophoneId);
+                    if (!$panel || (int)@$panel["enabled"] !== 1 || (string)@$panel["model"] !== "virtual.json") {
+                        echo json_encode(["ok" => false, "error" => "notFound"]);
+
+                        break;
+                    }
+                    $flat = $households->getFlat($flatId);
+                    if (!$flat || !is_array(@$flat["entrances"])) {
+                        echo json_encode(["ok" => false, "error" => "notFound"]);
+
+                        break;
+                    }
+                    $linkedToFlat = false;
+                    foreach ($flat["entrances"] as $e) {
+                        if ((int)@$e["domophoneId"] === $domophoneId) {
+                            $linkedToFlat = true;
+
+                            break;
+                        }
+                    }
+                    if (!$linkedToFlat) {
+                        echo json_encode(["ok" => false, "error" => "forbidden"]);
+
+                        break;
+                    }
+                    $ext = $panel["ext"] ?? [];
+                    if (is_object($ext)) {
+                        $ext = json_decode(json_encode($ext), true) ?: [];
+                    } elseif (!is_array($ext)) {
+                        $ext = [];
+                    }
+                    $urls = $ext["doorOpeningUrls"] ?? [];
+                    if (!is_array($urls)) {
+                        $urls = [];
+                    }
+                    $url0 = isset($urls[0]) ? trim((string)$urls[0]) : "";
+                    $url1 = isset($urls[1]) ? trim((string)$urls[1]) : "";
+                    $primary = trim((string)($panel["dtmf"] ?? "1"));
+                    if (!in_array($primary, ["*", "#", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], true)) {
+                        $primary = "1";
+                    }
+                    $pickAlt = static function (string $p): string {
+                        foreach (["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "*", "#"] as $d) {
+                            if ($d !== $p) {
+                                return $d;
+                            }
+                        }
+
+                        return "2";
+                    };
+                    $alt = $pickAlt($primary);
+                    $targetUrl = "";
+                    $doorIdx = -1;
+                    if ($digit === $primary) {
+                        if ($url0 !== "") {
+                            $targetUrl = $url0;
+                            $doorIdx = 0;
+                        }
+                    } elseif ($digit === $alt && $url1 !== "") {
+                        $targetUrl = $url1;
+                        $doorIdx = 1;
+                    }
+                    if ($targetUrl === "") {
+                        echo json_encode(["ok" => false, "error" => "noDoorForDigit"]);
+
+                        break;
+                    }
+                    if (!preg_match('#^https?://#i', $targetUrl)) {
+                        echo json_encode(["ok" => false, "error" => "badUrl"]);
+
+                        break;
+                    }
+                    $ctx = stream_context_create([
+                        "http" => [
+                            "timeout" => 8,
+                            "method" => "GET",
+                            "ignore_errors" => true,
+                        ],
+                        "ssl" => [
+                            "verify_peer" => true,
+                            "verify_peer_name" => true,
+                        ],
+                    ]);
+                    $httpOk = @file_get_contents($targetUrl, false, $ctx) !== false;
+                    $logDir = __DIR__ . "/logs";
+                    if (!is_dir($logDir)) {
+                        @mkdir($logDir, 0775, true);
+                    }
+                    $line = date("c") . "\tdtmf\t" . $domophoneId . "\t" . $flatId . "\t" . $digit . "\tdoor" . (string)$doorIdx . "\t" . ($httpOk ? "ok" : "fail") . "\n";
+                    @file_put_contents($logDir . "/vdom_dtmf_door.log", $line, FILE_APPEND | LOCK_EX);
+                    echo json_encode([
+                        "ok" => $httpOk,
+                        "domophoneId" => $domophoneId,
+                        "flatId" => $flatId,
+                        "doorId" => $doorIdx,
+                    ]);
+
+                    break;
+
                 case "concierge":
                     if ($params[0] === "1" && strlen($params) === 6) {
                         echo json_encode(loadBackend("households")->getDomophone((int)substr($params, 1))["concierge"]);
