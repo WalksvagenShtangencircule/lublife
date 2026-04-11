@@ -1,8 +1,5 @@
 {
     "tt": "Task manager",
-    "menuSidebar": "Tasks",
-    "customFilterSidebar": "Adv. search",
-    "workspacesSidebar": "Spaces",
     "settings": "Task manager settings",
     "projects": "Projects",
     "issueTypes": "Issue Types",

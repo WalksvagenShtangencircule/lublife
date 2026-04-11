@@ -22,7 +22,7 @@
 
     init: function () {
         if (parseInt(myself.uid) && AVAIL("tt", "tt", "GET")) {
-            this.menuItem = leftSide("fas fa-fw fa-diagram-project", i18n("tt.workspacesSidebar"), "?#tt.workspaces", "tt");
+            this.menuItem = leftSide("fas fa-fw fa-diagram-project", i18n("tt.workspaces"), "?#tt.workspaces", "tt");
         }
         moduleLoaded("tt.workspaces", this);
     },
