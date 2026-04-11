@@ -1509,6 +1509,76 @@
              * @inheritDoc
              */
 
+            public function getDomophoneByGuestSlug(string $slug) {
+                $slug = trim($slug);
+                if ($slug === "" || strlen($slug) > 128 || !preg_match('/^[a-f0-9]+$/i', $slug)) {
+                    return false;
+                }
+
+                $row = $this->db->get(
+                    "select house_domophone_id from houses_domophones where model = 'virtual.json' and enabled = 1 and coalesce(ext, '') <> '' and (ext::jsonb->>'guestAccessSlug') = :slug limit 2",
+                    [
+                        "slug" => $slug,
+                    ],
+                    false,
+                    [ "silent" ],
+                );
+
+                if (!$row || !is_array($row) || count($row) !== 1 || !isset($row[0]["house_domophone_id"])) {
+                    return false;
+                }
+
+                return $this->getDomophone((int)$row[0]["house_domophone_id"]);
+            }
+
+            /**
+             * @inheritDoc
+             */
+
+            public function rotateVirtualDomophoneGuestSlug(int $domophoneId) {
+                if (!checkInt($domophoneId)) {
+                    return false;
+                }
+
+                $d = $this->getDomophone($domophoneId);
+                if (!$d || ($d["model"] ?? "") !== "virtual.json") {
+                    return false;
+                }
+
+                $ext = $d["ext"];
+                if (is_object($ext)) {
+                    $ext = json_decode(json_encode($ext), true);
+                }
+                if (!is_array($ext)) {
+                    $ext = [];
+                }
+
+                $ext["virtualPanel"] = true;
+                $ext["guestAccessSlug"] = bin2hex(random_bytes(16));
+
+                $r = $this->db->modify(
+                    "update houses_domophones set ext = :ext where house_domophone_id = " . (int)$domophoneId . " and model = 'virtual.json'",
+                    [
+                        "ext" => json_encode($ext, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    ],
+                );
+
+                if ($r === false) {
+                    return false;
+                }
+
+                $queue = loadBackend("queue");
+                if ($queue) {
+                    $queue->changed("domophone", $domophoneId);
+                }
+
+                return $ext["guestAccessSlug"];
+            }
+
+            /**
+             * @inheritDoc
+             */
+
             public function getSubscribers($by, $query, $options = []) {
                 $q = "";
                 $p = false;

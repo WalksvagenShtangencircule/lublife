@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>Вызов с панели</title>
+    <style>
+        :root {
+            --bg: #1a1d24;
+            --panel: #2c313c;
+            --key: #3d4455;
+            --accent: #c45c3e;
+            --text: #f0e6dc;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: system-ui, sans-serif;
+            background: radial-gradient(ellipse at top, #2a3140 0%, var(--bg) 55%);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .wrap { width: 100%; max-width: 380px; }
+        .panel {
+            background: linear-gradient(165deg, var(--panel) 0%, #232833 100%);
+            border-radius: 20px;
+            padding: 22px 18px 18px;
+            box-shadow: 0 18px 50px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
+            border: 1px solid rgba(255,255,255,.08);
+        }
+        h1 { font-size: 1rem; font-weight: 600; margin: 0 0 6px; opacity: .95; }
+        .sub { font-size: .78rem; opacity: .55; margin-bottom: 16px; }
+        .display {
+            background: #0e1014;
+            border-radius: 10px;
+            padding: 12px 14px;
+            font-size: 1.6rem;
+            letter-spacing: .12em;
+            text-align: right;
+            min-height: 48px;
+            margin-bottom: 14px;
+            font-variant-numeric: tabular-nums;
+            border: 1px solid rgba(0,0,0,.4);
+        }
+        .keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        button.key {
+            border: none;
+            border-radius: 12px;
+            padding: 14px 0;
+            font-size: 1.15rem;
+            font-weight: 600;
+            background: var(--key);
+            color: var(--text);
+            cursor: pointer;
+            box-shadow: 0 3px 0 #252a35;
+        }
+        button.key:active { transform: translateY(2px); box-shadow: none; }
+        button.call {
+            grid-column: span 3;
+            margin-top: 6px;
+            background: linear-gradient(180deg, #d96d4d 0%, var(--accent) 100%);
+            box-shadow: 0 4px 0 #7a3320;
+            font-size: 1rem;
+        }
+        button.del { background: #4a3a32; box-shadow: 0 3px 0 #2e241f; font-size: .9rem; }
+        .status { margin-top: 14px; font-size: .78rem; opacity: .65; min-height: 2.4em; }
+        .video-wrap {
+            margin-top: 12px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+            aspect-ratio: 4/3;
+            display: none;
+        }
+        .video-wrap video { width: 100%; height: 100%; object-fit: cover; }
+        .err { color: #f88; font-size: .85rem; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="panel">
+            <h1 id="titleLine">Домофон</h1>
+            <div class="sub" id="subLine">Наберите номер квартиры</div>
+            <div class="display" id="disp">—</div>
+            <div class="keys" id="keys"></div>
+            <div class="status" id="status"></div>
+            <div class="video-wrap" id="vwrap"><video id="remote" autoplay playsinline></video></div>
+            <div class="err" id="err"></div>
+        </div>
+    </div>
+    <script src="/js/jssip.min.js"></script>
+    <script>
+(function () {
+    function apiRoot() {
+        const p = window.location.pathname;
+        const idx = p.indexOf('/frontend/');
+        if (idx === 0) return window.location.origin + '/api';
+        if (idx > 0) return window.location.origin + p.substring(0, idx) + '/api';
+        return window.location.origin + '/api';
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const slug = params.get('t');
+    const statusEl = document.getElementById('status');
+    const errEl = document.getElementById('err');
+    const dispEl = document.getElementById('disp');
+    const keysEl = document.getElementById('keys');
+    const vwrap = document.getElementById('vwrap');
+    const remote = document.getElementById('remote');
+
+    function setErr(t) { errEl.textContent = t || ''; }
+    function setStatus(t) { statusEl.textContent = t || ''; }
+
+    if (!slug) {
+        setErr('Неверная ссылка: нет кода доступа.');
+        return;
+    }
+
+    let digits = '';
+    let manifest = null;
+    let ua = null;
+    let session = null;
+
+    function renderDisp() {
+        dispEl.textContent = digits ? digits : '—';
+    }
+
+    function addDigit(d) {
+        if (digits.length >= 12) return;
+        digits += d;
+        renderDisp();
+    }
+
+    function backspace() {
+        digits = digits.slice(0, -1);
+        renderDisp();
+    }
+
+    function buildKeys() {
+        const nums = ['1','2','3','4','5','6','7','8','9'];
+        nums.forEach(function (n) {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'key';
+            b.textContent = n;
+            b.addEventListener('click', function () { addDigit(n); });
+            keysEl.appendChild(b);
+        });
+        const z = document.createElement('button');
+        z.type = 'button';
+        z.className = 'key del';
+        z.textContent = '⌫';
+        z.addEventListener('click', backspace);
+        keysEl.appendChild(z);
+        const zero = document.createElement('button');
+        zero.type = 'button';
+        zero.className = 'key';
+        zero.textContent = '0';
+        zero.addEventListener('click', function () { addDigit('0'); });
+        keysEl.appendChild(zero);
+        const clr = document.createElement('button');
+        clr.type = 'button';
+        clr.className = 'key del';
+        clr.textContent = 'C';
+        clr.addEventListener('click', function () { digits = ''; renderDisp(); });
+        keysEl.appendChild(clr);
+        const call = document.createElement('button');
+        call.type = 'button';
+        call.className = 'key call';
+        call.textContent = 'Вызов';
+        call.addEventListener('click', placeCall);
+        keysEl.appendChild(call);
+    }
+
+    function hangup() {
+        if (session && !session.isEnded()) {
+            try { session.terminate(); } catch (e) {}
+        }
+        session = null;
+        vwrap.style.display = 'none';
+        try { remote.srcObject = null; } catch (e) {}
+    }
+
+    function placeCall() {
+        setErr('');
+        if (!ua || !ua.isRegistered()) {
+            setErr('Нет соединения с сервером вызовов.');
+            return;
+        }
+        if (!digits || digits.length < 1) {
+            setErr('Введите номер квартиры.');
+            return;
+        }
+        hangup();
+        setStatus('Вызов…');
+        const ext = digits;
+        let iceGatherDone = false;
+        function signalIceReady(ev) {
+            if (iceGatherDone) return;
+            iceGatherDone = true;
+            try { ev.ready(); } catch (e) {}
+        }
+        const opt = {
+            mediaConstraints: { audio: true, video: { facingMode: 'user' } },
+            pcConfig: {
+                iceServers: manifest.ice || [],
+                iceCandidatePoolSize: 10,
+            },
+            rtcOfferConstraints: { offerToReceiveAudio: true, offerToReceiveVideo: true },
+            eventHandlers: {
+                icecandidate: function (event) {
+                    if (!event.candidate) {
+                        signalIceReady(event);
+                        return;
+                    }
+                    var c = event.candidate;
+                    if (c.type === 'srflx' && c.relatedAddress != null && c.relatedPort != null) {
+                        signalIceReady(event);
+                    }
+                },
+            },
+        };
+        session = ua.call('sip:' + ext + '@' + manifest.sipDomain, opt);
+        session.on('accepted', function () {
+            setStatus('Соединено');
+        });
+        session.on('confirmed', function () {
+            setStatus('Разговор');
+        });
+        session.on('ended', function () {
+            setStatus('Завершено');
+            hangup();
+        });
+        session.on('failed', function (e) {
+            setStatus('');
+            setErr('Вызов не удался: ' + (e.cause || 'ошибка'));
+            hangup();
+        });
+        session.connection.addEventListener('addstream', function (ev) {
+            vwrap.style.display = 'block';
+            remote.srcObject = ev.stream;
+        });
+        session.connection.addEventListener('track', function (ev) {
+            if (ev.streams && ev.streams[0]) {
+                vwrap.style.display = 'block';
+                remote.srcObject = ev.streams[0];
+            }
+        });
+    }
+
+    function explainManifestError(status, bodyText) {
+        let code = '';
+        try {
+            const j = JSON.parse(bodyText);
+            if (j && j.error) {
+                code = String(j.error);
+            }
+        } catch (e) {}
+        if (code === 'noToken' || code === 'tokenNotFound') {
+            return 'Сервер не распознал публичный метод (часто из‑за регистра в URL или другого входного скрипта для /api). Обновите backend; путь должен быть …/api/vdom/guestManifest';
+        }
+        if (code === 'notConfigured') {
+            return 'На сервере не заданы ws/sipDomain для Asterisk (client/config/config.json → asterisk).';
+        }
+        if (code === 'notFound') {
+            return 'Неверный код доступа или панель отключена.';
+        }
+        if (code) {
+            return 'Ошибка API: ' + code + (status ? ' (' + status + ')' : '');
+        }
+        return 'HTTP ' + (status || '?');
+    }
+
+    fetch(apiRoot() + '/vdom/guestManifest?t=' + encodeURIComponent(slug))
+        .then(function (r) {
+            return r.text().then(function (txt) {
+                if (!r.ok) {
+                    throw new Error(explainManifestError(r.status, txt));
+                }
+                try {
+                    return JSON.parse(txt);
+                } catch (e) {
+                    throw new Error('Ответ сервера не JSON');
+                }
+            });
+        })
+        .then(function (data) {
+            manifest = data;
+            if (!manifest || !manifest.sipUser || !manifest.sipPassword || !manifest.ws || !manifest.sipDomain) {
+                throw new Error('Неполный ответ сервера');
+            }
+            if (manifest.panelName) {
+                document.getElementById('titleLine').textContent = manifest.panelName;
+            }
+            buildKeys();
+            renderDisp();
+            if (typeof JsSIP === 'undefined') throw new Error('JsSIP не загружен');
+            JsSIP.debug.disable('JsSIP:*');
+            ua = new JsSIP.UA({
+                sockets: [ new JsSIP.WebSocketInterface(manifest.ws) ],
+                uri: 'sip:' + manifest.sipUser + '@' + manifest.sipDomain,
+                password: manifest.sipPassword,
+                sessionTimers: false,
+            });
+            ua.on('registered', function () {
+                setStatus('Готов к вызову');
+            });
+            ua.on('registrationFailed', function (e) {
+                setErr('Регистрация SIP не удалась: ' + (e.cause || ''));
+            });
+            ua.start();
+        })
+        .catch(function (e) {
+            setErr(e.message || 'Ошибка загрузки');
+        });
+})();
+    </script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+    "title": "Virtual QR panel",
+    "vendor": "RBT",
+    "model": "Virtual",
+    "class": "dummy",
+    "eventServer": "dummy",
+    "outputs": 4,
+    "camera": "dummy",
+    "useSmartConfigurator": false,
+    "cmses": []
+}

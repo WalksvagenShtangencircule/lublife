@@ -24,6 +24,11 @@
                     return true;
                 }
 
+                // Публичная панель по QR: без Bearer (регистр сегмента пути может отличаться от имени файла PHP).
+                if (strcasecmp((string)$params["_path"]["api"], "vdom") === 0 && strcasecmp((string)$params["_path"]["method"], "guestManifest") === 0 && $params["_request_method"] === "GET") {
+                    return true;
+                }
+
                 if (!checkInt($params["_uid"])) {
                     return false;
                 }

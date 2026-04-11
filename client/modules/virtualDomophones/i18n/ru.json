@@ -1,0 +1,23 @@
+{
+    "virtualDomophones": "Виртуальные панели (QR)",
+    "menuTitle": "Вирт. панели QR",
+    "listTitle": "Виртуальные панели для курьеров",
+    "addPanel": "Добавить панель",
+    "name": "Название",
+    "server": "SIP-сервер",
+    "doorUrl0": "URL открытия (основной выход)",
+    "doorUrl1": "URL открытия (доп. выход 1)",
+    "comments": "Примечание",
+    "guestUrl": "Ссылка для QR",
+    "rotateSlug": "Новый код QR",
+    "rotateSlugConfirm": "Старые наклейки перестанут работать. Продолжить?",
+    "slugRotated": "Код доступа обновлён",
+    "panelAdded": "Панель добавлена",
+    "panelChanged": "Панель сохранена",
+    "panelDeleted": "Панель удалена",
+    "editPanel": "Редактирование панели",
+    "deletePanel": "Удалить панель",
+    "confirmDelete": "Удалить виртуальную панель #%s?",
+    "noPanels": "Нет панелей",
+    "id": "#"
+}

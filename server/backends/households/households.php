@@ -285,6 +285,22 @@
             abstract public function getDomophone($domophoneId);
 
             /**
+             * Виртуальная панель (model virtual.json) по slug из ext.guestAccessSlug.
+             *
+             * @return false|array
+             */
+
+            abstract public function getDomophoneByGuestSlug(string $slug);
+
+            /**
+             * Новый slug для QR; только для model virtual.json.
+             *
+             * @return false|string новый slug при успехе
+             */
+
+            abstract public function rotateVirtualDomophoneGuestSlug(int $domophoneId);
+
+            /**
              * @param $by - "id", "mobile", "flat", "...?"
              * @param $query
              * @param $options

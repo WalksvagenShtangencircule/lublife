@@ -103,6 +103,31 @@
 
                 case "endpoints":
                     if ($panel && $panel["credentials"]) {
+                        $webrtcPanel = (($panel["video"] ?? "") === "webrtc")
+                            || (($panel["model"] ?? "") === "virtual.json");
+
+                        if ($webrtcPanel) {
+                            return [
+                                "id" => $extension,
+                                "auth" => $extension,
+                                "outbound_auth" => $extension,
+                                "aors" => $extension,
+                                "callerid" => $extension,
+                                "context" => "default",
+                                "disallow" => "all",
+                                "allow" => "alaw,h264,opus",
+                                "rtp_symmetric" => "yes",
+                                "force_rport" => "yes",
+                                "rewrite_contact" => "yes",
+                                "timers" => "no",
+                                "direct_media" => "no",
+                                "allow_subscribe" => "yes",
+                                "dtmf_mode" => "rfc4733",
+                                "ice_support" => "yes",
+                                "webrtc" => "yes",
+                            ];
+                        }
+
                         return [
                             "id" => $extension,
                             "auth" => $extension,
@@ -420,6 +445,8 @@
 
                         $entrances = $households->getEntrances("domophoneId", [ "domophoneId" => $params["domophoneId"], "output" => "0" ]);
 
+                        $shotDone = false;
+
                         if ($entrances && $entrances[0]) {
                             $cameras = $households->getCameras("id", $entrances[0]["cameraId"]);
 
@@ -433,6 +460,22 @@
                                 }
 
                                 $redis->setex("live_" . $params["hash"], 3 * 60, $cameraId);
+
+                                echo $params["hash"];
+                                $shotDone = true;
+                            }
+                        }
+
+                        if (!$shotDone) {
+                            $panel = $households->getDomophone((int)$params["domophoneId"]);
+                            if ($panel && ($panel["model"] ?? "") === "virtual.json") {
+                                $fakeImage = file_get_contents(__DIR__ . "/hw/ip/camera/fake/img/callcenter.jpg");
+
+                                if ($memfs) {
+                                    $memfs->putFile($params["hash"], $fakeImage);
+                                } else {
+                                    $redis->setex("shot_" . $params["hash"], 3 * 60, $fakeImage);
+                                }
 
                                 echo $params["hash"];
                             }
@@ -489,18 +532,23 @@
 
                     $domophone = $households->getDomophone((int)$params["domophoneId"]);
 
-                    if ($domophone && $domophone["video"] != "inband") {
-                        $entrance = $households->getEntrances("domophoneId", [ "domophoneId" => (int)$params["domophoneId"], "output" => "0" ])[0];
-                        $cameras = @loadBackend("cameras");
-                        $dvrs = @loadBackend("dvr");
-                        if ($entrance && $cameras && $dvrs) {
-                            $camera = $cameras->getCamera($entrance["cameraId"]);
-                            $dvr = $dvrs->getDVRServerForCam($camera);
-                            if ($camera && $dvr) {
-                                $_params["videoServer"] = $dvr["type"];
-                                $_params["videoToken"] = $dvrs->getDVRTokenForCam($camera, -1);
-                                $_params["videoType"] = $domophone["video"];
-                                $_params["videoStream"] = $camera["dvrStream"];
+                    $model = (is_array($domophone) ? (string)@$domophone["model"] : "");
+                    if (is_array($domophone) && $domophone["video"] != "inband" && $model !== "virtual.json") {
+                        $entranceRows = $households->getEntrances("domophoneId", [ "domophoneId" => (int)$params["domophoneId"], "output" => "0" ]);
+                        $entrance = ($entranceRows && !empty($entranceRows[0])) ? $entranceRows[0] : null;
+                        $cameraId = $entrance ? (int)@$entrance["cameraId"] : 0;
+                        if ($entrance && $cameraId > 0) {
+                            $cameras = @loadBackend("cameras");
+                            $dvrs = @loadBackend("dvr");
+                            if ($cameras && $dvrs) {
+                                $camera = $cameras->getCamera($cameraId);
+                                $dvr = $camera ? $dvrs->getDVRServerForCam($camera) : null;
+                                if ($camera && $dvr) {
+                                    $_params["videoServer"] = $dvr["type"];
+                                    $_params["videoToken"] = $dvrs->getDVRTokenForCam($camera, -1);
+                                    $_params["videoType"] = $domophone["video"];
+                                    $_params["videoStream"] = $camera["dvrStream"];
+                                }
                             }
                         }
                     }

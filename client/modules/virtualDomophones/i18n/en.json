@@ -1,0 +1,23 @@
+{
+    "virtualDomophones": "Virtual QR panels",
+    "menuTitle": "Virtual QR panels",
+    "listTitle": "Courier virtual panels",
+    "addPanel": "Add panel",
+    "name": "Name",
+    "server": "SIP server",
+    "doorUrl0": "Open URL (primary output)",
+    "doorUrl1": "Open URL (secondary output 1)",
+    "comments": "Comments",
+    "guestUrl": "QR link",
+    "rotateSlug": "Regenerate QR code",
+    "rotateSlugConfirm": "Old stickers will stop working. Continue?",
+    "slugRotated": "Access code updated",
+    "panelAdded": "Panel added",
+    "panelChanged": "Panel saved",
+    "panelDeleted": "Panel deleted",
+    "editPanel": "Edit panel",
+    "deletePanel": "Delete panel",
+    "confirmDelete": "Delete virtual panel #%s?",
+    "noPanels": "No panels",
+    "id": "#"
+}

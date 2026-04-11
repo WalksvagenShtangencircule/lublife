@@ -135,6 +135,33 @@
 
     $request = explode("?", $_SERVER["REQUEST_URI"])[0];
 
+    // Раньше в QR попадал путь …/frontend/virtual-intercom/ — он матчится location /frontend и попадает сюда же.
+    // Без отдачи статики ниже путь парсится как «API» (api=virtual-intercom) и сессия без Bearer → {"error":"noToken"}.
+    if (strncmp($request, "/frontend/virtual-intercom/", strlen("/frontend/virtual-intercom/")) === 0) {
+        $tail = substr($request, strlen("/frontend/virtual-intercom/"));
+        if ($tail === "" || $tail === "index.html") {
+            $vdi = __DIR__ . "/../client/virtual-intercom/index.html";
+            if (is_readable($vdi)) {
+                header("Content-Type: text/html; charset=utf-8");
+                readfile($vdi);
+                exit;
+            }
+        }
+    }
+
+    // QR из guestManifest ведёт на …/virtual-intercom/ (корень сайта), если nginx проксирует сюда весь хост.
+    if (strncmp($request, "/virtual-intercom/", strlen("/virtual-intercom/")) === 0) {
+        $tail = substr($request, strlen("/virtual-intercom/"));
+        if ($tail === "" || $tail === "index.html") {
+            $vdi = __DIR__ . "/../client/virtual-intercom/index.html";
+            if (is_readable($vdi)) {
+                header("Content-Type: text/html; charset=utf-8");
+                readfile($vdi);
+                exit;
+            }
+        }
+    }
+
     $frontend = parse_url(@$config["api"]["frontend"]);
     $api = parse_url(@$config["api"]["api"]);
 
@@ -160,6 +187,14 @@
 
     $api = @$m[0];
     $method = @$m[1];
+
+    // Публичный guestManifest: nginx/прокси иногда приводят сегмент пути к нижнему регистру — иначе не срабатывает bypass Bearer и отдаётся noToken.
+    if (strcasecmp((string)$api, "vdom") === 0 && strcasecmp((string)$method, "guestManifest") === 0) {
+        $api = "vdom";
+        $method = "guestManifest";
+        $m[0] = $api;
+        $m[1] = $method;
+    }
 
     $params = [];
 
@@ -260,6 +295,12 @@
         $params["_ip"] = $ip;
         response(204);
     } else
+    if ($api == "vdom" && $method == "guestManifest") {
+        $params["_login"] = "guest";
+        $params["_uid"] = 0;
+        $params["_realUid"] = 0;
+        $params["_ip"] = $ip;
+    } else
     if ($api == "authentication" && $method == "login") {
         if  (!@$params["login"] || !@$params["password"]) {
             $params["_login"] = @$params["login"] ? : "-";
@@ -298,6 +339,8 @@
         }
     }
 
+    $authUid = (is_array($auth) && isset($auth["uid"])) ? (int) $auth["uid"] : 0;
+
     $params["_md5"] = md5(print_r($params, true));
 
     $params["_config"] = $config;
@@ -321,9 +364,9 @@
             $skipFrontCache = ($api === "authorization" && $method === "available");
 
             $cache = false;
-            if ($params["_request_method"] === "GET" && !$skipFrontCache) {
+            if ($params["_request_method"] === "GET" && !$skipFrontCache && $authUid > 0) {
                 try {
-                    $cache = json_decode($redis->get("CACHE:FRONT:" . strtoupper($params["_md5"]) . ":" . $auth["uid"]), true);
+                    $cache = json_decode($redis->get("CACHE:FRONT:" . strtoupper($params["_md5"]) . ":" . $authUid), true);
                 } catch (Throwable $e) {
                     error_log(print_r($e, true));
                 }
@@ -334,8 +377,8 @@
                 response($code, $cache[$code]);
             } else {
                 header("X-Api-Data-Source: db");
-                if ($clearCache) {
-                    clearCache($auth["uid"]);
+                if ($clearCache && $authUid > 0) {
+                    clearCache($authUid);
                 }
                 if (file_exists(__DIR__ . "/api/$api/custom/$method.php")) {
                     $file = __DIR__ . "/api/$api/custom/$method.php";
@@ -352,8 +395,8 @@
                         if ((int)$code) {
                             if ($params["_request_method"] == "GET" && (int)$code === 200 && !$skipFrontCache) {
                                 $ttl = (array_key_exists("cache", $result)) ? ((int)$cache) : $redis_cache_ttl;
-                                if ((int)$auth["uid"] > 0) {
-                                    $redis->setex("CACHE:FRONT:" . strtoupper($params["_md5"]) . ":" . $auth["uid"], $ttl, json_encode($result));
+                                if ($authUid > 0) {
+                                    $redis->setex("CACHE:FRONT:" . strtoupper($params["_md5"]) . ":" . $authUid, $ttl, json_encode($result));
                                 }
                             }
                             response($code, $result[$code]);

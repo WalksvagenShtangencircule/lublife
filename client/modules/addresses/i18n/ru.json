@@ -165,6 +165,8 @@
     "cmsD": "Д",
     "cmsU": "Е",
     "domophones": "Домофоны",
+    "virtualQrPanel": "Виртуальная панель (QR для курьера)",
+    "virtualQrPanelHint": "Если «да», в списке только панели из модуля «Виртуальные панели»; матрица КМС отключается.",
     "addDomophone": "Добавить домофон",
     "domophoneId": "#",
     "domophoneIdList": "#",

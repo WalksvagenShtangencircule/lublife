@@ -142,6 +142,8 @@
                     "forbidden" => 403,
                     "notFound" => 404,
                     "notAcceptable" => 406,
+                    "notConfigured" => 503,
+                    "backend" => 500,
                 ];
 
                 $code = @$errors[$error] ?: 400;

@@ -10,7 +10,93 @@
     startPage: 1,
     filter: "",
 
+    /** Идентификатор модели «виртуальная QR-панель» в meta.models / БД */
+    VIRTUAL_DOMOPHONE_MODEL: "virtual.json",
+    /** Формальный URL устройства без реального IP (сохраняется в БД, на HW не ходим) */
+    VIRTUAL_DOMOPHONE_PLACEHOLDER_URL: "https://virtual.invalid/rbt-domophone",
+
+    isVirtualDomophoneModel: function (model) {
+        return String(model || "") === modules.addresses.domophones.VIRTUAL_DOMOPHONE_MODEL;
+    },
+
+    /**
+     * Для virtual.json скрываем поля, относящиеся к физическому аппарату (URL/IP, NAT, матрица и т.д.),
+     * подставляем безопасные значения по умолчанию. Паттерн как у CMS во входе (data-form-runtime-hide).
+     */
+    syncVirtualDomophoneFields: function (prefix) {
+        const model = String($("#" + prefix + "model").val() || "");
+        const virtual = modules.addresses.domophones.isVirtualDomophoneModel(model);
+
+        const setRow = (fieldId, hide) => {
+            const $c = $("#" + prefix + fieldId + "-container");
+            if (!$c.length) {
+                return;
+            }
+            if (hide) {
+                $c.attr("data-form-runtime-hide", "1").hide();
+            } else {
+                $c.attr("data-form-runtime-hide", "0").show();
+            }
+        };
+
+        [
+            "url",
+            "nat",
+            "video",
+            "display",
+            "monitoring",
+            "firstTime",
+            "locksAreOpen",
+        ].forEach(fid => setRow(fid, virtual));
+
+        if (virtual) {
+            const $url = $("#" + prefix + "url");
+            const u = $.trim($url.val());
+            if (!u || u === modules.addresses.domophones.VIRTUAL_DOMOPHONE_PLACEHOLDER_URL) {
+                $url.val(modules.addresses.domophones.VIRTUAL_DOMOPHONE_PLACEHOLDER_URL);
+            }
+            $("#" + prefix + "nat").val("0");
+            $("#" + prefix + "video").val("webrtc");
+            const $cred = $("#" + prefix + "credentials");
+            if (!$.trim($cred.val())) {
+                if (typeof PWGen !== "undefined" && PWGen.initialize && PWGen.generate) {
+                    PWGen.initialize();
+                    $cred.val(PWGen.generate());
+                }
+            }
+        } else {
+            const $url = $("#" + prefix + "url");
+            if ($url.length && $.trim($url.val()) === modules.addresses.domophones.VIRTUAL_DOMOPHONE_PLACEHOLDER_URL) {
+                $url.val("");
+            }
+        }
+    },
+
+    modelSelect: function (el, id, prefix) {
+        modules.addresses.domophones.syncVirtualDomophoneFields(prefix);
+    },
+
+    normalizeDomophonePayloadForModel: function (domophone) {
+        const d = domophone || {};
+        if (!modules.addresses.domophones.isVirtualDomophoneModel(d.model)) {
+            return d;
+        }
+        d.video = "webrtc";
+        d.nat = "0";
+        d.dtmf = d.dtmf || "1";
+        const u = $.trim(String(d.url || ""));
+        if (!u || !/^https?:\/\//i.test(u)) {
+            d.url = modules.addresses.domophones.VIRTUAL_DOMOPHONE_PLACEHOLDER_URL;
+        }
+        if (!$.trim(String(d.credentials || "")) && typeof PWGen !== "undefined" && PWGen.initialize && PWGen.generate) {
+            PWGen.initialize();
+            d.credentials = PWGen.generate();
+        }
+        return d;
+    },
+
     doAddDomophone: function (domophone) {
+        domophone = modules.addresses.domophones.normalizeDomophonePayloadForModel(domophone);
         loadingStart();
         POST("houses", "domophone", false, domophone).
         fail(FAIL).
@@ -24,6 +110,7 @@
     },
 
     doModifyDomophone: function (domophone, params) {
+        domophone = modules.addresses.domophones.normalizeDomophonePayloadForModel(domophone);
         loadingStart();
         PUT("houses", "domophone", domophone.domophoneId, domophone).
         fail(FAIL).
@@ -90,6 +177,12 @@
             topApply: true,
             apply: i18n("add"),
             size: "lg",
+            tabActivate: function (prefix) {
+                modules.addresses.domophones.syncVirtualDomophoneFields(prefix);
+            },
+            done: function (prefix) {
+                modules.addresses.domophones.syncVirtualDomophoneFields(prefix);
+            },
             fields: [
                 {
                     id: "name",
@@ -114,6 +207,7 @@
                     title: i18n("addresses.model"),
                     placeholder: i18n("addresses.model"),
                     options: models,
+                    select: modules.addresses.domophones.modelSelect,
                     tab: i18n("addresses.primary"),
                 },
                 {
@@ -314,6 +408,12 @@
                 delete: i18n("addresses.deleteDomophone"),
                 deleteTab: i18n("addresses.primary"),
                 size: "lg",
+                tabActivate: function (prefix) {
+                    modules.addresses.domophones.syncVirtualDomophoneFields(prefix);
+                },
+                done: function (prefix) {
+                    modules.addresses.domophones.syncVirtualDomophoneFields(prefix);
+                },
                 fields: [
                     {
                         id: "domophoneId",
@@ -349,6 +449,7 @@
                         placeholder: i18n("addresses.model"),
                         options: models,
                         value: domophone.model,
+                        select: modules.addresses.domophones.modelSelect,
                         tab: i18n("addresses.primary"),
                     },
                     {

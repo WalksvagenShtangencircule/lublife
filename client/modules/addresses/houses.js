@@ -245,6 +245,64 @@
         $("#" + prefix + "domophoneOutput").html(h);
     },
 
+    /**
+     * Чекбокс «только виртуальные панели»: фильтрует список domophoneId и при необходимости сбравает CMS.
+     */
+    virtualEntranceDomophoneSelect: function (el, id, prefix) {
+        const virtualOnly = parseInt($(el).val(), 10) === 1;
+        const rows = modules.addresses.houses._entranceDomophoneRowsForForm || [];
+        const $d = $("#" + prefix + "domophoneId");
+        const prev = $d.val();
+
+        let opts = [];
+        opts.push({
+            id: "0",
+            text: i18n("no"),
+        });
+
+        for (let i = 0; i < rows.length; i++) {
+            if (!virtualOnly || rows[i].model === "virtual.json") {
+                opts.push({
+                    id: String(rows[i].domophoneId),
+                    text: rows[i].text,
+                });
+            }
+        }
+
+        if ($d.hasClass("select2-hidden-accessible")) {
+            $d.select2("destroy");
+        }
+
+        $d.empty().select2({
+            data: opts,
+            language: lang["_code"],
+            width: "100%",
+        });
+
+        let next = prev;
+        if (virtualOnly && modules.addresses.houses.meta.domophoneModelsById[prev] !== "virtual.json") {
+            next = opts.length > 1 ? opts[1].id : "0";
+        }
+        if (!virtualOnly && prev && opts.filter(o => o.id === String(prev)).length === 0) {
+            next = opts.length > 1 ? opts[1].id : "0";
+        }
+
+        $d.val(next).trigger("change");
+
+        if (virtualOnly) {
+            $("#" + prefix + "cms").val("0").trigger("change");
+            $("#" + prefix + "domophoneOutput").val("0");
+            $("#" + prefix + "cms-container").attr("data-form-runtime-hide", "1").hide();
+            $("#" + prefix + "cmsType-container").attr("data-form-runtime-hide", "1").hide();
+            $("#" + prefix + "cmsLevels-container").attr("data-form-runtime-hide", "1").hide();
+        } else {
+            $("#" + prefix + "cms-container").attr("data-form-runtime-hide", "0").show();
+        }
+
+        modules.addresses.houses.domophoneIdSelect($d, "domophoneId", prefix);
+        modules.addresses.houses.outputsSelect($("#" + prefix + "domophoneOutput"), "domophoneOutput", prefix);
+    },
+
     outputsSelect: function (el, id, prefix) {
         if (parseInt($("#" + prefix + "domophoneOutput").val()) > 0) {
             $("#" + prefix + "cms-container").attr("data-form-runtime-hide", "1").hide();
@@ -490,6 +548,34 @@
                         })
                     }
 
+                    modules.addresses.houses._entranceDomophoneRowsForForm = [];
+                    for (let j in response.domophones.domophones) {
+                        let row = response.domophones.domophones[j];
+                        let url2;
+                        try {
+                            url2 = new URL(row.url);
+                        } catch (e) {
+                            url2 = { host: row.url };
+                        }
+                        let c2 = $.trim(row.comments);
+                        let n2 = $.trim(row.name);
+                        let text2 = "";
+                        if (n2 && c2) {
+                            text2 = n2 + " (" + c2 + ") [" + url2.host + "]";
+                        } else if (n2 && !c2) {
+                            text2 = n2 + " [" + url2.host + "]";
+                        } else if (!n2 && c2) {
+                            text2 = c2 + " [" + url2.host + "]";
+                        } else {
+                            text2 = url2.host;
+                        }
+                        modules.addresses.houses._entranceDomophoneRowsForForm.push({
+                            domophoneId: row.domophoneId,
+                            model: row.model,
+                            text: text2,
+                        });
+                    }
+
                     let pathFirst = true;
                     let treeName;
 
@@ -538,6 +624,22 @@
                         topApply: true,
                         apply: i18n("add"),
                         size: "lg",
+                        tabActivate: function (prefix, tabName, tabIndex) {
+                            if (tabIndex !== 0) {
+                                return;
+                            }
+                            const $f = $("#" + prefix + "form");
+                            if ($f.data("virtualEntranceSynced")) {
+                                return;
+                            }
+                            $f.data("virtualEntranceSynced", 1);
+                            setTimeout(() => {
+                                const $v = $("#" + prefix + "virtualEntranceDomophone");
+                                if ($v.length) {
+                                    modules.addresses.houses.virtualEntranceDomophoneSelect($v, "virtualEntranceDomophone", prefix);
+                                }
+                            }, 0);
+                        },
                         fields: [
                             {
                                 id: "entranceType",
@@ -653,12 +755,38 @@
                                 tab: i18n("addresses.cameras"),
                             },
                             {
+                                id: "virtualEntranceDomophone",
+                                type: "select",
+                                title: i18n("addresses.virtualQrPanel"),
+                                hint: i18n("addresses.virtualQrPanelHint"),
+                                tab: i18n("addresses.primary"),
+                                value: "0",
+                                options: [
+                                    {
+                                        id: "0",
+                                        text: i18n("no"),
+                                    },
+                                    {
+                                        id: "1",
+                                        text: i18n("yes"),
+                                    },
+                                ],
+                                select: modules.addresses.houses.virtualEntranceDomophoneSelect,
+                            },
+                            {
                                 id: "domophoneId",
                                 type: "select2",
                                 title: i18n("domophone"),
                                 options: domophones,
-                                validate: v => {
-                                    return parseInt(v) > 0;
+                                validate: (v, prefix) => {
+                                    if (!parseInt(v, 10) || parseInt(v, 10) <= 0) {
+                                        return false;
+                                    }
+                                    const $v = $("#" + prefix + "virtualEntranceDomophone");
+                                    if ($v.length && parseInt($v.val(), 10) === 1) {
+                                        return modules.addresses.houses.meta.domophoneModelsById[v] === "virtual.json";
+                                    }
+                                    return true;
                                 },
                                 select: modules.addresses.houses.domophoneIdSelect,
                                 tab: i18n("addresses.primary"),
@@ -1496,6 +1624,34 @@
                         });
                     }
 
+                    modules.addresses.houses._entranceDomophoneRowsForForm = [];
+                    for (let j in response.domophones.domophones) {
+                        let row = response.domophones.domophones[j];
+                        let url2;
+                        try {
+                            url2 = new URL(row.url);
+                        } catch (e) {
+                            url2 = { host: row.url };
+                        }
+                        let c2 = $.trim(row.comments);
+                        let n2 = $.trim(row.name);
+                        let text2 = "";
+                        if (n2 && c2) {
+                            text2 = n2 + " (" + c2 + ") [" + url2.host + "]";
+                        } else if (n2 && !c2) {
+                            text2 = n2 + " [" + url2.host + "]";
+                        } else if (!n2 && c2) {
+                            text2 = c2 + " [" + url2.host + "]";
+                        } else {
+                            text2 = url2.host;
+                        }
+                        modules.addresses.houses._entranceDomophoneRowsForForm.push({
+                            domophoneId: row.domophoneId,
+                            model: row.model,
+                            text: text2,
+                        });
+                    }
+
                     let pathFirst = true;
                     let treeName;
 
@@ -1541,6 +1697,8 @@
                         pathFirst = false;
                     }
 
+                    const virtualEntranceInitial = modules.addresses.houses.meta.domophoneModelsById[entrance.domophoneId] === "virtual.json" ? "1" : "0";
+
                     cardForm({
                         title: i18n("addresses.editEntrance"),
                         footer: true,
@@ -1550,6 +1708,22 @@
                         delete: i18n("addresses.deleteEntrance"),
                         deleteTab: i18n("addresses.primary"),
                         size: "lg",
+                        tabActivate: function (prefix, tabName, tabIndex) {
+                            if (tabIndex !== 0) {
+                                return;
+                            }
+                            const $f = $("#" + prefix + "form");
+                            if ($f.data("virtualEntranceSynced")) {
+                                return;
+                            }
+                            $f.data("virtualEntranceSynced", 1);
+                            setTimeout(() => {
+                                const $v = $("#" + prefix + "virtualEntranceDomophone");
+                                if ($v.length) {
+                                    modules.addresses.houses.virtualEntranceDomophoneSelect($v, "virtualEntranceDomophone", prefix);
+                                }
+                            }, 0);
+                        },
                         fields: [
                             {
                                 id: "entranceId",
@@ -1684,6 +1858,25 @@
                                 value: entrance.altCameraId7,
                             },
                             {
+                                id: "virtualEntranceDomophone",
+                                type: "select",
+                                title: i18n("addresses.virtualQrPanel"),
+                                hint: i18n("addresses.virtualQrPanelHint"),
+                                tab: i18n("addresses.primary"),
+                                value: virtualEntranceInitial,
+                                options: [
+                                    {
+                                        id: "0",
+                                        text: i18n("no"),
+                                    },
+                                    {
+                                        id: "1",
+                                        text: i18n("yes"),
+                                    },
+                                ],
+                                select: modules.addresses.houses.virtualEntranceDomophoneSelect,
+                            },
+                            {
                                 id: "domophoneId",
                                 type: "select2",
                                 title: i18n("domophone"),
@@ -1691,8 +1884,15 @@
                                 value: modules.addresses.houses.meta.domophoneModelsById[entrance.domophoneId] ? entrance.domophoneId : "0",
                                 options: domophones,
                                 select: modules.addresses.houses.domophoneIdSelect,
-                                validate: v => {
-                                    return parseInt(v) > 0;
+                                validate: (v, prefix) => {
+                                    if (!parseInt(v, 10) || parseInt(v, 10) <= 0) {
+                                        return false;
+                                    }
+                                    const $v = $("#" + prefix + "virtualEntranceDomophone");
+                                    if ($v.length && parseInt($v.val(), 10) === 1) {
+                                        return modules.addresses.houses.meta.domophoneModelsById[v] === "virtual.json";
+                                    }
+                                    return true;
                                 },
                             },
                             {

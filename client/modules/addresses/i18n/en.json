@@ -165,6 +165,8 @@
     "cmsD": "D",
     "cmsU": "U",
     "domophones": "Intercoms",
+    "virtualQrPanel": "Virtual QR panel (courier)",
+    "virtualQrPanelHint": "If yes, only panels from the «Virtual panels» module are listed; apartment matrix (CMS) is turned off.",
     "addDomophone": "Add intercom",
     "domophoneId": "Domophone",
     "domophoneIdList": "#",

@@ -174,6 +174,10 @@ function mobileIntercom(flatId, flatNumber, domophoneId)
 
     callerId = channel.CALLERID("name"):get()
 
+    -- Одна физическая трубка не может одновременно зарегистрировать несколько разных 2000… WebRTC.
+    -- Дубликаты устройств в БД с одним и тем же subscriber.mobile давали 3× push и 3× Local/ — в логах оживала одна нога, остальные шли в CONGESTION/NOANSWER.
+    local dial_seen = {}
+
     for i, device in ipairs(devices) do
         if device.platform ~= cjson.null and tonumber(device.voipEnabled) == 1 then
             local flatVoipEnabled = false
@@ -184,14 +188,6 @@ function mobileIntercom(flatId, flatNumber, domophoneId)
             end
 
             if flatVoipEnabled == 1 then
-                redis:incr("autoextension")
-
-                extension = tonumber(redis:get("autoextension"))
-                if extension > 999999 then
-                    redis:set("autoextension", "1")
-                end
-                extension = extension + 2000000000
-
                 local token = ""
                 if tonumber(device.tokenType) == 1 or tonumber(device.tokenType) == 2 then
                     token = device.voipToken
@@ -200,39 +196,64 @@ function mobileIntercom(flatId, flatNumber, domophoneId)
                 end
 
                 if token ~= cjson.null and token ~= nil and token ~= "" then
-                    redis:setex("turn/realm/" .. realm .. "/user/" .. extension .. "/key", 3 * 60, md5.sumhexa(extension .. ":" .. realm .. ":" .. hash))
-                    redis:setex("mobile_extension_" .. extension, 3 * 60, hash)
-
-                    local bundle = "default"
-                    if device.bundle ~= cjson.null and device.bundle ~= nil and device.bundle ~= "" then
-                        bundle = device.bundle
+                    local dedupe_key = nil
+                    if device.subscriber ~= nil and device.subscriber ~= cjson.null then
+                        local mob = device.subscriber.mobile
+                        if mob ~= nil and mob ~= cjson.null and tostring(mob) ~= "" then
+                            dedupe_key = "m:" .. tostring(mob)
+                        end
+                    end
+                    if not dedupe_key then
+                        dedupe_key = "t:" .. tostring(token)
                     end
 
-                    if tonumber(device.tokenType) ~= 1 and tonumber(device.tokenType) ~= 2 then
-                        -- not for apple's voips
-                        redis:setex("mobile_token_" .. extension, 3 * 60, token)
+                    if dial_seen[dedupe_key] then
+                        logDebug("mobile intercom: skip duplicate callee key=" .. dedupe_key)
+                    else
+                        dial_seen[dedupe_key] = true
+
+                        redis:incr("autoextension")
+
+                        extension = tonumber(redis:get("autoextension"))
+                        if extension > 999999 then
+                            redis:set("autoextension", "1")
+                        end
+                        extension = extension + 2000000000
+
+                        redis:setex("turn/realm/" .. realm .. "/user/" .. extension .. "/key", 3 * 60, md5.sumhexa(extension .. ":" .. realm .. ":" .. hash))
+                        redis:setex("mobile_extension_" .. extension, 3 * 60, hash)
+
+                        local bundle = "default"
+                        if device.bundle ~= cjson.null and device.bundle ~= nil and device.bundle ~= "" then
+                            bundle = device.bundle
+                        end
+
+                        if tonumber(device.tokenType) ~= 1 and tonumber(device.tokenType) ~= 2 then
+                            -- not for apple's voips
+                            redis:setex("mobile_token_" .. extension, 3 * 60, token)
+                        end
+
+                        if tonumber(device.platform) == 1 and (tonumber(device.tokenType) == 0 or tonumber(device.tokenType) == 4 or tonumber(device.tokenType) == 5) then
+                            -- ios over fcm (with repeat)
+                            redis:setex("voip_crutch_" .. extension, 1 * 60, cjson.encode({
+                                id = extension,
+                                token = token,
+                                tokenType = device.tokenType,
+                                hash = hash,
+                                platform = device.platform,
+                                flatId = flatId,
+                                dtmf = dtmf,
+                                mobile = device.subscriber.mobile,
+                                flatNumber = flatNumber,
+                                domophoneId = domophoneId,
+                                bundle = bundle,
+                            }))
+                        end
+
+                        push(token, device.tokenType, device.platform, extension, hash, callerId, flatId, dtmf, device.subscriber.mobile, flatNumber, domophoneId, bundle)
+
+                        res = res .. "&Local/" .. extension
                     end
-
-                    if tonumber(device.platform) == 1 and (tonumber(device.tokenType) == 0 or tonumber(device.tokenType) == 4 or tonumber(device.tokenType) == 5) then
-                        -- ios over fcm (with repeat)
-                        redis:setex("voip_crutch_" .. extension, 1 * 60, cjson.encode({
-                            id = extension,
-                            token = token,
-                            tokenType = device.tokenType,
-                            hash = hash,
-                            platform = device.platform,
-                            flatId = flatId,
-                            dtmf = dtmf,
-                            mobile = device.subscriber.mobile,
-                            flatNumber = flatNumber,
-                            domophoneId = domophoneId,
-                            bundle = bundle,
-                        }))
-                    end
-
-                    push(token, device.tokenType, device.platform, extension, hash, callerId, flatId, dtmf, device.subscriber.mobile, flatNumber, domophoneId, bundle)
-
-                    res = res .. "&Local/" .. extension
                 end
             end
         end
@@ -280,6 +301,8 @@ function handleMobileIntercom(context, extension)
         if pjsip_extension ~= "" and pjsip_extension ~= nil then
             if not skip then
                 logDebug("has registration: " .. extension)
+                -- после REGISTER клиенту нужно время, иначе первый INVITE часто уходит в CONGESTION/488 при подряд звонках
+                app.Wait(2)
                 skip = true
             end
             app.Dial(pjsip_extension, 35, "g")
@@ -287,6 +310,11 @@ function handleMobileIntercom(context, extension)
             if status == "CHANUNAVAIL" then
                 logDebug(extension .. ': sleeping')
                 app.Wait(35)
+            elseif status == "ANSWER" then
+                -- разговор был; иначе цикл сразу делает второй Dial на тот же контакт — срыв следующего вызова с панели
+                break
+            elseif status == "BUSY" or status == "CONGESTION" or status == "CANCEL" then
+                break
             end
         else
             app.Wait(0.5)
