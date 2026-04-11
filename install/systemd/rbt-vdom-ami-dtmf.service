@@ -12,8 +12,6 @@ RestartSec=10
 Restart=always
 User=rbt
 Group=rbt
-# каталог и файлы логов создаёт systemd с владельцем rbt (не нужен ручной chown root)
-LogsDirectory=rbt_vdom_ami_dtmf
 SyslogIdentifier=rbt_vdom_ami_dtmf
 StandardOutput=append:/var/log/rbt_vdom_ami_dtmf/stdout.log
 StandardError=append:/var/log/rbt_vdom_ami_dtmf/stderr.log
