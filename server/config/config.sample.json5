@@ -72,6 +72,8 @@
             "port": 5038,
             "username": "rbtdom",
             "secret": "CHANGE_ME_VDOM_AMI_SECRET",
+            // true = в vdom_ami_listener.log: startup, ami_login_ok, каждый DTMF, reconnect. На проде обычно false.
+            "verbose_log": false,
         },
     },
 
@@ -482,6 +484,12 @@
         // Учебные строки warn/fail в начале таблицы (отключить на проде). При enabled в UI — жёлтый баннер и кнопка «Тест алерта».
         "simulate": {
             "enabled": false,
+        },
+        // Плановый прогон из cli.php --cron=… (кеш сводки, история, Telegram по правилам alert). Без enabled диагностика по cron не выполняется.
+        "scheduledRun": {
+            "enabled": true,
+            "cronPart": "hourly",
+            "heavy": false,
         },
         // Алерты в Telegram через HTTP(S)/SOCKS-прокси: URL со списком и/или static_proxies (TCP + опц. HTTP-проверка, кеш).
         // Кнопка «Ждать чат» вызывает deleteWebhook — если у бота был webhook, без этого getUpdates пустой.

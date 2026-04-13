@@ -4,11 +4,14 @@
  * AMI → DTMF → открытие URL для виртуальной QR-панели (Redis vdom_dtmf_ctx:*).
  * Конфиг: config.json → vdom_dtmf.ami (host, port, username, secret)
  * Лог успеха: server/logs/vdom_dtmf_door.log
- * Отладка:   server/logs/vdom_ami_listener.log
+ * Отладка:   server/logs/vdom_ami_listener.log (подробности только при vdom_dtmf.ami.verbose_log)
  */
 declare(strict_types=1);
 
 chdir(__DIR__ . '/..');
+
+set_time_limit(0);
+ini_set('max_execution_time', '0');
 
 function vdom_log(string $file, string $line): void {
     $dir = __DIR__ . '/../logs';
@@ -16,6 +19,45 @@ function vdom_log(string $file, string $line): void {
         @mkdir($dir, 0775, true);
     }
     @file_put_contents($dir . '/' . $file, $line . "\n", FILE_APPEND | LOCK_EX);
+}
+
+/** Подробный лог в vdom_ami_listener.log (startup, каждый DTMF, reconnect). */
+function vdom_verbose_log(array $config): bool {
+    $ami = ($config['vdom_dtmf']['ami'] ?? []);
+    return !empty($ami['verbose_log']);
+}
+
+function vdom_log_debug(array $config, string $file, string $line): void {
+    if (vdom_verbose_log($config)) {
+        vdom_log($file, $line);
+    }
+}
+
+/**
+ * Один процесс на хост: защита от второго запуска (cron + systemd, лишний @reboot и т.п.).
+ *
+ * @return resource|false
+ */
+function vdom_acquire_singleton_lock() {
+    $dir = __DIR__ . '/../logs';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0775, true);
+    }
+    $path = $dir . '/.vdom_ami_dtmf_listener.lock';
+    $fh = @fopen($path, 'c+');
+    if ($fh === false) {
+        fwrite(STDERR, date('c') . " vdom_ami: не удалось открыть lock-файл $path\n");
+        return false;
+    }
+    if (!flock($fh, LOCK_EX | LOCK_NB)) {
+        fclose($fh);
+        fwrite(STDERR, date('c') . " vdom_ami: слушатель уже запущен (см. flock $path), повторный запуск пропущен.\n");
+        exit(0);
+    }
+    ftruncate($fh, 0);
+    fwrite($fh, (string)getmypid() . "\n");
+    fflush($fh);
+    return $fh;
 }
 
 function vdom_load_config(): array {
@@ -78,6 +120,11 @@ if ($secret === '') {
     exit(1);
 }
 
+$lockFh = vdom_acquire_singleton_lock();
+if ($lockFh === false) {
+    exit(1);
+}
+
 $rch = $config['redis']['host'] ?? '127.0.0.1';
 $rpo = (int)($config['redis']['port'] ?? 6379);
 $rpa = $config['redis']['password'] ?? null;
@@ -90,7 +137,8 @@ if ($rpa !== null && $rpa !== '') {
 
 date_default_timezone_set($config['mobile']['time_zone'] ?? 'Europe/Moscow');
 
-vdom_log('vdom_ami_listener.log', date('c') . "\tstartup\tpid=" . getmypid());
+vdom_log_debug($config, 'vdom_ami_listener.log', date('c') . "\tstartup\tpid=" . getmypid());
+fwrite(STDERR, date('c') . " vdom_ami: слушатель AMI/DTMF запущен pid=" . getmypid() . " verbose_log=" . (vdom_verbose_log($config) ? '1' : '0') . "\n");
 
 while (true) {
     $errno = 0;
@@ -135,7 +183,7 @@ while (true) {
             ) {
                 $loggedIn = true;
                 vdom_ami_write($sock, ['Action' => 'Events', 'EventMask' => 'on',]);
-                vdom_log('vdom_ami_listener.log', date('c') . "\tami_login_ok");
+                vdom_log_debug($config, 'vdom_ami_listener.log', date('c') . "\tami_login_ok");
                 continue;
             }
 
@@ -166,7 +214,7 @@ while (true) {
                 $linked = trim((string)($vars['Uniqueid'] ?? ''));
             }
 
-            vdom_log('vdom_ami_listener.log', date('c') . "\tdtmf_event\tdigit=$digit\tlinkedid=$linked\tchan=" . ($vars['Channel'] ?? ''));
+            vdom_log_debug($config, 'vdom_ami_listener.log', date('c') . "\tdtmf_event\tdigit=$digit\tlinkedid=$linked\tchan=" . ($vars['Channel'] ?? ''));
 
             $ctxKey = null;
             if ($linked !== '') {
@@ -180,7 +228,7 @@ while (true) {
                 $keys = $redis->keys('vdom_dtmf_ctx:*');
                 if (is_array($keys) && count($keys) === 1) {
                     $ctxKey = $keys[0];
-                    vdom_log('vdom_ami_listener.log', date('c') . "\tdtmf_fallback_single_ctx\t" . $ctxKey);
+                    vdom_log_debug($config, 'vdom_ami_listener.log', date('c') . "\tdtmf_fallback_single_ctx\t" . $ctxKey);
                 }
             }
 
@@ -248,6 +296,6 @@ while (true) {
     }
 
     fclose($sock);
-    vdom_log('vdom_ami_listener.log', date('c') . "\tami_socket_closed_resleep");
+    vdom_log_debug($config, 'vdom_ami_listener.log', date('c') . "\tami_socket_closed_resleep");
     sleep(3);
 }

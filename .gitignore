@@ -83,6 +83,7 @@ server/logs/*.log
 server/logs/*.log-*
 server/logs/*.gz
 server/logs/*.out
+server/logs/.vdom_ami_dtmf_listener.lock
 server/vendor
 server/test.php
 server/integration.php

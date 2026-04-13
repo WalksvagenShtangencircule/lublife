@@ -1,4 +1,4 @@
-# RBT: логи PHP/AMI (vdom_ami_listener — частые startup/ami_login_ok из cron)
+# RBT: логи PHP/AMI и др. (vdom_ami_listener при verbose_log, иначе только ошибки/DTMF-итоги)
 /opt/rbt/server/logs/*.log {
     daily
     missingok
