@@ -1,0 +1,4 @@
+[Journal]
+# Ограничение systemd-journal (было ~2.2G)
+SystemMaxUse=400M
+RuntimeMaxUse=100M

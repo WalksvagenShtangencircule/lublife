@@ -1,0 +1,13 @@
+# RBT: логи PHP/AMI (vdom_ami_listener — частые startup/ami_login_ok из cron)
+/opt/rbt/server/logs/*.log {
+    daily
+    missingok
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+    maxsize 50M
+    copytruncate
+    dateext
+    dateformat -%Y%m%d
+}

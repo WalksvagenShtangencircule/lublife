@@ -1,13 +1,15 @@
-/var/log/mongodb/mongod.log {
-    rotate 3
+/var/log/mongodb/*.log {
     daily
-    size 1M
     missingok
-    create 0600 mongodb mongodb
-    delaycompress
+    rotate 7
     compress
-    sharedscripts
+    delaycompress
+    notifempty
+    maxsize 100M
+    copytruncate
     postrotate
-        /bin/kill -SIGUSR1 $(cat /var/run/mongodb/mongod.pid)
+        if systemctl is-active --quiet mongod 2>/dev/null; then
+            systemctl kill -s USR1 mongod 2>/dev/null || true
+        fi
     endscript
 }

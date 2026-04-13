@@ -80,6 +80,8 @@ server/config/config.yml
 
 # Локальные логи (vdom AMI, тесты) — не коммитить
 server/logs/*.log
+server/logs/*.log-*
+server/logs/*.gz
 server/logs/*.out
 server/vendor
 server/test.php

@@ -1,0 +1,11 @@
+# Node event service (syslog receivers); логи root:root — ротация от root
+/var/log/event_service/*.log {
+    daily
+    missingok
+    rotate 7
+    compress
+    delaycompress
+    notifempty
+    maxsize 20M
+    copytruncate
+}
