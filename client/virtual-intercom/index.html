@@ -4,101 +4,268 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <title>Вызов с панели</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #1a1d24;
-            --panel: #2c313c;
-            --key: #3d4455;
-            --accent: #c45c3e;
-            --text: #f0e6dc;
+            --ral7021: #3d3f42;
+            --ral-dark: #2a2c2f;
+            --metal-light: #8a8f98;
+            --metal-mid: #5c6068;
+            --metal-dark: #3a3d44;
+            --led-red: #ff2a1a;
+            --led-dim: rgba(255, 42, 26, .22);
         }
         * { box-sizing: border-box; }
         body {
             margin: 0;
             min-height: 100vh;
-            font-family: system-ui, sans-serif;
-            background: radial-gradient(ellipse at top, #2a3140 0%, var(--bg) 55%);
-            color: var(--text);
+            font-family: system-ui, -apple-system, sans-serif;
+            background:
+                radial-gradient(ellipse 80% 60% at 50% 20%, #2a2d32 0%, #141518 70%);
+            color: #c8c4bc;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 16px;
+            padding: 20px 14px;
         }
-        .wrap { width: 100%; max-width: 380px; }
+        .wrap { width: 100%; max-width: 340px; }
         .panel {
-            background: linear-gradient(165deg, var(--panel) 0%, #232833 100%);
-            border-radius: 20px;
-            padding: 22px 18px 18px;
-            box-shadow: 0 18px 50px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
-            border: 1px solid rgba(255,255,255,.08);
+            position: relative;
+            background:
+                repeating-linear-gradient(
+                    90deg,
+                    transparent 0 2px,
+                    rgba(0,0,0,.03) 2px 3px
+                ),
+                linear-gradient(165deg, #45484e 0%, var(--ral7021) 22%, var(--ral-dark) 100%);
+            border-radius: 4px;
+            padding: 18px 16px 20px;
+            box-shadow:
+                0 16px 48px rgba(0,0,0,.65),
+                inset 0 1px 0 rgba(255,255,255,.12),
+                inset 0 -8px 24px rgba(0,0,0,.4);
+            border: 1px solid #1e2024;
         }
-        h1 { font-size: 1rem; font-weight: 600; margin: 0 0 6px; opacity: .95; }
-        .sub { font-size: .78rem; opacity: .55; margin-bottom: 16px; }
-        .display {
-            background: #0e1014;
-            border-radius: 10px;
-            padding: 12px 14px;
-            font-size: 1.6rem;
-            letter-spacing: .12em;
-            text-align: right;
-            min-height: 48px;
+        .panel::before,
+        .panel::after {
+            content: '';
+            position: absolute;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #6a6e76, #2a2c30 55%, #1a1b1e);
+            box-shadow: inset 0 1px 2px rgba(255,255,255,.15), 0 1px 2px rgba(0,0,0,.5);
+        }
+        .panel::before { top: 8px; left: 8px; }
+        .panel::after { top: 8px; right: 8px; }
+        .screw-bl,
+        .screw-br {
+            position: absolute;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #6a6e76, #2a2c30 55%, #1a1b1e);
+            box-shadow: inset 0 1px 2px rgba(255,255,255,.15), 0 1px 2px rgba(0,0,0,.5);
+            bottom: 8px;
+        }
+        .screw-bl { left: 8px; }
+        .screw-br { right: 8px; }
+        h1 {
+            font-size: .95rem;
+            font-weight: 700;
+            margin: 0 0 10px;
+            text-align: center;
+            letter-spacing: .28em;
+            text-transform: uppercase;
+            color: rgba(230, 228, 220, .88);
+            text-shadow: 0 1px 0 rgba(0,0,0,.45);
+        }
+        .speaker-row {
+            display: flex;
+            align-items: stretch;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .grille {
+            flex: 1;
+            min-height: 44px;
+            border-radius: 2px;
+            background: #1a1b1e;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,.85);
+            background-image: repeating-linear-gradient(
+                180deg,
+                #25262b 0 3px,
+                #121316 3px 5px
+            );
+            border: 1px solid #0d0e10;
+        }
+        .cam-dot {
+            width: 36px;
+            flex-shrink: 0;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #2a2d35 0%, #0a0b0d 70%);
+            box-shadow: inset 0 2px 5px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.04);
+            align-self: center;
+            height: 36px;
+        }
+        .sub {
+            font-size: .72rem;
+            opacity: .58;
+            margin: 0 0 10px;
+            text-align: center;
+            line-height: 1.35;
+        }
+        .display-wrap {
+            background: #0d0e11;
+            border-radius: 2px;
+            padding: 4px 6px;
             margin-bottom: 14px;
-            font-variant-numeric: tabular-nums;
-            border: 1px solid rgba(0,0,0,.4);
+            box-shadow: inset 0 2px 10px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.04);
         }
-        .keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        button.key {
-            border: none;
-            border-radius: 12px;
-            padding: 14px 0;
-            font-size: 1.15rem;
+        .display {
+            background: #08090a;
+            border-radius: 1px;
+            padding: 10px 12px 12px;
+            font-family: "Orbitron", ui-monospace, monospace;
+            font-size: 1.55rem;
             font-weight: 600;
-            background: var(--key);
-            color: var(--text);
-            cursor: pointer;
-            box-shadow: 0 3px 0 #252a35;
+            letter-spacing: .22em;
+            text-align: right;
+            min-height: 46px;
+            font-variant-numeric: tabular-nums;
+            color: var(--led-red);
+            text-shadow:
+                0 0 8px rgba(255, 50, 30, .85),
+                0 0 20px rgba(255, 40, 20, .35);
         }
-        button.key:active { transform: translateY(2px); box-shadow: none; }
-        button.call {
-            grid-column: span 3;
-            margin-top: 6px;
-            background: linear-gradient(180deg, #d96d4d 0%, var(--accent) 100%);
-            box-shadow: 0 4px 0 #7a3320;
-            font-size: 1rem;
+        .display:empty::before,
+        .display.is-placeholder {
+            color: var(--led-dim);
+            text-shadow: none;
+        }
+        .keypad-rfid {
+            display: flex;
+            gap: 12px;
+            align-items: stretch;
+        }
+        .keys {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 9px;
+            min-width: 0;
+        }
+        button.key {
+            aspect-ratio: 1;
+            border: none;
+            border-radius: 50%;
+            padding: 0;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            cursor: pointer;
+            background:
+                radial-gradient(circle at 30% 25%, #d8dce3 0%, var(--metal-light) 18%, var(--metal-mid) 45%, var(--metal-dark) 100%);
+            box-shadow:
+                0 3px 0 #1f2126,
+                0 4px 8px rgba(0,0,0,.45),
+                inset 0 2px 3px rgba(255,255,255,.55),
+                inset 0 -2px 4px rgba(0,0,0,.25);
+        }
+        button.key:active {
+            transform: translateY(2px);
+            box-shadow:
+                0 1px 0 #1f2126,
+                inset 0 3px 8px rgba(0,0,0,.35);
+        }
+        button.call:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
         }
         button.hangup {
             display: none;
             width: 100%;
-            margin-top: 10px;
+            margin-top: 12px;
             border: none;
-            border-radius: 12px;
-            padding: 14px 0;
-            font-size: 1rem;
+            border-radius: 8px;
+            padding: 12px 0;
+            font-size: .9rem;
             font-weight: 600;
             cursor: pointer;
-            background: linear-gradient(180deg, #c24a4a 0%, #7a2828 100%);
-            color: #fff;
-            box-shadow: 0 4px 0 #3d1515;
+            background: linear-gradient(180deg, #8a3838 0%, #5c2020 100%);
+            color: #f0e8e8;
+            box-shadow: 0 3px 0 #2a1010, inset 0 1px 0 rgba(255,255,255,.12);
         }
-        button.hangup:active { transform: translateY(2px); box-shadow: none; }
-        button.del { background: #4a3a32; box-shadow: 0 3px 0 #2e241f; font-size: .9rem; }
-        .status { margin-top: 14px; font-size: .78rem; opacity: .65; min-height: 2.4em; }
-        button.call:disabled {
-            opacity: 0.45;
-            cursor: not-allowed;
-            pointer-events: none;
+        button.hangup:active { transform: translateY(1px); box-shadow: 0 1px 0 #2a1010; }
+        .rfid {
+            width: 72px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding-top: 4px;
         }
-        .err { color: #f88; font-size: .85rem; margin-top: 10px; }
+        .rfid-key {
+            width: 22px;
+            height: 14px;
+            opacity: .35;
+            background: no-repeat center / contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 16'%3E%3Cpath fill='%23aaa' d='M8 2a2 2 0 0 0-2 2v2H4v2h2v6h2V8h2V6h-2V4a2 2 0 0 1 2-2h8V0H8zm6 4v2h6V6h-6zm0 4v2h4v-2h-4z'/%3E%3C/svg%3E");
+        }
+        .rfid-dish {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background:
+                radial-gradient(circle at 30% 25%, #c5cad2 0%, #8a909a 40%, #4a5058 100%);
+            box-shadow:
+                0 3px 0 #252830,
+                inset 0 2px 4px rgba(255,255,255,.45),
+                inset 0 -3px 6px rgba(0,0,0,.35);
+        }
+        .rfid-dish::after {
+            content: '';
+            display: block;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: no-repeat center / 70% 70% url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath fill='none' stroke='%23333' stroke-width='2' opacity='.35' d='M24 36c6 0 11-5 11-11S30 14 24 14 13 19 13 25s5 11 11 11z'/%3E%3Cpath fill='none' stroke='%23333' stroke-width='2' opacity='.25' d='M24 32c4 0 7-3 7-7s-3-7-7-7-7 3-7 7 3 7 7 7z'/%3E%3Cpath fill='none' stroke='%23333' stroke-width='2' opacity='.2' d='M24 28c2 0 4-2 4-4s-2-4-4-4-4 2-4 4 2 4 4 4z'/%3E%3C/svg%3E");
+        }
+        .status { margin-top: 12px; font-size: .7rem; opacity: .5; min-height: 2.2em; text-align: center; }
+        .err { color: #ff9088; font-size: .8rem; margin-top: 8px; text-align: center; }
         #remoteAudio { display: none; }
+        @media (max-width: 360px) {
+            .rfid { width: 64px; }
+            .rfid-dish { width: 50px; height: 50px; }
+            button.key { font-size: 1.05rem; }
+        }
     </style>
 </head>
 <body>
     <div class="wrap">
         <div class="panel">
+            <span class="screw-bl" aria-hidden="true"></span>
+            <span class="screw-br" aria-hidden="true"></span>
             <h1 id="titleLine">Домофон</h1>
+            <div class="speaker-row" aria-hidden="true">
+                <div class="grille"></div>
+                <div class="cam-dot"></div>
+            </div>
             <div class="sub" id="subLine">Наберите номер квартиры</div>
-            <div class="display" id="disp">—</div>
-            <div class="keys" id="keys"></div>
+            <div class="display-wrap">
+                <div class="display is-placeholder" id="disp">—</div>
+            </div>
+            <div class="keypad-rfid">
+                <div class="keys" id="keys"></div>
+                <div class="rfid" aria-hidden="true">
+                    <div class="rfid-key"></div>
+                    <div class="rfid-dish"></div>
+                </div>
+            </div>
             <button type="button" class="hangup" id="hangupBtn" aria-label="Отбой">Отбой</button>
             <div class="status" id="status"></div>
             <audio id="remoteAudio" autoplay playsinline></audio>
@@ -141,16 +308,16 @@
 
     function renderDisp() {
         dispEl.textContent = digits ? digits : '—';
+        if (digits) {
+            dispEl.classList.remove('is-placeholder');
+        } else {
+            dispEl.classList.add('is-placeholder');
+        }
     }
 
     function addDigit(d) {
         if (digits.length >= 12) return;
         digits += d;
-        renderDisp();
-    }
-
-    function backspace() {
-        digits = digits.slice(0, -1);
         renderDisp();
     }
 
@@ -161,33 +328,33 @@
             b.type = 'button';
             b.className = 'key';
             b.textContent = n;
+            b.setAttribute('aria-label', 'Цифра ' + n);
             b.addEventListener('click', function () { addDigit(n); });
             keysEl.appendChild(b);
         });
-        const z = document.createElement('button');
-        z.type = 'button';
-        z.className = 'key del';
-        z.textContent = '⌫';
-        z.addEventListener('click', backspace);
-        keysEl.appendChild(z);
+        const call = document.createElement('button');
+        call.type = 'button';
+        call.className = 'key call';
+        call.textContent = 'B';
+        call.setAttribute('aria-label', 'Вызов');
+        call.title = 'Вызов';
+        call.addEventListener('click', placeCall);
+        keysEl.appendChild(call);
         const zero = document.createElement('button');
         zero.type = 'button';
         zero.className = 'key';
         zero.textContent = '0';
+        zero.setAttribute('aria-label', 'Цифра 0');
         zero.addEventListener('click', function () { addDigit('0'); });
         keysEl.appendChild(zero);
         const clr = document.createElement('button');
         clr.type = 'button';
-        clr.className = 'key del';
+        clr.className = 'key';
         clr.textContent = 'C';
+        clr.setAttribute('aria-label', 'Сброс');
+        clr.title = 'Сброс';
         clr.addEventListener('click', function () { digits = ''; renderDisp(); });
         keysEl.appendChild(clr);
-        const call = document.createElement('button');
-        call.type = 'button';
-        call.className = 'key call';
-        call.textContent = 'Вызов';
-        call.addEventListener('click', placeCall);
-        keysEl.appendChild(call);
         callBtnEl = call;
     }
 
@@ -456,9 +623,6 @@
             }
             if (manifest.panelName) {
                 document.getElementById('titleLine').textContent = manifest.panelName;
-            }
-            if (manifest.doorOpenConfigured) {
-                document.getElementById('subLine').textContent = 'Наберите квартиру. Открытие калитки с трубки — DTMF (цифры подставятся после соединения).';
             }
             buildKeys();
             renderDisp();
