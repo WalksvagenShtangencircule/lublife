@@ -1369,7 +1369,9 @@ th.rbt-entrance-preview-col {
 }
 
 /* Горизонтальный логотип (brandLogoWide в config) — без круглой маски */
+/* AdminLTE задаёт .brand-link .brand-image { float: left } — снимаем, иначе центр «уезжает» */
 .brand-link .brand-image#leftSideToggler.brand-image-wide {
+    float: none !important;
     width: auto !important;
     max-width: min(300px, 100%);
     height: auto !important;
@@ -1378,28 +1380,35 @@ th.rbt-entrance-preview-col {
     border-radius: 0;
     margin-left: 0 !important;
     margin-right: 0 !important;
+    display: inline-block;
+    vertical-align: middle;
 }
 
-/* Широкий логотип — по центру колонки сайдбара */
-#brand.brand-link:has(.brand-image-wide) {
-    display: flex !important;
+/*
+ * Центр строго внутри полосы бренда левого сайдбара (.main-sidebar), ширина = колонка меню.
+ * text-align + inline-flex как единый «компактный» блок — без растягивания на всю область контента.
+ */
+.main-sidebar #brand.brand-link:has(.brand-image-wide) {
+    display: block !important;
+    text-align: center;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.main-sidebar #brand.brand-link:has(.brand-image-wide) .sidebarToggler[data-widget="pushmenu"] {
+    display: inline-flex !important;
     justify-content: center;
     align-items: center;
-    width: 100%;
-    box-sizing: border-box;
+    width: auto;
+    max-width: 100%;
+    float: none;
 }
 
 /* SmartAccess: чуть ниже оптического центра относительно аватара, сдвиг вправо */
 #brand .sidebarToggler[data-widget="pushmenu"] {
     display: inline-flex;
     align-items: center;
-}
-
-#brand.brand-link:has(.brand-image-wide) .sidebarToggler[data-widget="pushmenu"] {
-    display: flex !important;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
 }
 
 .brand-link #brandTitle.brand-text {
