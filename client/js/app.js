@@ -606,8 +606,10 @@ function initAll() {
         $("#leftSideToggler").attr("src", logoSrc).attr("alt", altTxt);
         if (config.brandLogoWide) {
             $("#leftSideToggler").addClass("brand-image-wide");
+            $("#brand").addClass("rbt-brand-wide");
         } else {
             $("#leftSideToggler").removeClass("brand-image-wide");
+            $("#brand").removeClass("rbt-brand-wide");
         }
         if (config.brandUseAvatarFavicon) {
             setFavicon(logoSrc);
@@ -616,6 +618,7 @@ function initAll() {
         }
     } else {
         $("#leftSideToggler").removeClass("brand-image-wide");
+        $("#brand").removeClass("rbt-brand-wide");
         setFavicon(config.favicon || "img/brandIcon.svg?v=s2");
     }
 

@@ -1385,18 +1385,18 @@ th.rbt-entrance-preview-col {
 }
 
 /*
- * Центр строго внутри полосы бренда левого сайдбара (.main-sidebar), ширина = колонка меню.
- * text-align + inline-flex как единый «компактный» блок — без растягивания на всю область контента.
+ * Полоса бренда при layout-navbar-fixed: position:fixed — НЕЛЬЗЯ задавать width в %,
+ * иначе процент считается от viewport и логотип визуально оказывается по центру экрана.
+ * Ширину задаёт AdminLTE (250px / 4.6rem в sidebar-collapse) — не переопределяем.
+ * Класс .rbt-brand-wide вешается в app.js (надёжнее :has()).
  */
-.main-sidebar #brand.brand-link:has(.brand-image-wide) {
+.main-sidebar #brand.brand-link.rbt-brand-wide {
     display: block !important;
     text-align: center;
-    width: 100%;
-    max-width: 100%;
     box-sizing: border-box;
 }
 
-.main-sidebar #brand.brand-link:has(.brand-image-wide) .sidebarToggler[data-widget="pushmenu"] {
+.main-sidebar #brand.brand-link.rbt-brand-wide .sidebarToggler[data-widget="pushmenu"] {
     display: inline-flex !important;
     justify-content: center;
     align-items: center;
