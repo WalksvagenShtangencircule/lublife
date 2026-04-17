@@ -596,13 +596,26 @@ function initAll() {
     if (config.brandLogoUrl || config.brandGithubUser) {
         let ghUser = config.brandGithubUser ? String(config.brandGithubUser).trim().replace(/^@/, "") : "";
         let logoSrc = config.brandLogoUrl || ("https://github.com/" + ghUser + ".png");
-        $("#leftSideToggler").attr("src", logoSrc).attr("alt", ghUser ? ("GitHub @" + ghUser) : "");
+        let altTxt = "";
+        if (config.brandLogoUrl) {
+            let t = config.brandSidebarTitle !== undefined ? String(config.brandSidebarTitle).trim() : "";
+            altTxt = t || "Logo";
+        } else if (ghUser) {
+            altTxt = "GitHub @" + ghUser;
+        }
+        $("#leftSideToggler").attr("src", logoSrc).attr("alt", altTxt);
+        if (config.brandLogoWide) {
+            $("#leftSideToggler").addClass("brand-image-wide");
+        } else {
+            $("#leftSideToggler").removeClass("brand-image-wide");
+        }
         if (config.brandUseAvatarFavicon) {
             setFavicon(logoSrc);
         } else {
             setFavicon(config.favicon || "img/brandIcon.svg?v=s2");
         }
     } else {
+        $("#leftSideToggler").removeClass("brand-image-wide");
         setFavicon(config.favicon || "img/brandIcon.svg?v=s2");
     }
 

@@ -1368,6 +1368,16 @@ th.rbt-entrance-preview-col {
     margin-right: 0.45rem;
 }
 
+/* Горизонтальный логотип (brandLogoWide в config) — без круглой маски */
+.brand-link .brand-image#leftSideToggler.brand-image-wide {
+    width: auto !important;
+    max-width: min(220px, 100%);
+    height: auto !important;
+    max-height: 44px !important;
+    object-fit: contain;
+    border-radius: 0;
+}
+
 /* SmartAccess: чуть ниже оптического центра относительно аватара, сдвиг вправо */
 #brand .sidebarToggler[data-widget="pushmenu"] {
     display: inline-flex;

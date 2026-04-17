@@ -88,6 +88,8 @@
     "brandSidebarTitle": "SmartAccess",
     // Опционально: свой URL картинки вместо github.com/<user>.png
     // "brandLogoUrl": "https://…",
+    // true — широкий логотип в сайдбаре (без круга 46×46, object-fit: contain)
+    // "brandLogoWide": true,
     // Опционально: куда вести по клику (иначе https://github.com/<brandGithubUser>)
     // "brandLinkUrl": "https://github.com/you/repo",
     // Опционально: тот же URL как favicon
