@@ -1371,17 +1371,35 @@ th.rbt-entrance-preview-col {
 /* Горизонтальный логотип (brandLogoWide в config) — без круглой маски */
 .brand-link .brand-image#leftSideToggler.brand-image-wide {
     width: auto !important;
-    max-width: min(220px, 100%);
+    max-width: min(300px, 100%);
     height: auto !important;
-    max-height: 44px !important;
+    max-height: 56px !important;
     object-fit: contain;
     border-radius: 0;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+/* Широкий логотип — по центру колонки сайдбара */
+#brand.brand-link:has(.brand-image-wide) {
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* SmartAccess: чуть ниже оптического центра относительно аватара, сдвиг вправо */
 #brand .sidebarToggler[data-widget="pushmenu"] {
     display: inline-flex;
     align-items: center;
+}
+
+#brand.brand-link:has(.brand-image-wide) .sidebarToggler[data-widget="pushmenu"] {
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
 }
 
 .brand-link #brandTitle.brand-text {
