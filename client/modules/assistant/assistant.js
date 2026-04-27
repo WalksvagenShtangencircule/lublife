@@ -14,20 +14,104 @@
         return i18n("assistant.quick." + key);
     },
 
-    quickScenarios: function () {
-        let t = modules.assistant.t;
-        return [
-            { key: "houseOverview", prompt: t("houseOverviewPrompt") },
-            { key: "subscriberTimeline", prompt: t("subscriberTimelinePrompt") },
-            { key: "keyUsage", prompt: t("keyUsagePrompt") },
-            { key: "mobileFunnel", prompt: t("mobileFunnelPrompt") },
-            { key: "crossHouse", prompt: t("crossHousePrompt") },
-            { key: "entranceLoad", prompt: t("entranceLoadPrompt") },
-            { key: "flatRisk", prompt: t("flatRiskPrompt") },
-            { key: "anomalies", prompt: t("anomaliesPrompt") },
-            { key: "apiRights", prompt: t("apiRightsPrompt") },
-            { key: "schemaAudit", prompt: t("schemaAuditPrompt") },
-        ];
+    /** Извлекает объекты из rendered HTML ответа ассистента и обновляет контекстную панель. */
+    updateContextPanel: function (replyHtml) {
+        let parser = new DOMParser();
+        let doc = parser.parseFromString(replyHtml, "text/html");
+        let anchors = doc.querySelectorAll("a[href]");
+
+        let houses = [], flats = [], subscribers = [], domophones = [], cameras = [];
+        let seen = {};
+
+        for (let a of anchors) {
+            let href = (a.getAttribute("href") || "").trim();
+            if (!href.startsWith("?#addresses")) continue;
+            let label = (a.textContent || "").trim();
+            if (!label || seen[href]) continue;
+            seen[href] = true;
+
+            if (href.includes("subscriberId=")) {
+                subscribers.push({ href, label });
+            } else if (href.includes("flatId=")) {
+                flats.push({ href, label });
+            } else if (href.includes("domophones")) {
+                domophones.push({ href, label });
+            } else if (href.includes("cameras")) {
+                cameras.push({ href, label });
+            } else if (href.includes("houseId=") || href.includes("houses")) {
+                houses.push({ href, label });
+            }
+        }
+
+        let total = houses.length + flats.length + subscribers.length + domophones.length + cameras.length;
+
+        function section(icon, title, items, maxItems) {
+            if (!items.length) return "";
+            let s = "<div class='mb-2'><div style='font-size:10px;font-weight:700;text-transform:uppercase;" +
+                "letter-spacing:0.05em;color:#8898aa;margin-bottom:4px'>" + title + "</div>";
+            for (let x of items.slice(0, maxItems || 6)) {
+                s += "<div class='mb-1' style='overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px'>" +
+                    "<i class='" + icon + " mr-1' style='color:#aab;width:12px'></i>" +
+                    "<a href='" + escapeHTML(x.href) + "' style='color:#2c3e50'>" + escapeHTML(x.label) + "</a>" +
+                    "</div>";
+            }
+            return s + "</div>";
+        }
+
+        let html = "";
+        if (!total) {
+            html = "<p class='text-muted' style='font-size:12px;margin-top:8px'>Ответ не содержит ссылок на объекты системы.</p>";
+        } else {
+            html += section("fas fa-building", "Дома", houses, 8);
+            html += section("fas fa-door-open", "Квартиры", flats, 8);
+            html += section("fas fa-user", "Абоненты", subscribers, 8);
+            html += section("fas fa-phone-square", "Домофоны", domophones, 6);
+            html += section("fas fa-video", "Камеры", cameras, 6);
+        }
+
+        let $panel = $("#assistantContextPanel");
+        $panel.html(html);
+        $panel.closest(".card").show();
+    },
+
+    /** Поиск дома и вставка house_id в поле ввода. */
+    contextHouseSearch: function () {
+        let q = $.trim($("#assistantHouseSearch").val() || "");
+        if (!q) return;
+        let A = modules.assistant;
+        loadingStart();
+        QUERY("houses", "search", { search: q }, true).
+            fail(xhr => { FAIL(xhr); loadingDone(); }).
+            done(r => {
+                let rows = (r && r.houses && Array.isArray(r.houses)) ? r.houses : [];
+                if (!rows.length) {
+                    warning("Дом не найден. Уточните адрес.");
+                    loadingDone();
+                    return;
+                }
+                let $res = $("#assistantHouseResults");
+                let html = "";
+                for (let h of rows.slice(0, 8)) {
+                    let hid = parseInt(h.houseId, 10);
+                    if (!hid) continue;
+                    html += "<a href='#' class='d-block assistant-house-pick mb-1' data-hid='" + hid + "' " +
+                        "data-name='" + escapeHTML(h.houseFull || "#" + hid) + "' " +
+                        "style='font-size:12px;padding:3px 6px;border-radius:4px;background:#f4f6f9;color:#2c3e50;text-decoration:none'>" +
+                        escapeHTML(h.houseFull || "#" + hid) + " <span style='color:#aab;font-size:11px'>#" + hid + "</span></a>";
+                }
+                $res.html(html || "<span class='text-muted' style='font-size:12px'>Ничего не найдено</span>").show();
+                $res.off("click.pick").on("click.pick", ".assistant-house-pick", function (e) {
+                    e.preventDefault();
+                    let hid = $(this).attr("data-hid");
+                    let name = $(this).attr("data-name");
+                    let cur = $.trim($("#assistantInput").val());
+                    let insert = "house_id=" + hid;
+                    $("#assistantInput").val(cur ? cur + " " + insert : insert).focus();
+                    message("Дом «" + name + "» (house_id=" + hid + ") вставлен в поле запроса.");
+                    $res.hide();
+                });
+            }).
+            always(loadingDone);
     },
 
     askNumber: function (label, defValue, callback) {
@@ -404,7 +488,9 @@
                 while (modules.assistant.transcript.length > 100) {
                     modules.assistant.transcript.shift();
                 }
+                let renderedReply = modules.assistant.renderMarkdown(reply || "—");
                 modules.assistant.appendBubble("assistant", reply || "—");
+                modules.assistant.updateContextPanel(renderedReply);
             }).
             always(loadingDone);
     },
@@ -543,18 +629,39 @@
             "<div class='input-group-append'>" +
             "<button type='button' class='btn btn-primary' id='assistantSend'>" + escapeHTML(i18n("assistant.send")) + "</button>" +
             "</div></div></div></div></div>" +
+
             "<div class='col-lg-4 mb-3'>" +
-            "<div class='card card-outline card-secondary h-100'>" +
-            "<div class='card-header'><h3 class='card-title mb-0'>" + escapeHTML(modules.assistant.t("title")) + "</h3></div>" +
-            "<div class='card-body small'>" +
-            "<p class='text-muted'>" + escapeHTML(modules.assistant.t("hint")) + "</p>" +
-            "<div id='assistantQuickLinks'></div>" +
-            "<hr class='my-2'>" +
-            "<div id='assistantQuickHintLive' class='text-muted small'></div>" +
-            "</div></div></div></div>"
+
+            "<div class='card card-outline card-secondary mb-3'>" +
+            "<div class='card-header py-2'><h3 class='card-title mb-0' style='font-size:13px'>" +
+            "<i class='fas fa-search mr-1'></i>Поиск дома</h3></div>" +
+            "<div class='card-body py-2'>" +
+            "<div class='input-group input-group-sm'>" +
+            "<input type='text' id='assistantHouseSearch' class='form-control' placeholder='Улица, номер дома...' " +
+            "autocomplete='off' autocorrect='off' spellcheck='false'>" +
+            "<div class='input-group-append'>" +
+            "<button type='button' class='btn btn-outline-secondary' id='assistantHouseSearchBtn'>" +
+            "<i class='fas fa-search'></i></button></div></div>" +
+            "<div id='assistantHouseResults' class='mt-2' style='display:none'></div>" +
+            "<p class='text-muted mt-2 mb-0' style='font-size:11px'>Найденный house_id вставится в поле запроса.</p>" +
+            "</div></div>" +
+
+            "<div class='card card-outline card-secondary'>" +
+            "<div class='card-header py-2'><h3 class='card-title mb-0' style='font-size:13px'>" +
+            "<i class='fas fa-map-marker-alt mr-1'></i>Объекты из диалога</h3></div>" +
+            "<div class='card-body py-2'>" +
+            "<p class='text-muted mb-0' style='font-size:12px'>Здесь появятся ссылки на дома, квартиры и абонентов после ответа ассистента.</p>" +
+            "<div id='assistantContextPanel' class='mt-2'></div>" +
+            "</div></div>" +
+
+            "</div></div>"
         );
         modules.assistant.transcript = [];
-        modules.assistant.renderQuickLinks();
+        $("#assistantHouseSearchBtn").off("click").on("click", () => modules.assistant.contextHouseSearch());
+        $("#assistantHouseSearch").off("keydown.hs").on("keydown.hs", e => {
+            if (e.key === "Enter") { e.preventDefault(); modules.assistant.contextHouseSearch(); }
+        });
+
         let $ai = $("#assistantInput");
         $ai
             .attr("autocomplete", "off")
