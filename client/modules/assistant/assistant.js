@@ -74,44 +74,37 @@
         $panel.closest(".card").show();
     },
 
-    /** Поиск дома и вставка house_id в поле ввода. */
-    contextHouseSearch: function () {
-        let q = $.trim($("#assistantHouseSearch").val() || "");
-        if (!q) return;
-        let A = modules.assistant;
-        loadingStart();
-        QUERY("houses", "search", { search: q }, true).
-            fail(xhr => { FAIL(xhr); loadingDone(); }).
+    /** Загружает и отображает быструю статистику системы в панели дашборда. */
+    loadSystemStats: function () {
+        let $panel = $("#assistantStatsPanel");
+        $panel.html("<p class='text-muted mb-0' style='font-size:12px'>Загрузка...</p>");
+        QUERY("assistant", "stats", {}, true).
+            fail(() => {
+                $panel.html("<p class='text-muted mb-0' style='font-size:12px'>Не удалось загрузить статистику.</p>");
+            }).
             done(r => {
-                let rows = (r && r.houses && Array.isArray(r.houses)) ? r.houses : [];
-                if (!rows.length) {
-                    warning("Дом не найден. Уточните адрес.");
-                    loadingDone();
+                let s = r && r.assistantStats && r.assistantStats.stats ? r.assistantStats.stats : null;
+                if (!s) {
+                    $panel.html("<p class='text-muted mb-0' style='font-size:12px'>Нет данных.</p>");
                     return;
                 }
-                let $res = $("#assistantHouseResults");
-                let html = "";
-                for (let h of rows.slice(0, 8)) {
-                    let hid = parseInt(h.houseId, 10);
-                    if (!hid) continue;
-                    html += "<a href='#' class='d-block assistant-house-pick mb-1' data-hid='" + hid + "' " +
-                        "data-name='" + escapeHTML(h.houseFull || "#" + hid) + "' " +
-                        "style='font-size:12px;padding:3px 6px;border-radius:4px;background:#f4f6f9;color:#2c3e50;text-decoration:none'>" +
-                        escapeHTML(h.houseFull || "#" + hid) + " <span style='color:#aab;font-size:11px'>#" + hid + "</span></a>";
+                function row(icon, label, val, cls) {
+                    return "<div class='d-flex justify-content-between align-items-center mb-1' style='font-size:12px'>" +
+                        "<span><i class='" + icon + " mr-1' style='color:#aab;width:13px'></i>" + label + "</span>" +
+                        "<strong class='" + (cls || "") + "'>" + val + "</strong></div>";
                 }
-                $res.html(html || "<span class='text-muted' style='font-size:12px'>Ничего не найдено</span>").show();
-                $res.off("click.pick").on("click.pick", ".assistant-house-pick", function (e) {
-                    e.preventDefault();
-                    let hid = $(this).attr("data-hid");
-                    let name = $(this).attr("data-name");
-                    let cur = $.trim($("#assistantInput").val());
-                    let insert = "house_id=" + hid;
-                    $("#assistantInput").val(cur ? cur + " " + insert : insert).focus();
-                    message("Дом «" + name + "» (house_id=" + hid + ") вставлен в поле запроса.");
-                    $res.hide();
-                });
-            }).
-            always(loadingDone);
+                let html =
+                    row("fas fa-building",      "Домов",                 s.houses) +
+                    row("fas fa-door-open",     "Квартир",               s.flats) +
+                    row("fas fa-users",         "Абонентов",             s.subscribers) +
+                    row("fas fa-phone-square",  "Домофонов активных",    s.domophones_active) +
+                    row("fas fa-video",         "Камер",                 s.cameras) +
+                    "<hr class='my-1'>" +
+                    row("fas fa-mobile-alt",    "Активны за 7 дн.",      s.active_7d,  "text-success") +
+                    row("fas fa-mobile-alt",    "Активны за 30 дн.",     s.active_30d, "text-info") +
+                    row("fas fa-ban",           "Квартир заблокировано", s.flats_blocked, s.flats_blocked > 0 ? "text-warning" : "");
+                $panel.html(html);
+            });
     },
 
     askNumber: function (label, defValue, callback) {
@@ -633,18 +626,11 @@
             "<div class='col-lg-4 mb-3'>" +
 
             "<div class='card card-outline card-secondary mb-3'>" +
-            "<div class='card-header py-2'><h3 class='card-title mb-0' style='font-size:13px'>" +
-            "<i class='fas fa-search mr-1'></i>Поиск дома</h3></div>" +
-            "<div class='card-body py-2'>" +
-            "<div class='input-group input-group-sm'>" +
-            "<input type='text' id='assistantHouseSearch' class='form-control' placeholder='Улица, номер дома...' " +
-            "autocomplete='off' autocorrect='off' spellcheck='false'>" +
-            "<div class='input-group-append'>" +
-            "<button type='button' class='btn btn-outline-secondary' id='assistantHouseSearchBtn'>" +
-            "<i class='fas fa-search'></i></button></div></div>" +
-            "<div id='assistantHouseResults' class='mt-2' style='display:none'></div>" +
-            "<p class='text-muted mt-2 mb-0' style='font-size:11px'>Найденный house_id вставится в поле запроса.</p>" +
-            "</div></div>" +
+            "<div class='card-header py-2 d-flex justify-content-between align-items-center'>" +
+            "<h3 class='card-title mb-0' style='font-size:13px'><i class='fas fa-chart-bar mr-1'></i>Система</h3>" +
+            "<a href='#' id='assistantStatsRefresh' style='font-size:11px;color:#aab' title='Обновить'><i class='fas fa-sync-alt'></i></a>" +
+            "</div>" +
+            "<div class='card-body py-2'><div id='assistantStatsPanel'></div></div></div>" +
 
             "<div class='card card-outline card-secondary'>" +
             "<div class='card-header py-2'><h3 class='card-title mb-0' style='font-size:13px'>" +
@@ -657,9 +643,10 @@
             "</div></div>"
         );
         modules.assistant.transcript = [];
-        $("#assistantHouseSearchBtn").off("click").on("click", () => modules.assistant.contextHouseSearch());
-        $("#assistantHouseSearch").off("keydown.hs").on("keydown.hs", e => {
-            if (e.key === "Enter") { e.preventDefault(); modules.assistant.contextHouseSearch(); }
+        modules.assistant.loadSystemStats();
+        $("#assistantStatsRefresh").off("click").on("click", e => {
+            e.preventDefault();
+            modules.assistant.loadSystemStats();
         });
 
         let $ai = $("#assistantInput");
