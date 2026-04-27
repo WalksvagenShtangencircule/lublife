@@ -583,6 +583,21 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
             return ["error" => "db_error"];
         }
 
+        // Реальные итоги без лимита — чтобы модель не путала размер списка с общим числом абонентов
+        $totals = $db->get(
+            "SELECT
+                COUNT(DISTINCT fs.house_subscriber_id)::int AS total_subscribers,
+                COUNT(DISTINCT CASE WHEN d.last_seen >= :since THEN fs.house_subscriber_id END)::int AS active_in_period
+             FROM houses_flats_subscribers fs
+             JOIN houses_flats hf ON hf.house_flat_id = fs.house_flat_id
+             JOIN houses_subscribers_mobile m ON m.house_subscriber_id = fs.house_subscriber_id
+             LEFT JOIN houses_subscribers_devices d ON d.house_subscriber_id = fs.house_subscriber_id
+             WHERE hf.address_house_id = :hid",
+            ["hid" => $houseId, "since" => $since],
+            ["total_subscribers" => "count", "active_in_period" => "count"],
+            ["fieldlify"]
+        );
+
         foreach ($rows as &$r) {
             $r["platform_name"] = isset($r["platform"]) && $r["platform"] ? ($platformMap[(int)$r["platform"]] ?? "Unknown") : null;
             $r["active"] = isset($r["last_seen"]) && $r["last_seen"] && (int)$r["last_seen"] >= $since;
@@ -597,13 +612,18 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
         $active = array_values(array_filter($rows, fn($r) => $r["active"]));
         $inactive = array_values(array_filter($rows, fn($r) => !$r["active"]));
 
+        $totalSubscribers = is_array($totals) ? (int)($totals["total_subscribers"] ?? count($rows)) : count($rows);
+        $activeInPeriod   = is_array($totals) ? (int)($totals["active_in_period"]   ?? count($active)) : count($active);
+
         return [
-            "house_id" => $houseId,
-            "days_back" => $daysBack,
-            "total_returned" => count($rows),
-            "active_count" => count($active),
-            "inactive_count" => count($inactive),
-            "subscribers" => $rows,
+            "house_id"                  => $houseId,
+            "days_back"                 => $daysBack,
+            "total_subscribers_in_house" => $totalSubscribers,
+            "active_in_period_count"    => $activeInPeriod,
+            "NOTE"                      => "total_subscribers_in_house и active_in_period_count — точные итоги по всему дому. subscribers[] — выборка до $limit записей.",
+            "list_limit"                => $limit,
+            "list_returned"             => count($rows),
+            "subscribers"               => $rows,
         ];
     }
 

@@ -86,7 +86,7 @@
                         "Заблокированные квартиры дома: blocked_flats. " .
                         "Подъезды дома: house_entrances_list. Домофоны дома: house_domophones_list. " .
                         "Карточка абонента (квартиры, устройства, ключи): subscriber_lookup. " .
-                        "Список активных абонентов дома: active_subscribers_for_house. " .
+                        "Список абонентов дома: active_subscribers_for_house — поле total_subscribers_in_house содержит ТОЧНОЕ общее число абонентов, active_in_period_count — активных за период; list_returned — это лишь размер выборки (≤limit), НЕ общий счёт. " .
                         "Мобильные учётки и plog-активность: mobile_users_stats. " .
                         "Воронка за несколько периодов одним вызовом: mobile_access_funnel(house_id, periods_days:[7,30]). " .
                         "Журнал событий (проходы/открытия): plog_events_list. " .
