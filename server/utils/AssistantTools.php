@@ -307,7 +307,7 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
                 );
                 if (is_array($flat)) {
                     $row["flat_number"] = $flat["flat_number"];
-                    $row["_url"] = "?#addresses.subscribers&flatId={$fid}&houseId=" . $flat["house_id"];
+                    $row["_url"] = "?#addresses.subscribers&flatId={$fid}&houseId=" . $flat["house_id"] . "&flat=" . urlencode($flat["flat_number"]);
                 }
             }
         }
@@ -724,7 +724,7 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
 
         $row["_url"] = "?#addresses.subscriberDevices&subscriberId=" . $hid;
         foreach ($flats as &$f) {
-            $f["_url"] = "?#addresses.subscribers&flatId=" . $f["flatId"] . "&houseId=" . $f["houseId"];
+            $f["_url"] = "?#addresses.subscribers&flatId=" . $f["flatId"] . "&houseId=" . $f["houseId"] . "&flat=" . urlencode($f["flatNumber"]);
         }
         unset($f);
 
@@ -889,9 +889,10 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
             return ["error" => "flat_not_found"];
         }
 
-        $fid = (int) $row["house_flat_id"];
-        $hid = (int) $row["house_id"];
-        $row["_url"] = "?#addresses.subscribers&flatId={$fid}&houseId={$hid}";
+        $fid  = (int) $row["house_flat_id"];
+        $hid  = (int) $row["house_id"];
+        $flat = urlencode((string)($row["flat_number"] ?? ""));
+        $row["_url"]      = "?#addresses.subscribers&flatId={$fid}&houseId={$hid}&flat={$flat}";
         $row["house_url"] = "?#addresses.houses&houseId={$hid}";
 
         $blocked = ((int)$row["manual_block"] > 0 || (int)$row["auto_block"] > 0 || (int)$row["admin_block"] > 0);
@@ -1042,9 +1043,10 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
         }
 
         foreach ($rows as &$r) {
-            $fid = (int) $r["house_flat_id"];
-            $hid = (int) $r["house_id"];
-            $r["_url"] = "?#addresses.subscribers&flatId={$fid}&houseId={$hid}";
+            $fid  = (int) $r["house_flat_id"];
+            $hid  = (int) $r["house_id"];
+            $flat = urlencode((string)($r["flat_number"] ?? ""));
+            $r["_url"] = "?#addresses.subscribers&flatId={$fid}&houseId={$hid}&flat={$flat}";
             $reasons = [];
             if ((int)$r["manual_block"] > 0) $reasons[] = "ручная";
             if ((int)$r["auto_block"] > 0)   $reasons[] = "авто";
@@ -1120,7 +1122,7 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
                 if (is_array($flat)) {
                     $r["flat_number"] = $flat["flat_number"];
                     $r["flat_house_full"] = $flat["house_full"];
-                    $r["flat_url"] = "?#addresses.subscribers&flatId=" . $flat["house_flat_id"] . "&houseId=" . $flat["house_id"];
+                    $r["flat_url"] = "?#addresses.subscribers&flatId=" . $flat["house_flat_id"] . "&houseId=" . $flat["house_id"] . "&flat=" . urlencode((string)($flat["flat_number"] ?? ""));
                     $r["keys_url"] = "?#addresses.keys&query=" . urlencode($r["rfid"]);
                 }
             }
