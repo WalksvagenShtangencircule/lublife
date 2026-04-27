@@ -297,7 +297,7 @@
     "domophoneName": "Наименование",
     "subscriberInbox": "Сообщения",
     "objectKeys": "Ключи объекта (%s)",
-    "superKeys": "Ключи RFID",
+    "superKeys": "Суперключи",
     "keysType0": "спецключи",
     "keysType1": "жильца",
     "keysType2": "квартиры",
