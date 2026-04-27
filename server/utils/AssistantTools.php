@@ -594,8 +594,8 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
              LEFT JOIN houses_subscribers_devices d ON d.house_subscriber_id = fs.house_subscriber_id
              WHERE hf.address_house_id = :hid",
             ["hid" => $houseId, "since" => $since],
-            ["total_subscribers" => "count", "active_in_period" => "count"],
-            ["fieldlify"]
+            [],
+            ["singlify", "silent"]
         );
 
         foreach ($rows as &$r) {
