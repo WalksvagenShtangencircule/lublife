@@ -18,7 +18,7 @@
   --wp-accent: #7c4dff;
   --wp-accent-hover: #651fff;
   --wp-accent-soft: rgba(124, 77, 255, 0.22);
-  --wp-sidebar-bg: #4a148c;
+  --wp-sidebar-bg: #2e3f7c;
   --wp-sidebar-hover: rgba(255, 255, 255, 0.12);
   --wp-navbar-bg: #ffffff;
   --wp-input-bg: #ffffff;
@@ -103,7 +103,7 @@ body.dark-mode .main-header.navbar-dark .nav-link {
 /* Боковое меню */
 .main-sidebar.sidebar-dark-primary {
   background-color: var(--wp-sidebar-bg) !important;
-  box-shadow: 4px 0 24px rgba(74, 20, 140, 0.25) !important;
+  box-shadow: 4px 0 20px rgba(46, 63, 124, 0.18) !important;
 }
 
 .sidebar-dark-primary .brand-link {
