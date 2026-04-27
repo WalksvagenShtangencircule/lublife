@@ -534,4 +534,36 @@
     "ntp_servers": [
         "ntp:<-- your ntp server ip here -->:123",
     ],
+
+    // ИИ-ассистент (модуль assistant): чат оператора с DeepSeek, инструменты PostgreSQL и ClickHouse.
+    // Требует прав assistant/chat в core_users_rights для пользователя.
+    // Пример конфига также в server/config/assistant.example.json.
+    "assistant": {
+        // API-ключ DeepSeek (https://platform.deepseek.com → API Keys)
+        "deepseekApiKey": "sk-замените_на_ключ",
+
+        // Базовый URL API. По умолчанию https://api.deepseek.com — менять только при использовании прокси.
+        "deepseekBaseUrl": "https://api.deepseek.com",
+
+        // Модель. Актуальные значения: deepseek-v4-flash (быстрее), deepseek-v4-pro (умнее).
+        // Устаревший алиас deepseek-chat автоматически перенаправляется на deepseek-v4-flash.
+        "model": "deepseek-v4-flash",
+
+        // Максимальное число итераций цикла model→tools→model за один запрос.
+        // Больше — полнее ответ, дольше ожидание. Рекомендуется 4–6.
+        "maxToolIterations": 6,
+
+        // Жёсткий лимит на общее число вызовов инструментов за один запрос (все итерации суммарно).
+        // Защищает от «карусели» одинаковых tool-call. Рекомендуется 3–5.
+        "maxToolCallsPerRequest": 3,
+
+        // Максимум токенов в ответе модели за одну итерацию.
+        // 520 покрывает большинство ответов; для развёрнутых таблиц можно поднять до 800–1200.
+        "maxResponseTokens": 520,
+
+        // Абсолютный дедлайн wall-clock (секунды) на весь POST /api/assistant/chat.
+        // PHP выполняет set_time_limit(120), поэтому значение > 120 бесполезно.
+        // При исчерпании бюджета отдаётся лучший накопленный ответ из meta.
+        "maxTotalSeconds": 90,
+    },
 }
