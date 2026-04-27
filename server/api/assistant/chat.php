@@ -27,13 +27,12 @@
 
                 $baseUrl = isset($cfg["deepseekBaseUrl"]) ? rtrim(trim((string) $cfg["deepseekBaseUrl"]), "/") : "https://api.deepseek.com";
                 $model = isset($cfg["model"]) ? trim((string) $cfg["model"]) : "deepseek-chat";
-                $maxIter = isset($cfg["maxToolIterations"]) ? (int) $cfg["maxToolIterations"] : 4;
+                $maxIter = isset($cfg["maxToolIterations"]) ? (int) $cfg["maxToolIterations"] : 6;
                 if ($maxIter < 1) {
                     $maxIter = 1;
                 }
-                // Много итераций × долгий curl = минуты ожидания; для UX держим потолок низким.
-                if ($maxIter > 4) {
-                    $maxIter = 4;
+                if ($maxIter > 8) {
+                    $maxIter = 8;
                 }
                 $maxToolExecTotal = isset($cfg["maxToolCallsPerRequest"]) ? (int) $cfg["maxToolCallsPerRequest"] : 6;
                 if ($maxToolExecTotal < 1) {
@@ -42,12 +41,12 @@
                 if ($maxToolExecTotal > 12) {
                     $maxToolExecTotal = 12;
                 }
-                $maxResponseTokens = isset($cfg["maxResponseTokens"]) ? (int) $cfg["maxResponseTokens"] : 520;
+                $maxResponseTokens = isset($cfg["maxResponseTokens"]) ? (int) $cfg["maxResponseTokens"] : 1200;
                 if ($maxResponseTokens < 200) {
                     $maxResponseTokens = 200;
                 }
-                if ($maxResponseTokens > 1200) {
-                    $maxResponseTokens = 1200;
+                if ($maxResponseTokens > 2000) {
+                    $maxResponseTokens = 2000;
                 }
                 /** Абсолютный дедлайн wall-clock для всего POST (сек), по умолчанию ~1 минута. */
                 $wallDeadline = microtime(true) + self::assistantMaxWallSeconds($cfg);
@@ -67,16 +66,37 @@
                 array_unshift($messages, [
                     "role" => "system",
                     "content" => "Ты встроенный аналитический помощник **этого конкретного сервера SmartAccess**. " .
-                        "Отвечай **только** на основе данных, полученных через инструменты (БД PostgreSQL, журнал plog в ClickHouse, конфигурация этого экземпляра). " .
-                        "Если вопрос выходит за пределы доступных данных или не относится к содержимому этого сервера — прямо скажи, что можешь отвечать лишь по фактам из системы, и не выдумывай. " .
-                        "Отвечай по-русски, структурированно. Дома ищи через resolve_house, затем используй house_id. " .
-                        "Время since_unix/until_unix — **unix-секунды** (эпоха). Для «за последнюю неделю»: until=текущее время, since=until-7*86400. " .
-                        "Типы событий plog: 1 пропущенный звонок, 2 ответ, 3 открыто ключом RFID, 4 открыто из приложения, 5 лицо, 6 код, 7 ворота по звонку, 9 транспорт. " .
-                        "Счёт квартир: flats_count. Мобильные учётки и активность приложения в plog: mobile_users_stats. " .
-                        "Если просят воронку сразу за **несколько периодов** (например 7 и 30 дней) — один вызов **mobile_access_funnel** (house_id + periods_days), не делай десяток одинаковых вызовов. " .
+                        "Отвечай **только** на основе данных, полученных через инструменты (БД PostgreSQL, журнал plog в ClickHouse). " .
+                        "Если вопрос выходит за пределы доступных данных — прямо скажи об этом, не выдумывай. " .
+                        "Отвечай по-русски, структурированно, используй Markdown (заголовки, таблицы, списки). " .
+
+                        "**ССЫЛКИ**: Когда инструмент возвращает поля _url, flat_url, owner_url, domophone_url, camera_url, house_url — " .
+                        "всегда вставляй их в ответ как Markdown-ссылки. Примеры форматирования: " .
+                        "[Иванов И.И.](?#addresses.subscriberDevices&subscriberId=42), " .
+                        "[кв. 15](?#addresses.subscribers&flatId=100&houseId=5), " .
+                        "[домофон Beward](?#addresses.domophones&id=3), " .
+                        "[камера](?#addresses.cameras&id=7), " .
+                        "[дом](?#addresses.houses&houseId=5). " .
+                        "Если данных для ссылки нет — просто выводи текст без ссылки. " .
+
+                        "**ИНСТРУМЕНТЫ**: " .
+                        "Дома ищи через resolve_house, затем используй house_id. " .
+                        "Список всех домов: all_houses_list. " .
+                        "Счёт квартир: flats_count. Детали квартиры (код, блокировки, абоненты): flat_info. " .
+                        "Заблокированные квартиры дома: blocked_flats. " .
+                        "Подъезды дома: house_entrances_list. Домофоны дома: house_domophones_list. " .
                         "Карточка абонента (квартиры, устройства, ключи): subscriber_lookup. " .
-                        "Что открывалось и когда: plog_events_list (по дому; узкий фильтр по абоненту — house_subscriber_id). " .
-                        "Запрос «паспорт дома» за 7 дней: за один проход вызови flats_count, затем mobile_access_funnel(house_id, periods_days:[7]) и при необходимости plog_events_list с умеренным limit; не дублируй одинаковые вызовы.",
+                        "Список активных абонентов дома: active_subscribers_for_house. " .
+                        "Мобильные учётки и plog-активность: mobile_users_stats. " .
+                        "Воронка за несколько периодов одним вызовом: mobile_access_funnel(house_id, periods_days:[7,30]). " .
+                        "Журнал событий (проходы/открытия): plog_events_list. " .
+                        "Ключи квартиры: count_keys_for_flat. Поиск ключа RFID: rfid_lookup. " .
+                        "События по ключу RFID: rfid_events_in_period. Топ активных квартир: flat_activity_in_house. " .
+
+                        "**ВРЕМЯ**: since_unix/until_unix — unix-секунды. Для «за X дней» передавай days_back=X. " .
+                        "Типы событий plog: 1=пропущенный_звонок, 2=ответ, 3=ключ_RFID, 4=мобильное_приложение, 5=лицо, 6=код, 7=ворота_по_звонку, 9=транспорт. " .
+
+                        "**ПАСПОРТ ДОМА** (7 дней): flats_count → mobile_access_funnel(periods_days:[7]) → plog_events_list(limit:30). Не дублируй вызовы.",
                 ]);
 
                 $messages = self::sanitizeMessages($messages);
@@ -505,17 +525,110 @@
                             ],
                         ],
                     ],
+                    [
+                        "type" => "function",
+                        "function" => [
+                            "name" => "flat_info",
+                            "description" => "Детальная карточка квартиры: код открытия, блокировки (ручная/авто/административная), SIP, количество ключей RFID, список абонентов со ссылками. Используй для «покажи квартиру X в доме Y», «заблокирована ли», «кто живёт».",
+                            "parameters" => [
+                                "type" => "object",
+                                "properties" => [
+                                    "house_id" => ["type" => "integer", "description" => "ID дома"],
+                                    "flat_number" => ["type" => "string", "description" => "Номер квартиры как в справочнике"],
+                                    "flat_id" => ["type" => "integer", "description" => "house_flat_id — альтернатива house_id+flat_number"],
+                                ],
+                                "required" => [],
+                            ],
+                        ],
+                    ],
+                    [
+                        "type" => "function",
+                        "function" => [
+                            "name" => "house_entrances_list",
+                            "description" => "Список подъездов дома: тип, номер, привязанный домофон (модель, IP), камера со ссылками. Используй для «покажи подъезды», «какие домофоны в доме», «есть ли камеры на входе».",
+                            "parameters" => [
+                                "type" => "object",
+                                "properties" => [
+                                    "house_id" => ["type" => "integer"],
+                                ],
+                                "required" => ["house_id"],
+                            ],
+                        ],
+                    ],
+                    [
+                        "type" => "function",
+                        "function" => [
+                            "name" => "house_domophones_list",
+                            "description" => "Список домофонов дома с моделью, IP, статусом (активен/отключён), ссылками. Используй для «список домофонов», «IP домофона», «модели оборудования».",
+                            "parameters" => [
+                                "type" => "object",
+                                "properties" => [
+                                    "house_id" => ["type" => "integer"],
+                                ],
+                                "required" => ["house_id"],
+                            ],
+                        ],
+                    ],
+                    [
+                        "type" => "function",
+                        "function" => [
+                            "name" => "blocked_flats",
+                            "description" => "Список заблокированных квартир дома (ручная, авто или административная блокировка) со ссылками. Используй для «покажи заблокированные квартиры», «у кого блокировка».",
+                            "parameters" => [
+                                "type" => "object",
+                                "properties" => [
+                                    "house_id" => ["type" => "integer"],
+                                    "block_type" => [
+                                        "type" => "string",
+                                        "enum" => ["any", "manual", "auto", "admin"],
+                                        "description" => "Фильтр по типу блокировки: any = все виды (по умолчанию)",
+                                    ],
+                                    "limit" => ["type" => "integer", "description" => "Максимум записей, 5–500. По умолчанию 100"],
+                                ],
+                                "required" => ["house_id"],
+                            ],
+                        ],
+                    ],
+                    [
+                        "type" => "function",
+                        "function" => [
+                            "name" => "rfid_lookup",
+                            "description" => "Найти ключ RFID: кому принадлежит (абонент или квартира), дата последнего использования, ссылки на владельца и квартиру. Используй для «кому принадлежит ключ X», «найди карту RFID», «история ключа».",
+                            "parameters" => [
+                                "type" => "object",
+                                "properties" => [
+                                    "rfid" => ["type" => "string", "description" => "Полный или частичный HEX-код ключа"],
+                                ],
+                                "required" => ["rfid"],
+                            ],
+                        ],
+                    ],
+                    [
+                        "type" => "function",
+                        "function" => [
+                            "name" => "all_houses_list",
+                            "description" => "Полный список домов в системе с количеством квартир и абонентов, ссылками на страницы домов. Используй для «список всех домов», «сколько домов в системе», «покажи все адреса».",
+                            "parameters" => [
+                                "type" => "object",
+                                "properties" => [
+                                    "search" => ["type" => "string", "description" => "Фильтр по адресу (необязательно)"],
+                                    "limit" => ["type" => "integer", "description" => "Максимум строк, 10–500. По умолчанию 100"],
+                                ],
+                                "required" => [],
+                            ],
+                        ],
+                    ],
                 ];
             }
 
             /** Общий лимит времени на весь запрос assistant/chat (сек). */
             private static function assistantMaxWallSeconds(array $cfg): float {
-                $v = isset($cfg["maxTotalSeconds"]) ? (float) $cfg["maxTotalSeconds"] : 24.0;
+                $v = isset($cfg["maxTotalSeconds"]) ? (float) $cfg["maxTotalSeconds"] : 90.0;
                 if ($v < 10.0) {
                     $v = 10.0;
                 }
-                if ($v > 45.0) {
-                    $v = 45.0;
+                if ($v > 110.0) {
+                    $v = 110.0;
                 }
                 return $v;
             }

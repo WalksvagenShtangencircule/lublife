@@ -112,6 +112,18 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
                 return assistant_tool_rfid_events_in_period($db, $config, $args);
             case "flat_activity_in_house":
                 return assistant_tool_flat_activity_in_house($db, $config, $args);
+            case "flat_info":
+                return assistant_tool_flat_info($db, $args);
+            case "house_entrances_list":
+                return assistant_tool_house_entrances_list($db, $args);
+            case "house_domophones_list":
+                return assistant_tool_house_domophones_list($db, $args);
+            case "blocked_flats":
+                return assistant_tool_blocked_flats($db, $args);
+            case "rfid_lookup":
+                return assistant_tool_rfid_lookup($db, $args);
+            case "all_houses_list":
+                return assistant_tool_all_houses_list($db, $args);
             default:
                 return ["error" => "unknown_tool", "name" => $name];
         }
@@ -157,6 +169,10 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
         if ($rows === false) {
             return ["error" => "db_error"];
         }
+        foreach ($rows as &$r) {
+            $r["_url"] = "?#addresses.houses&houseId=" . $r["houseId"];
+        }
+        unset($r);
         return ["houses" => $rows, "count" => count($rows)];
     }
 
@@ -547,6 +563,7 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
             if ($r["last_seen"]) {
                 $r["last_seen_date"] = date("Y-m-d H:i", (int)$r["last_seen"]);
             }
+            $r["_url"] = "?#addresses.subscriberDevices&subscriberId=" . $r["house_subscriber_id"];
         }
         unset($r);
 
@@ -657,6 +674,12 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
         if ($keys === false) {
             $keys = [];
         }
+
+        $row["_url"] = "?#addresses.subscriberDevices&subscriberId=" . $hid;
+        foreach ($flats as &$f) {
+            $f["_url"] = "?#addresses.subscribers&flatId=" . $f["flatId"] . "&houseId=" . $f["houseId"];
+        }
+        unset($f);
 
         return [
             "subscriber" => $row,
@@ -772,6 +795,341 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
             "until_unix" => $until,
             "returned" => count($out),
             "events" => $out,
+        ];
+    }
+
+    function assistant_tool_flat_info($db, array $args): array {
+        $houseId = isset($args["house_id"]) ? (int) $args["house_id"] : 0;
+        $flatNum = isset($args["flat_number"]) ? trim((string) $args["flat_number"]) : "";
+        $flatId  = isset($args["flat_id"]) ? (int) $args["flat_id"] : 0;
+
+        if ($houseId <= 0 && $flatId <= 0) {
+            return ["error" => "invalid_params", "need" => ["house_id + flat_number или flat_id"]];
+        }
+
+        if ($flatId > 0) {
+            $cond = "hf.house_flat_id = :fid";
+            $binds = ["fid" => $flatId];
+        } else {
+            if ($flatNum === "") {
+                return ["error" => "invalid_params", "need" => ["flat_number"]];
+            }
+            $cond = "hf.address_house_id = :hid AND CAST(hf.flat AS VARCHAR) = :fn";
+            $binds = ["hid" => $houseId, "fn" => $flatNum];
+        }
+
+        $row = $db->get(
+            "SELECT hf.house_flat_id, hf.address_house_id AS house_id,
+                    CAST(hf.flat AS VARCHAR) AS flat_number, hf.floor,
+                    hf.code AS open_code, hf.manual_block, hf.auto_block, hf.admin_block,
+                    hf.sip_enabled, hf.cms_enabled, hf.contract, hf.login,
+                    hf.auto_open, hf.white_rabbit, hf.plog,
+                    ah.house_full,
+                    (SELECT COUNT(*) FROM houses_rfids r
+                     WHERE r.access_type = 2 AND r.access_to = hf.house_flat_id) AS keys_count,
+                    (SELECT COUNT(*) FROM houses_flats_subscribers fs
+                     WHERE fs.house_flat_id = hf.house_flat_id) AS subscribers_count
+             FROM houses_flats hf
+             JOIN addresses_houses ah ON ah.address_house_id = hf.address_house_id
+             WHERE " . $cond . "
+             LIMIT 1",
+            $binds,
+            [],
+            ["silent", "singlify"]
+        );
+
+        if ($row === false || !is_array($row)) {
+            return ["error" => "flat_not_found"];
+        }
+
+        $fid = (int) $row["house_flat_id"];
+        $hid = (int) $row["house_id"];
+        $row["_url"] = "?#addresses.subscribers&flatId={$fid}&houseId={$hid}";
+        $row["house_url"] = "?#addresses.houses&houseId={$hid}";
+
+        $blocked = ((int)$row["manual_block"] > 0 || (int)$row["auto_block"] > 0 || (int)$row["admin_block"] > 0);
+        $row["is_blocked"] = $blocked;
+        $row["block_reason"] = [];
+        if ((int)$row["manual_block"] > 0) $row["block_reason"][] = "ручная";
+        if ((int)$row["auto_block"] > 0)   $row["block_reason"][] = "автоматическая";
+        if ((int)$row["admin_block"] > 0)  $row["block_reason"][] = "административная";
+
+        $subs = $db->get(
+            "SELECT fs.house_subscriber_id, m.id AS phone, m.subscriber_full AS name, fs.role
+             FROM houses_flats_subscribers fs
+             JOIN houses_subscribers_mobile m ON m.house_subscriber_id = fs.house_subscriber_id
+             WHERE fs.house_flat_id = :fid
+             ORDER BY fs.role, m.subscriber_full
+             LIMIT 30",
+            ["fid" => $fid],
+            [],
+            ["silent"]
+        );
+        if ($subs === false) $subs = [];
+        foreach ($subs as &$s) {
+            $s["role_name"] = (int)($s["role"] ?? 0) === 0 ? "владелец" : "пользователь";
+            $s["_url"] = "?#addresses.subscriberDevices&subscriberId=" . $s["house_subscriber_id"];
+        }
+        unset($s);
+
+        $row["subscribers"] = $subs;
+        return $row;
+    }
+
+    function assistant_tool_house_entrances_list($db, array $args): array {
+        $houseId = isset($args["house_id"]) ? (int) $args["house_id"] : 0;
+        if ($houseId <= 0) {
+            return ["error" => "invalid_params", "need" => ["house_id"]];
+        }
+
+        $rows = $db->get(
+            "SELECT he.house_entrance_id, he.entrance_type, he.entrance,
+                    he.house_domophone_id, he.camera_id, he.cms_type,
+                    hd.model AS domophone_model, hd.ip AS domophone_ip,
+                    hd.name AS domophone_name, hd.enabled AS domophone_enabled
+             FROM houses_houses_entrances hhe
+             JOIN houses_entrances he ON he.house_entrance_id = hhe.house_entrance_id
+             LEFT JOIN houses_domophones hd ON hd.house_domophone_id = he.house_domophone_id
+             WHERE hhe.address_house_id = :hid
+             ORDER BY he.entrance",
+            ["hid" => $houseId],
+            [],
+            ["silent"]
+        );
+        if ($rows === false) {
+            return ["error" => "db_error"];
+        }
+
+        foreach ($rows as &$r) {
+            if ($r["house_domophone_id"]) {
+                $r["domophone_url"] = "?#addresses.domophones&id=" . $r["house_domophone_id"];
+            }
+            if ($r["camera_id"]) {
+                $r["camera_url"] = "?#addresses.cameras&id=" . $r["camera_id"];
+            }
+        }
+        unset($r);
+
+        return [
+            "house_id" => $houseId,
+            "house_url" => "?#addresses.houses&houseId={$houseId}",
+            "count" => count($rows),
+            "entrances" => $rows,
+        ];
+    }
+
+    function assistant_tool_house_domophones_list($db, array $args): array {
+        $houseId = isset($args["house_id"]) ? (int) $args["house_id"] : 0;
+        if ($houseId <= 0) {
+            return ["error" => "invalid_params", "need" => ["house_id"]];
+        }
+
+        $rows = $db->get(
+            "SELECT DISTINCT ON (hd.house_domophone_id)
+                    hd.house_domophone_id, hd.model, hd.ip, hd.name, hd.enabled, hd.monitoring,
+                    hd.url AS stream_url, hd.comments, hd.sub_id,
+                    he.entrance_type, he.entrance
+             FROM houses_entrances he
+             JOIN houses_houses_entrances hhe ON hhe.house_entrance_id = he.house_entrance_id
+             JOIN houses_domophones hd ON hd.house_domophone_id = he.house_domophone_id
+             WHERE hhe.address_house_id = :hid
+             ORDER BY hd.house_domophone_id, he.entrance",
+            ["hid" => $houseId],
+            [],
+            ["silent"]
+        );
+        if ($rows === false) {
+            return ["error" => "db_error"];
+        }
+
+        foreach ($rows as &$r) {
+            $r["_url"] = "?#addresses.domophones&id=" . $r["house_domophone_id"];
+            $r["enabled_label"] = (int)($r["enabled"] ?? 1) ? "активен" : "отключён";
+        }
+        unset($r);
+
+        return [
+            "house_id" => $houseId,
+            "house_url" => "?#addresses.houses&houseId={$houseId}",
+            "domophones_list_url" => "?#addresses.domophones",
+            "count" => count($rows),
+            "domophones" => $rows,
+        ];
+    }
+
+    function assistant_tool_blocked_flats($db, array $args): array {
+        $houseId = isset($args["house_id"]) ? (int) $args["house_id"] : 0;
+        $blockType = isset($args["block_type"]) ? trim((string) $args["block_type"]) : "any";
+        $limit = isset($args["limit"]) ? max(5, min(500, (int) $args["limit"])) : 100;
+
+        if ($houseId <= 0) {
+            return ["error" => "invalid_params", "need" => ["house_id"]];
+        }
+
+        $where = "hf.address_house_id = :hid";
+        if ($blockType === "manual") {
+            $where .= " AND hf.manual_block > 0";
+        } elseif ($blockType === "auto") {
+            $where .= " AND hf.auto_block > 0";
+        } elseif ($blockType === "admin") {
+            $where .= " AND hf.admin_block > 0";
+        } else {
+            $where .= " AND (hf.manual_block > 0 OR hf.auto_block > 0 OR hf.admin_block > 0)";
+        }
+
+        $rows = $db->get(
+            "SELECT hf.house_flat_id, hf.address_house_id AS house_id,
+                    CAST(hf.flat AS VARCHAR) AS flat_number, hf.floor,
+                    hf.manual_block, hf.auto_block, hf.admin_block,
+                    hf.contract
+             FROM houses_flats hf
+             WHERE " . $where . "
+             ORDER BY hf.flat
+             LIMIT :lim",
+            ["hid" => $houseId, "lim" => $limit],
+            [],
+            ["silent"]
+        );
+        if ($rows === false) {
+            return ["error" => "db_error"];
+        }
+
+        foreach ($rows as &$r) {
+            $fid = (int) $r["house_flat_id"];
+            $hid = (int) $r["house_id"];
+            $r["_url"] = "?#addresses.subscribers&flatId={$fid}&houseId={$hid}";
+            $reasons = [];
+            if ((int)$r["manual_block"] > 0) $reasons[] = "ручная";
+            if ((int)$r["auto_block"] > 0)   $reasons[] = "авто";
+            if ((int)$r["admin_block"] > 0)  $reasons[] = "административная";
+            $r["block_reasons"] = $reasons;
+        }
+        unset($r);
+
+        return [
+            "house_id" => $houseId,
+            "block_type_filter" => $blockType,
+            "count" => count($rows),
+            "flats" => $rows,
+        ];
+    }
+
+    function assistant_tool_rfid_lookup($db, array $args): array {
+        $rfid = isset($args["rfid"]) ? strtoupper(preg_replace("/[^0-9A-F]/i", "", (string) $args["rfid"])) : "";
+        if (strlen($rfid) < 4) {
+            return ["error" => "invalid_params", "need" => ["rfid (минимум 4 символа)"]];
+        }
+
+        $rows = $db->get(
+            "SELECT r.house_rfid_id, r.rfid, r.access_type, r.access_to,
+                    r.last_seen, r.comments,
+                    CASE WHEN r.access_type = 1 THEN 'абонент'
+                         WHEN r.access_type = 2 THEN 'квартира'
+                         ELSE 'неизвестно' END AS access_type_label
+             FROM houses_rfids r
+             WHERE upper(r.rfid) LIKE :q
+             ORDER BY r.last_seen DESC NULLS LAST
+             LIMIT 20",
+            ["q" => "%" . $rfid . "%"],
+            [],
+            ["silent"]
+        );
+        if ($rows === false) {
+            return ["error" => "db_error"];
+        }
+        if (!count($rows)) {
+            return ["error" => "rfid_not_found", "rfid" => $rfid];
+        }
+
+        foreach ($rows as &$r) {
+            $accessType = (int) $r["access_type"];
+            $accessTo   = (int) $r["access_to"];
+
+            if ($accessType === 1) {
+                $sub = $db->get(
+                    "SELECT m.id AS phone, m.subscriber_full AS name, m.house_subscriber_id
+                     FROM houses_subscribers_mobile m WHERE m.house_subscriber_id = :sid LIMIT 1",
+                    ["sid" => $accessTo],
+                    [],
+                    ["silent", "singlify"]
+                );
+                if (is_array($sub)) {
+                    $r["owner_phone"] = $sub["phone"];
+                    $r["owner_name"]  = $sub["name"];
+                    $r["owner_subscriber_id"] = $sub["house_subscriber_id"];
+                    $r["owner_url"] = "?#addresses.subscriberDevices&subscriberId=" . $sub["house_subscriber_id"];
+                }
+            } elseif ($accessType === 2) {
+                $flat = $db->get(
+                    "SELECT hf.house_flat_id, hf.address_house_id AS house_id,
+                            CAST(hf.flat AS VARCHAR) AS flat_number, ah.house_full
+                     FROM houses_flats hf
+                     JOIN addresses_houses ah ON ah.address_house_id = hf.address_house_id
+                     WHERE hf.house_flat_id = :fid LIMIT 1",
+                    ["fid" => $accessTo],
+                    [],
+                    ["silent", "singlify"]
+                );
+                if (is_array($flat)) {
+                    $r["flat_number"] = $flat["flat_number"];
+                    $r["flat_house_full"] = $flat["house_full"];
+                    $r["flat_url"] = "?#addresses.subscribers&flatId=" . $flat["house_flat_id"] . "&houseId=" . $flat["house_id"];
+                    $r["keys_url"] = "?#addresses.keys&query=" . urlencode($r["rfid"]);
+                }
+            }
+
+            if ($r["last_seen"]) {
+                $r["last_seen_date"] = date("Y-m-d H:i", (int) $r["last_seen"]);
+            }
+        }
+        unset($r);
+
+        return [
+            "rfid_query" => $rfid,
+            "count" => count($rows),
+            "keys" => $rows,
+        ];
+    }
+
+    function assistant_tool_all_houses_list($db, array $args): array {
+        $search = isset($args["search"]) ? trim((string) $args["search"]) : "";
+        $limit = isset($args["limit"]) ? max(10, min(500, (int) $args["limit"])) : 100;
+
+        $where = "1=1";
+        $binds = ["lim" => $limit];
+        if ($search !== "") {
+            $where = "ah.house_full ILIKE :q";
+            $binds["q"] = "%" . $search . "%";
+        }
+
+        $rows = $db->get(
+            "SELECT ah.address_house_id AS house_id, ah.house_full,
+                    COUNT(hf.house_flat_id) AS flats_count,
+                    COUNT(DISTINCT fs.house_subscriber_id) AS subscribers_count
+             FROM addresses_houses ah
+             LEFT JOIN houses_flats hf ON hf.address_house_id = ah.address_house_id
+             LEFT JOIN houses_flats_subscribers fs ON fs.house_flat_id = hf.house_flat_id
+             WHERE " . $where . "
+             GROUP BY ah.address_house_id, ah.house_full
+             ORDER BY ah.house_full
+             LIMIT :lim",
+            $binds,
+            [],
+            ["silent"]
+        );
+        if ($rows === false) {
+            return ["error" => "db_error"];
+        }
+
+        foreach ($rows as &$r) {
+            $r["_url"] = "?#addresses.houses&houseId=" . $r["house_id"];
+        }
+        unset($r);
+
+        return [
+            "search" => $search,
+            "count" => count($rows),
+            "houses" => $rows,
         ];
     }
 }
