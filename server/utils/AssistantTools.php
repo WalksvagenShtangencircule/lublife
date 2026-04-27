@@ -100,6 +100,8 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
                 return assistant_tool_mobile_users_stats($db, $config, $args);
             case "mobile_access_funnel":
                 return assistant_tool_mobile_access_funnel($db, $config, $args);
+            case "active_subscribers_for_house":
+                return assistant_tool_active_subscribers_for_house($db, $args);
             case "subscriber_lookup":
                 return assistant_tool_subscriber_lookup($db, $args);
             case "plog_events_list":
@@ -492,6 +494,72 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
             "until_unix" => $until,
             "windows" => $windows,
             "note" => "Сводка по окнам: учётки и устройства — PostgreSQL; активные по приложению — uniq user_phone в plog при event=4 за каждый интервал.",
+        ];
+    }
+
+    function assistant_tool_active_subscribers_for_house($db, array $args): array {
+        $houseId = isset($args["house_id"]) ? (int) $args["house_id"] : 0;
+        $daysBack = isset($args["days_back"]) ? max(1, min(365, (int) $args["days_back"])) : 30;
+        $limit = isset($args["limit"]) ? max(10, min(500, (int) $args["limit"])) : 100;
+        $onlyWithDevice = !empty($args["only_with_device"]);
+
+        if ($houseId <= 0) {
+            return ["error" => "invalid_params", "need" => ["house_id"]];
+        }
+
+        $since = time() - $daysBack * 86400;
+        $platformMap = [1 => "iOS", 2 => "Android", 3 => "Web"];
+
+        $deviceJoin = $onlyWithDevice ? "INNER" : "LEFT";
+
+        $rows = $db->get(
+            "SELECT DISTINCT ON (fs.house_subscriber_id)
+                fs.house_subscriber_id,
+                m.id AS phone,
+                m.subscriber_full AS name,
+                hf.flat,
+                fs.role,
+                d.platform,
+                d.last_seen,
+                d.version,
+                d.bundle
+             FROM houses_flats_subscribers fs
+             JOIN houses_flats hf ON hf.house_flat_id = fs.house_flat_id
+             JOIN houses_subscribers_mobile m ON m.house_subscriber_id = fs.house_subscriber_id
+             " . $deviceJoin . " JOIN houses_subscribers_devices d ON d.house_subscriber_id = fs.house_subscriber_id
+                AND d.last_seen >= :since
+             WHERE hf.address_house_id = :hid
+             ORDER BY fs.house_subscriber_id, d.last_seen DESC NULLS LAST
+             LIMIT :lim",
+            ["hid" => $houseId, "since" => $since, "lim" => $limit],
+            [],
+            ["silent"]
+        );
+
+        if ($rows === false) {
+            return ["error" => "db_error"];
+        }
+
+        foreach ($rows as &$r) {
+            $r["platform_name"] = isset($r["platform"]) && $r["platform"] ? ($platformMap[(int)$r["platform"]] ?? "Unknown") : null;
+            $r["active"] = isset($r["last_seen"]) && $r["last_seen"] && (int)$r["last_seen"] >= $since;
+            $r["role_name"] = (int)($r["role"] ?? 0) === 0 ? "владелец" : "пользователь";
+            if ($r["last_seen"]) {
+                $r["last_seen_date"] = date("Y-m-d H:i", (int)$r["last_seen"]);
+            }
+        }
+        unset($r);
+
+        $active = array_values(array_filter($rows, fn($r) => $r["active"]));
+        $inactive = array_values(array_filter($rows, fn($r) => !$r["active"]));
+
+        return [
+            "house_id" => $houseId,
+            "days_back" => $daysBack,
+            "total_returned" => count($rows),
+            "active_count" => count($active),
+            "inactive_count" => count($inactive),
+            "subscribers" => $rows,
         ];
     }
 

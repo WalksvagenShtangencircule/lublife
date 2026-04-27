@@ -3,7 +3,7 @@
     "deepseekBaseUrl": "https://api.deepseek.com",
     "model": "deepseek-v4-flash",
     "maxToolIterations": 6,
-    "maxToolCallsPerRequest": 3,
+    "maxToolCallsPerRequest": 6,
     "maxResponseTokens": 520,
     "maxTotalSeconds": 90
 }

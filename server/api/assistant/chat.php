@@ -35,12 +35,12 @@
                 if ($maxIter > 4) {
                     $maxIter = 4;
                 }
-                $maxToolExecTotal = isset($cfg["maxToolCallsPerRequest"]) ? (int) $cfg["maxToolCallsPerRequest"] : 3;
+                $maxToolExecTotal = isset($cfg["maxToolCallsPerRequest"]) ? (int) $cfg["maxToolCallsPerRequest"] : 6;
                 if ($maxToolExecTotal < 1) {
                     $maxToolExecTotal = 1;
                 }
-                if ($maxToolExecTotal > 8) {
-                    $maxToolExecTotal = 8;
+                if ($maxToolExecTotal > 12) {
+                    $maxToolExecTotal = 12;
                 }
                 $maxResponseTokens = isset($cfg["maxResponseTokens"]) ? (int) $cfg["maxResponseTokens"] : 520;
                 if ($maxResponseTokens < 200) {
@@ -392,8 +392,25 @@
                     [
                         "type" => "function",
                         "function" => [
+                            "name" => "active_subscribers_for_house",
+                            "description" => "Список абонентов дома с активностью в мобильном приложении: телефон, ФИО, квартира, платформа (iOS/Android), дата последнего входа, роль. Используй для отчётов «активные абоненты», «кто пользуется приложением», «список жильцов».",
+                            "parameters" => [
+                                "type" => "object",
+                                "properties" => [
+                                    "house_id" => ["type" => "integer", "description" => "ID дома"],
+                                    "days_back" => ["type" => "integer", "description" => "За сколько дней считать активным (по last_seen устройства). По умолчанию 30"],
+                                    "limit" => ["type" => "integer", "description" => "Максимум записей, 10–500. По умолчанию 100"],
+                                    "only_with_device" => ["type" => "boolean", "description" => "true — только те у кого есть зарегистрированное устройство за период"],
+                                ],
+                                "required" => ["house_id"],
+                            ],
+                        ],
+                    ],
+                    [
+                        "type" => "function",
+                        "function" => [
                             "name" => "subscriber_lookup",
-                            "description" => "Данные абонента: ФИО/телефон, привязанные квартиры и дома, мобильные устройства (UA, last_seen), привязанные RFID-ключи.",
+                            "description" => "Данные одного абонента: ФИО/телефон, привязанные квартиры и дома, мобильные устройства (UA, last_seen), привязанные RFID-ключи.",
                             "parameters" => [
                                 "type" => "object",
                                 "properties" => [
