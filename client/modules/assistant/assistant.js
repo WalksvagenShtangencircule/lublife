@@ -76,11 +76,19 @@
 
     /** Загружает и отображает быструю статистику системы в панели дашборда. */
     loadSystemStats: function () {
+        if (!AVAIL("assistant", "stats", "GET")) {
+            $("#assistantStatsCard").hide();
+            return;
+        }
         let $panel = $("#assistantStatsPanel");
         $panel.html("<p class='text-muted mb-0' style='font-size:12px'>Загрузка...</p>");
         QUERY("assistant", "stats", {}, true).
-            fail(() => {
-                $panel.html("<p class='text-muted mb-0' style='font-size:12px'>Не удалось загрузить статистику.</p>");
+            fail(xhr => {
+                if (xhr && xhr.status === 403) {
+                    $("#assistantStatsCard").hide();
+                } else {
+                    $panel.html("<p class='text-muted mb-0' style='font-size:12px'>Нет данных.</p>");
+                }
             }).
             done(r => {
                 let s = r && r.assistantStats && r.assistantStats.stats ? r.assistantStats.stats : null;
@@ -625,7 +633,7 @@
 
             "<div class='col-lg-4 mb-3'>" +
 
-            "<div class='card card-outline card-secondary mb-3'>" +
+            "<div id='assistantStatsCard' class='card card-outline card-secondary mb-3'>" +
             "<div class='card-header py-2 d-flex justify-content-between align-items-center'>" +
             "<h3 class='card-title mb-0' style='font-size:13px'><i class='fas fa-chart-bar mr-1'></i>Система</h3>" +
             "<a href='#' id='assistantStatsRefresh' style='font-size:11px;color:#aab' title='Обновить'><i class='fas fa-sync-alt'></i></a>" +
