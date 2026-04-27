@@ -140,7 +140,7 @@
                     }
 
                     $bud = self::assistantBudgetSeconds($wallDeadline);
-                    $curlT = self::nextCurlTimeout($bud, 5, 16);
+                    $curlT = self::nextCurlTimeout($bud, 5, 55);
                     if ($curlT <= 0) {
                         return self::answerTimeBudget($assistantMeta, $iter);
                     }
@@ -715,7 +715,7 @@
                     "temperature" => 0.2,
                 ];
                 $bud = self::assistantBudgetSeconds($wallDeadline);
-                        $curlT = self::nextCurlTimeout($bud, 4, 12);
+                        $curlT = self::nextCurlTimeout($bud, 4, 40);
                 if ($curlT <= 0) {
                     return null;
                 }
