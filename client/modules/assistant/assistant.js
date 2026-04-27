@@ -532,7 +532,7 @@
             downloadBtn = "<div style='margin-top:8px;padding-top:6px;border-top:1px solid #eaecef;text-align:right'>" +
                 "<a href='#' class='assistant-dl-btn' style='font-size:11px;color:#6c757d;text-decoration:none;' " +
                 "data-text='" + escaped + "'>" +
-                "<i class='fas fa-download mr-1'></i>Скачать TXT</a></div>";
+                "<i class='fas fa-file-code mr-1'></i>Скачать HTML</a></div>";
         }
 
         $box.append(
@@ -680,13 +680,40 @@
         });
         $("#mainForm").off("click.assistantDl").on("click.assistantDl", ".assistant-dl-btn", function (e) {
             e.preventDefault();
-            let text = $(this).attr("data-text") || "";
-            text = text.replace(/&#39;/g, "'");
-            let blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+            let md = ($(this).attr("data-text") || "").replace(/&#39;/g, "'");
+            let bodyHtml = modules.assistant.renderMarkdown(md);
+            let ts = new Date().toLocaleString("ru-RU");
+            let html = "<!DOCTYPE html><html lang='ru'><head><meta charset='UTF-8'>" +
+                "<title>Отчёт SmartAccess — " + ts + "</title>" +
+                "<style>" +
+                "body{font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#212529;background:#fff;margin:40px auto;max-width:960px;padding:0 24px}" +
+                "h1,h2,h3,h4{color:#2c3e50;margin-top:1.2em}" +
+                "h1{font-size:1.5em;border-bottom:2px solid #2e3f7c;padding-bottom:6px}" +
+                "h2{font-size:1.25em;border-bottom:1px solid #dee2e6;padding-bottom:4px}" +
+                "table{border-collapse:collapse;width:100%;margin:12px 0;font-size:13px}" +
+                "th{background:#2e3f7c;color:#fff;padding:7px 10px;text-align:left;white-space:nowrap}" +
+                "td{padding:6px 10px;border-bottom:1px solid #dee2e6;vertical-align:top}" +
+                "tr:nth-child(even) td{background:#f8f9fa}" +
+                "tr:hover td{background:#e8f0fb}" +
+                "code,pre{background:#f4f4f4;border-radius:4px;font-size:12px}" +
+                "pre{padding:10px;overflow:auto}" +
+                "code{padding:1px 4px}" +
+                "ul,ol{padding-left:20px}" +
+                "li{margin-bottom:3px}" +
+                "a{color:#2e3f7c}" +
+                "hr{border:none;border-top:1px solid #dee2e6;margin:16px 0}" +
+                ".footer{margin-top:32px;font-size:11px;color:#aaa;border-top:1px solid #eee;padding-top:8px}" +
+                "</style></head><body>" +
+                "<h1>Отчёт SmartAccess</h1>" +
+                "<p style='font-size:12px;color:#888;margin-bottom:20px'>Сформировано: " + ts + "</p>" +
+                bodyHtml +
+                "<div class='footer'>SmartAccess &mdash; аналитический отчёт ИИ-ассистента</div>" +
+                "</body></html>";
+            let blob = new Blob([html], { type: "text/html;charset=utf-8" });
             let url = URL.createObjectURL(blob);
             let a = document.createElement("a");
             a.href = url;
-            a.download = "assistant-" + new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-") + ".txt";
+            a.download = "report-" + new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-") + ".html";
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);

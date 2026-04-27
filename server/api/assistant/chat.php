@@ -41,12 +41,12 @@
                 if ($maxToolExecTotal > 25) {
                     $maxToolExecTotal = 25;
                 }
-                $maxResponseTokens = isset($cfg["maxResponseTokens"]) ? (int) $cfg["maxResponseTokens"] : 1200;
+                $maxResponseTokens = isset($cfg["maxResponseTokens"]) ? (int) $cfg["maxResponseTokens"] : 4096;
                 if ($maxResponseTokens < 200) {
                     $maxResponseTokens = 200;
                 }
-                if ($maxResponseTokens > 2000) {
-                    $maxResponseTokens = 2000;
+                if ($maxResponseTokens > 8192) {
+                    $maxResponseTokens = 8192;
                 }
                 /** Абсолютный дедлайн wall-clock для всего POST (сек), по умолчанию ~1 минута. */
                 $wallDeadline = microtime(true) + self::assistantMaxWallSeconds($cfg);
