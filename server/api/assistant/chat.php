@@ -13,6 +13,7 @@
         class chat extends api {
 
             public static function POST($params) {
+                set_time_limit(120);
                 require_once __DIR__ . "/../../utils/AssistantTools.php";
 
                 $cfg = @$params["_config"]["assistant"];
@@ -26,13 +27,30 @@
 
                 $baseUrl = isset($cfg["deepseekBaseUrl"]) ? rtrim(trim((string) $cfg["deepseekBaseUrl"]), "/") : "https://api.deepseek.com";
                 $model = isset($cfg["model"]) ? trim((string) $cfg["model"]) : "deepseek-chat";
-                $maxIter = isset($cfg["maxToolIterations"]) ? (int) $cfg["maxToolIterations"] : 8;
+                $maxIter = isset($cfg["maxToolIterations"]) ? (int) $cfg["maxToolIterations"] : 4;
                 if ($maxIter < 1) {
                     $maxIter = 1;
                 }
-                if ($maxIter > 12) {
-                    $maxIter = 12;
+                // Много итераций × долгий curl = минуты ожидания; для UX держим потолок низким.
+                if ($maxIter > 4) {
+                    $maxIter = 4;
                 }
+                $maxToolExecTotal = isset($cfg["maxToolCallsPerRequest"]) ? (int) $cfg["maxToolCallsPerRequest"] : 3;
+                if ($maxToolExecTotal < 1) {
+                    $maxToolExecTotal = 1;
+                }
+                if ($maxToolExecTotal > 8) {
+                    $maxToolExecTotal = 8;
+                }
+                $maxResponseTokens = isset($cfg["maxResponseTokens"]) ? (int) $cfg["maxResponseTokens"] : 520;
+                if ($maxResponseTokens < 200) {
+                    $maxResponseTokens = 200;
+                }
+                if ($maxResponseTokens > 1200) {
+                    $maxResponseTokens = 1200;
+                }
+                /** Абсолютный дедлайн wall-clock для всего POST (сек), по умолчанию ~1 минута. */
+                $wallDeadline = microtime(true) + self::assistantMaxWallSeconds($cfg);
 
                 $messages = @$params["messages"];
                 if (!is_array($messages) || !count($messages)) {
@@ -57,7 +75,8 @@
                         "Счёт квартир: flats_count. Мобильные учётки и активность приложения в plog: mobile_users_stats. " .
                         "Если просят воронку сразу за **несколько периодов** (например 7 и 30 дней) — один вызов **mobile_access_funnel** (house_id + periods_days), не делай десяток одинаковых вызовов. " .
                         "Карточка абонента (квартиры, устройства, ключи): subscriber_lookup. " .
-                        "Что открывалось и когда: plog_events_list (по дому; узкий фильтр по абоненту — house_subscriber_id).",
+                        "Что открывалось и когда: plog_events_list (по дому; узкий фильтр по абоненту — house_subscriber_id). " .
+                        "Запрос «паспорт дома» за 7 дней: за один проход вызови flats_count, затем mobile_access_funnel(house_id, periods_days:[7]) и при необходимости plog_events_list с умеренным limit; не дублируй одинаковые вызовы.",
                 ]);
 
                 $messages = self::sanitizeMessages($messages);
@@ -65,22 +84,32 @@
                     return api::ANSWER(false, "badRequest");
                 }
 
-                $tools = self::toolDefinitions();
                 $db = $params["_db"];
                 $config = $params["_config"];
+
+                $fast = self::tryFastHousePassport($messages, $db, $config);
+                if (is_array($fast)) {
+                    return api::ANSWER($fast, "assistantChat");
+                }
+
+                $tools = self::toolDefinitions();
 
                 $iter = 0;
                 $assistantMeta = [];
                 $toolCallLoop = [];
                 $rawMarkupLoops = 0;
+                $toolExecTotal = 0;
 
                 while ($iter < $maxIter) {
                     $iter++;
-                    $forceNoTools = ($iter >= $maxIter - 1);
+                    // Только на последней итерации отключаем инструменты. Раньше было ($iter >= $maxIter - 1) — тогда
+                    // при maxIter=5 инструменты работали лишь на шагах 1–3, а «паспорт дома» не успевал собраться.
+                    $forceNoTools = ($iter >= $maxIter);
                     $payload = [
                         "model" => $model,
                         "messages" => $messages,
                         "temperature" => 0.2,
+                        "max_tokens" => $maxResponseTokens,
                     ];
                     if (!$forceNoTools) {
                         $payload["tools"] = $tools;
@@ -90,8 +119,16 @@
                         $payload["tool_choice"] = "none";
                     }
 
-                    $raw = self::httpJson("POST", $baseUrl . "/chat/completions", $apiKey, $payload);
+                    $bud = self::assistantBudgetSeconds($wallDeadline);
+                    $curlT = self::nextCurlTimeout($bud, 5, 16);
+                    if ($curlT <= 0) {
+                        return self::answerTimeBudget($assistantMeta, $iter);
+                    }
+                    $raw = self::httpJson("POST", $baseUrl . "/chat/completions", $apiKey, $payload, $curlT);
                     if ($raw === null) {
+                        if (self::assistantBudgetSeconds($wallDeadline) < 2.0) {
+                            return self::answerTimeBudget($assistantMeta, $iter);
+                        }
                         return api::ANSWER([
                             "reply" => "",
                             "error" => "deepseek_unreachable",
@@ -122,16 +159,31 @@
                     // Раньше мы требовали подстроку "DSML" или finish=tool_calls — из-за этого инструменты не выполнялись.
                     if (is_array($toolCalls) && count($toolCalls)) {
                         if ($forceNoTools) {
-                            // Модель продолжает просить инструменты даже на финальном проходе.
-                            // Добавляем жёсткую подсказку и делаем ещё одну попытку без tools.
+                            // Раньше здесь был continue — на последней итерации ($iter === $maxIter) цикл while
+                            // уже не выполняется снова (iter < maxIter ложно), и ответ терялся → buildFallbackFromMeta.
                             $messages[] = [
                                 "role" => "system",
                                 "content" => "Новых вызовов инструментов больше делать нельзя. Ответь пользователю итогом на основании уже полученных результатов инструментов.",
                             ];
-                            continue;
+                            return api::ANSWER([
+                                "reply" => self::buildFallbackFromMeta($assistantMeta),
+                                "iterations" => $iter,
+                                "meta" => $assistantMeta,
+                                "fallback" => true,
+                            ], "assistantChat");
                         }
                         $messages[] = $msg;
                         foreach ($toolCalls as $tc) {
+                            if ($toolExecTotal >= $maxToolExecTotal) {
+                                return api::ANSWER([
+                                    "reply" => self::buildFallbackFromMeta($assistantMeta) .
+                                        "\n\n— Лимит быстрых инструментов достигнут. Уточните запрос (дом, абонент, период), чтобы ответ пришёл быстрее.",
+                                    "iterations" => $iter,
+                                    "meta" => $assistantMeta,
+                                    "fallback" => true,
+                                    "tool_limit" => true,
+                                ], "assistantChat");
+                            }
                             $id = @$tc["id"];
                             $fn = "";
                             $args = [];
@@ -157,7 +209,16 @@
                                 ];
                                 continue;
                             }
-                            $result = assistant_tools_run((string) $fn, $args, $db, $config);
+                            if (self::assistantBudgetSeconds($wallDeadline) < 4.0) {
+                                $result = [
+                                    "error" => "server_time_budget",
+                                    "tool" => $fn,
+                                    "message" => "Лимит времени ответа сервера: инструмент не выполнен.",
+                                ];
+                            } else {
+                                $result = assistant_tools_run((string) $fn, $args, $db, $config);
+                            }
+                            $toolExecTotal++;
                             $assistantMeta[] = ["tool" => $fn, "args" => $args, "result" => $result];
                             $messages[] = [
                                 "role" => "tool",
@@ -171,7 +232,7 @@
                     $content = isset($msg["content"]) ? (string) $msg["content"] : "";
                     if (self::containsRawToolMarkup($content)) {
                         $rawMarkupLoops++;
-                        if ($rawMarkupLoops >= 2 || $iter >= $maxIter - 1) {
+                        if ($rawMarkupLoops >= 2) {
                             $fallback = self::buildFallbackFromMeta($assistantMeta);
                             return api::ANSWER([
                                 "reply" => $fallback,
@@ -191,6 +252,14 @@
                             "content" => "Не выводи DSML/XML/служебные теги (function_calls/function_results/result/parameter). " .
                                 "Дай только финальный ответ пользователю обычным русским текстом, используя уже полученные результаты инструментов.",
                         ];
+                        if ($iter >= $maxIter) {
+                            return api::ANSWER([
+                                "reply" => self::buildFallbackFromMeta($assistantMeta),
+                                "iterations" => $iter,
+                                "meta" => $assistantMeta,
+                                "fallback" => true,
+                            ], "assistantChat");
+                        }
                         continue;
                     }
                     $content = self::stripDsmlMarkup($content);
@@ -221,9 +290,9 @@
              */
             private static function sanitizeMessages(array $messages): array {
                 $out = [];
-                /** Контекст до 10 реплик user/assistant + system; бюджет символов под длинные ответы */
-                $maxChars = 36000;
-                $maxPerMessage = 6000;
+                /** Контекст короче для снижения задержки ответа модели. */
+                $maxChars = 18000;
+                $maxPerMessage = 3500;
                 $total = 0;
 
                 foreach ($messages as $m) {
@@ -421,11 +490,65 @@
                 ];
             }
 
+            /** Общий лимит времени на весь запрос assistant/chat (сек). */
+            private static function assistantMaxWallSeconds(array $cfg): float {
+                $v = isset($cfg["maxTotalSeconds"]) ? (float) $cfg["maxTotalSeconds"] : 24.0;
+                if ($v < 10.0) {
+                    $v = 10.0;
+                }
+                if ($v > 45.0) {
+                    $v = 45.0;
+                }
+                return $v;
+            }
+
+            private static function assistantBudgetSeconds(float $deadline): float {
+                $b = $deadline - microtime(true);
+                return $b > 0 ? $b : 0.0;
+            }
+
+            /**
+             * Сколько секунд отдать одному HTTP к DeepSeek (остаток бюджета минус запас).
+             *
+             * @return int 0 — бюджета не хватает, вызывать API не нужно
+             */
+            private static function nextCurlTimeout(float $budgetSeconds, int $minimum, int $cap): int {
+                if ($budgetSeconds < (float) $minimum + 1.0) {
+                    return 0;
+                }
+                $t = (int) floor($budgetSeconds - 1.0);
+                if ($t < $minimum) {
+                    return 0;
+                }
+                return min($cap, $t);
+            }
+
+            /**
+             * @param array<int, array<string, mixed>> $assistantMeta
+             */
+            private static function answerTimeBudget(array $assistantMeta, int $iter): array {
+                if (count($assistantMeta)) {
+                    return api::ANSWER([
+                        "reply" => self::buildFallbackFromMeta($assistantMeta) .
+                            "\n\n— Ответ обрезан по лимиту времени сервера (~1 мин). Сузьте запрос (конкретный house_id, короткий период, меньше пунктов).",
+                        "iterations" => $iter,
+                        "meta" => $assistantMeta,
+                        "fallback" => true,
+                        "time_budget" => true,
+                    ], "assistantChat");
+                }
+                return api::ANSWER([
+                    "reply" => "Превышено время ожидания: сеть или модель отвечают слишком долго. Повторите с более коротким периодом.",
+                    "error" => "assistant_time_budget",
+                    "iterations" => $iter,
+                ], "assistantChat");
+            }
+
             /**
              * @param array<string, mixed> $body
              * @return array<string, mixed>|null
              */
-            private static function httpJson(string $method, string $url, string $apiKey, array $body) {
+            private static function httpJson(string $method, string $url, string $apiKey, array $body, int $timeoutSec = 40, int $connectTimeoutSec = 8) {
                 $json = json_encode($body, JSON_UNESCAPED_UNICODE);
                 $ch = curl_init($url);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -435,8 +558,8 @@
                     "Authorization: Bearer " . $apiKey,
                 ]);
                 curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 120);
-                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
+                curl_setopt($ch, CURLOPT_TIMEOUT, max(5, $timeoutSec));
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, max(3, $connectTimeoutSec));
                 $resp = curl_exec($ch);
                 $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 curl_close($ch);
@@ -446,6 +569,41 @@
                 }
                 $dec = json_decode($resp, true);
                 return is_array($dec) ? $dec : null;
+            }
+
+            /**
+             * Один запрос к модели без инструментов (итог после инструментов или «залипания» на последнем шаге цикла).
+             *
+             * @param array<int, array<string, mixed>> $messages
+             */
+            private static function requestTextOnlyCompletion(string $baseUrl, string $apiKey, string $model, array $messages, float $wallDeadline): ?string {
+                // Без поля tools — модель не сможет вызвать функции; tool_choice без списка tools у части API даёт ошибку.
+                $payload = [
+                    "model" => $model,
+                    "messages" => $messages,
+                    "temperature" => 0.2,
+                ];
+                $bud = self::assistantBudgetSeconds($wallDeadline);
+                        $curlT = self::nextCurlTimeout($bud, 4, 12);
+                if ($curlT <= 0) {
+                    return null;
+                }
+                $raw = self::httpJson("POST", $baseUrl . "/chat/completions", $apiKey, $payload, $curlT);
+                if ($raw === null) {
+                    return null;
+                }
+                $choice = @$raw["choices"][0];
+                if (!$choice || !is_array(@$choice["message"])) {
+                    return null;
+                }
+                $msg = $choice["message"];
+                $text = isset($msg["content"]) && is_string($msg["content"]) ? (string) $msg["content"] : "";
+                $text = self::stripDsmlMarkup($text);
+                $trim = trim($text);
+                if ($trim !== "") {
+                    return $trim;
+                }
+                return null;
             }
 
             /**
@@ -460,14 +618,20 @@
                 }
                 $calls = [];
                 // Универсальный разбор: ищем каждый invoke-блок и параметры внутри него, не опираясь жёстко на spacing DSML.
-                if (!preg_match_all('/invoke\\s+name=\"([a-zA-Z0-9_]+)\"\\s*>(.*?)\\/\\s*invoke\\s*>/isu', $content, $invokes, PREG_SET_ORDER)) {
-                    return [];
+                if (!preg_match_all('/<\\s*invoke\\s+name=\"([a-zA-Z0-9_]+)\"\\s*>(.*?)<\\s*\\/\\s*invoke\\s*>/isu', $content, $invokes, PREG_SET_ORDER)) {
+                    // Совместимость со старым DSML-представлением без угловой скобки в начале.
+                    if (!preg_match_all('/invoke\\s+name=\"([a-zA-Z0-9_]+)\"\\s*>(.*?)\\/\\s*invoke\\s*>/isu', $content, $invokes, PREG_SET_ORDER)) {
+                        return [];
+                    }
                 }
                 foreach ($invokes as $inv) {
                     $name = (string) $inv[1];
                     $body = (string) $inv[2];
                     $args = [];
-                    if (preg_match_all('/parameter\\s+name=\"([a-zA-Z0-9_]+)\"([^>]*)>(.*?)\\/\\s*parameter\\s*>/isu', $body, $params, PREG_SET_ORDER)) {
+                    if (!preg_match_all('/<\\s*parameter\\s+name=\"([a-zA-Z0-9_]+)\"([^>]*)>(.*?)<\\s*\\/\\s*parameter\\s*>/isu', $body, $params, PREG_SET_ORDER)) {
+                        preg_match_all('/parameter\\s+name=\"([a-zA-Z0-9_]+)\"([^>]*)>(.*?)\\/\\s*parameter\\s*>/isu', $body, $params, PREG_SET_ORDER);
+                    }
+                    if (count($params)) {
                         foreach ($params as $p) {
                             $k = (string) $p[1];
                             $attrs = (string) $p[2];
@@ -529,7 +693,7 @@
                 // Удаляем DSML-блоки целиком, если вдруг модель добавила их в финальный ответ.
                 $out = preg_replace('/<\\|\\s*DSML\\s*\\|\\s*function_calls\\s*>.*?<\\|\\s*\\/\\s*DSML\\s*\\|\\s*function_calls\\s*>/isu', '', $out);
                 // Подстраховка на "голые" invoke/parameter без внешних тегов.
-                $out = preg_replace('/invoke\\s+name=\"[a-zA-Z0-9_]+\"\\s*>.*?\\/\\s*invoke\\s*>/isu', '', $out);
+                $out = preg_replace('/<\\s*invoke\\s+name=\"[a-zA-Z0-9_]+\"\\s*>.*?<\\s*\\/\\s*invoke\\s*>/isu', '', $out);
                 // Удаляем function_results/result XML-like блоки.
                 $out = preg_replace('/<\\s*function_results\\s*>.*?<\\s*\\/\\s*function_results\\s*>/isu', '', $out);
                 $out = preg_replace('/<\\s*result\\s*>.*?<\\s*\\/\\s*result\\s*>/isu', '', $out);
@@ -670,6 +834,136 @@
                     return "—";
                 }
                 return gmdate("Y-m-d H:i", $ts) . " UTC";
+            }
+
+            /**
+             * Быстрый путь для сценария "паспорт дома" (house_id + период):
+             * без обращения к LLM, чтобы не ждать несколько итераций/сетевых round-trip.
+             *
+             * @param array<int, array<string, mixed>> $messages
+             * @return array<string, mixed>|null
+             */
+            private static function tryFastHousePassport(array $messages, $db, array $config): ?array {
+                $userText = "";
+                for ($i = count($messages) - 1; $i >= 0; $i--) {
+                    $m = $messages[$i];
+                    if (!is_array($m)) {
+                        continue;
+                    }
+                    if ((string) (@$m["role"]) !== "user") {
+                        continue;
+                    }
+                    $userText = trim((string) (@$m["content"] ?: ""));
+                    if ($userText !== "") {
+                        break;
+                    }
+                }
+                if ($userText === "") {
+                    return null;
+                }
+                if (!preg_match('/паспорт\\s+дома/iu', $userText)) {
+                    return null;
+                }
+                if (!preg_match('/house_id\\s*=\\s*(\\d+)/i', $userText, $hm)) {
+                    return null;
+                }
+
+                $houseId = (int) $hm[1];
+                if ($houseId <= 0) {
+                    return null;
+                }
+
+                $days = 7;
+                if (preg_match('/период\\s*[:=]?\\s*(?:последние\\s*)?(\\d+)\\s*д/iu', $userText, $dm)) {
+                    $days = (int) $dm[1];
+                }
+                if ($days < 1) {
+                    $days = 1;
+                }
+                if ($days > 60) {
+                    $days = 60;
+                }
+
+                $until = time();
+                $since = $until - $days * 86400;
+
+                $flats = assistant_tools_run("flats_count", [
+                    "house_id" => $houseId,
+                ], $db, $config);
+                $funnel = assistant_tools_run("mobile_access_funnel", [
+                    "house_id" => $houseId,
+                    "periods_days" => [$days],
+                    "until_unix" => $until,
+                ], $db, $config);
+                $events = assistant_tools_run("plog_events_list", [
+                    "house_id" => $houseId,
+                    "since_unix" => $since,
+                    "until_unix" => $until,
+                    "limit" => 25,
+                ], $db, $config);
+
+                $meta = [
+                    ["tool" => "flats_count", "args" => ["house_id" => $houseId], "result" => $flats],
+                    ["tool" => "mobile_access_funnel", "args" => ["house_id" => $houseId, "periods_days" => [$days], "until_unix" => $until], "result" => $funnel],
+                    ["tool" => "plog_events_list", "args" => ["house_id" => $houseId, "since_unix" => $since, "until_unix" => $until, "limit" => 25], "result" => $events],
+                ];
+
+                $lines = [];
+                $lines[] = "Паспорт дома #" . $houseId . " за " . $days . " дн. (" . self::fmtUnix($since) . " — " . self::fmtUnix($until) . ")";
+                $lines[] = "";
+
+                if (!isset($flats["error"])) {
+                    $fc = isset($flats["flats_count"]) ? (int) $flats["flats_count"] : 0;
+                    $lines[] = "1) Квартиры";
+                    $lines[] = "• Всего квартир: " . $fc . ".";
+                } else {
+                    $lines[] = "1) Квартиры";
+                    $lines[] = "• Ошибка: " . (string) $flats["error"] . ".";
+                }
+
+                $lines[] = "";
+                $lines[] = "2) Мобильная воронка";
+                $window = null;
+                if (isset($funnel["windows"]) && is_array($funnel["windows"]) && count($funnel["windows"])) {
+                    $window = $funnel["windows"][0];
+                }
+                if (is_array($window) && !isset($window["error"])) {
+                    $acc = isset($window["pg_mobile_subscribers_distinct"]) ? (int) $window["pg_mobile_subscribers_distinct"] : 0;
+                    $dev = isset($window["pg_subscribers_with_device_row"]) ? (int) $window["pg_subscribers_with_device_row"] : 0;
+                    $act = isset($window["plog_distinct_app_phones_event4"]) && $window["plog_distinct_app_phones_event4"] !== null
+                        ? (int) $window["plog_distinct_app_phones_event4"] : null;
+                    $lines[] = "• Учёток: " . $acc . ".";
+                    $lines[] = "• С устройствами: " . $dev . ".";
+                    $lines[] = "• Активных в plog (event=4): " . ($act === null ? "н/д" : (string) $act) . ".";
+                } else {
+                    $lines[] = "• Ошибка: " . (is_array($window) && isset($window["error"]) ? (string) $window["error"] : "данные недоступны") . ".";
+                }
+
+                $lines[] = "";
+                $lines[] = "3) События доступа (plog)";
+                if (!isset($events["error"])) {
+                    $ret = isset($events["returned"]) ? (int) $events["returned"] : 0;
+                    $lines[] = "• Найдено событий: " . $ret . ".";
+                    if ($ret > 0 && isset($events["events"][0]) && is_array($events["events"][0])) {
+                        $e0 = $events["events"][0];
+                        $lines[] = "• Последнее событие: " .
+                            (isset($e0["event_name_ru"]) ? (string) $e0["event_name_ru"] : "событие") .
+                            ", flat_id=" . (isset($e0["flat_id"]) ? (int) $e0["flat_id"] : 0) .
+                            ", ts=" . (isset($e0["timestamp_unix"]) ? self::fmtUnix((int) $e0["timestamp_unix"]) : "—") . ".";
+                    }
+                } else {
+                    $lines[] = "• Ошибка: " . (string) $events["error"] . ".";
+                }
+
+                $lines[] = "";
+                $lines[] = "Источник: быстрый профиль отчёта (без LLM), чтобы не ждать длинный цикл модели.";
+
+                return [
+                    "reply" => implode("\n", $lines),
+                    "iterations" => 0,
+                    "meta" => $meta,
+                    "fast_path" => "house_passport",
+                ];
             }
 
             public static function index() {

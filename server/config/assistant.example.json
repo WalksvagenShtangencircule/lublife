@@ -1,6 +1,9 @@
 {
     "deepseekApiKey": "sk-замените_на_ключ",
     "deepseekBaseUrl": "https://api.deepseek.com",
-    "model": "deepseek-chat",
-    "maxToolIterations": 5
+    "model": "deepseek-v4-flash",
+    "maxToolIterations": 6,
+    "maxToolCallsPerRequest": 3,
+    "maxResponseTokens": 520,
+    "maxTotalSeconds": 90
 }

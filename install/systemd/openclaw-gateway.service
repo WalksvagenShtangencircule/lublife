@@ -1,0 +1,17 @@
+[Unit]
+Description=OpenClaw Gateway
+After=network.target
+
+[Service]
+Type=simple
+User=tech
+WorkingDirectory=/opt/openclaw
+ExecStart=/usr/bin/node /opt/openclaw/openclaw.mjs gateway
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=openclaw-gateway
+
+[Install]
+WantedBy=multi-user.target
