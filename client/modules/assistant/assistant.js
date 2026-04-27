@@ -409,13 +409,50 @@
             always(loadingDone);
     },
 
+    renderMarkdown: function (text) {
+        if (window.remarkable && window.remarkable.Remarkable) {
+            try {
+                let md = new window.remarkable.Remarkable({ html: false, breaks: true });
+                return md.render(text);
+            } catch (e) {}
+        }
+        return escapeHTML(text).replace(/\n/g, "<br>");
+    },
+
     appendBubble: function (role, text) {
-        let cls = role === "user" ? "bg-light border" : "bg-primary text-white";
         let $box = $("#assistantThread");
-        let safe = escapeHTML(text).replace(/\n/g, "<br>");
+        let isUser = role === "user";
+        let bubbleStyle, wrapStyle;
+
+        if (isUser) {
+            bubbleStyle = "background:#2c3e50;color:#ffffff;border-radius:12px 12px 4px 12px;";
+            wrapStyle = "display:flex;justify-content:flex-end;margin-bottom:10px;";
+        } else {
+            bubbleStyle = "background:#ffffff;color:#2c3e50;border:1px solid #dde3ea;border-radius:12px 12px 12px 4px;";
+            wrapStyle = "display:flex;justify-content:flex-start;margin-bottom:10px;";
+        }
+
+        let contentHtml;
+        if (isUser) {
+            contentHtml = "<div style='white-space:pre-wrap'>" + escapeHTML(text) + "</div>";
+        } else {
+            contentHtml = "<div class='assistant-md-body'>" + modules.assistant.renderMarkdown(text) + "</div>";
+        }
+
+        let downloadBtn = "";
+        if (!isUser && text.length > 800) {
+            let escaped = escapeHTML(text).replace(/'/g, "&#39;");
+            downloadBtn = "<div style='margin-top:8px;padding-top:6px;border-top:1px solid #eaecef;text-align:right'>" +
+                "<a href='#' class='assistant-dl-btn' style='font-size:11px;color:#6c757d;text-decoration:none;' " +
+                "data-text='" + escaped + "'>" +
+                "<i class='fas fa-download mr-1'></i>Скачать TXT</a></div>";
+        }
+
         $box.append(
-            "<div class='mb-2 p-2 rounded " + cls + "' style='max-width:95%;" + (role === "user" ? " margin-left:auto;" : "") + "'>" +
-            safe + "</div>"
+            "<div style='" + wrapStyle + "'>" +
+            "<div style='max-width:90%;padding:10px 14px;font-size:14px;line-height:1.5;" + bubbleStyle + "'>" +
+            contentHtml + downloadBtn +
+            "</div></div>"
         );
         $box.scrollTop($box[0].scrollHeight);
     },
@@ -473,6 +510,26 @@
             page404();
             return;
         }
+        if (!document.getElementById("assistantMdStyles")) {
+            let s = document.createElement("style");
+            s.id = "assistantMdStyles";
+            s.textContent = [
+                ".assistant-md-body h1,.assistant-md-body h2,.assistant-md-body h3{margin:8px 0 4px;font-size:1em;font-weight:700;color:#1a2a3a}",
+                ".assistant-md-body p{margin:0 0 6px}",
+                ".assistant-md-body ul,.assistant-md-body ol{margin:0 0 6px;padding-left:18px}",
+                ".assistant-md-body li{margin-bottom:2px}",
+                ".assistant-md-body table{border-collapse:collapse;width:100%;margin:6px 0;font-size:13px}",
+                ".assistant-md-body th{background:#f0f4f8;color:#2c3e50;padding:5px 8px;border:1px solid #dde3ea;text-align:left}",
+                ".assistant-md-body td{padding:4px 8px;border:1px solid #eaecef;vertical-align:top}",
+                ".assistant-md-body tr:nth-child(even) td{background:#f8fafc}",
+                ".assistant-md-body code{background:#f0f4f8;padding:1px 4px;border-radius:3px;font-size:12px;font-family:monospace}",
+                ".assistant-md-body pre{background:#f0f4f8;padding:8px;border-radius:4px;overflow-x:auto;font-size:12px}",
+                ".assistant-md-body strong{font-weight:700}",
+                ".assistant-md-body hr{border:none;border-top:1px solid #eaecef;margin:8px 0}",
+            ].join("");
+            document.head.appendChild(s);
+        }
+
         $("#mainForm").html(
             "<div class='row'>" +
             "<div class='col-lg-8 mb-3'>" +
@@ -480,7 +537,7 @@
             "<div class='card-header'><h3 class='card-title mb-0'>" + escapeHTML(modules.assistant.cardPageTitle()) + "</h3></div>" +
             "<div class='card-body'>" +
             "<p class='text-muted small'>" + escapeHTML(modules.assistant.cardPageHint()) + "</p>" +
-            "<div id='assistantThread' class='border rounded p-2 mb-2' style='min-height:220px;max-height:55vh;overflow:auto;background:#faf9f7'></div>" +
+            "<div id='assistantThread' class='rounded p-2 mb-2' style='min-height:220px;max-height:55vh;overflow:auto;background:#f4f6f9;border:1px solid #dde3ea'></div>" +
             "<div class='input-group'>" +
             "<textarea id='assistantInput' class='form-control' rows='2' placeholder='" + escapeHTML(i18n("assistant.placeholder")) + "'></textarea>" +
             "<div class='input-group-append'>" +
@@ -518,6 +575,20 @@
                 e.preventDefault();
                 modules.assistant.send();
             }
+        });
+        $("#mainForm").off("click.assistantDl").on("click.assistantDl", ".assistant-dl-btn", function (e) {
+            e.preventDefault();
+            let text = $(this).attr("data-text") || "";
+            text = text.replace(/&#39;/g, "'");
+            let blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement("a");
+            a.href = url;
+            a.download = "assistant-" + new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-") + ".txt";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         });
         loadingDone();
     },

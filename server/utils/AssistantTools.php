@@ -602,13 +602,18 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
         $houseId = isset($args["house_id"]) ? (int) $args["house_id"] : 0;
         $since = isset($args["since_unix"]) ? (int) $args["since_unix"] : 0;
         $until = isset($args["until_unix"]) ? (int) $args["until_unix"] : 0;
-        $limit = isset($args["limit"]) ? min(80, max(5, (int) $args["limit"])) : 40;
+        $limit = isset($args["limit"]) ? min(200, max(5, (int) $args["limit"])) : 40;
         $rfid = isset($args["rfid"]) ? strtoupper(preg_replace("/[^0-9A-F]/i", "", (string) $args["rfid"])) : "";
         $phone = isset($args["phone"]) ? trim((string) $args["phone"]) : "";
         $scopeSubscriberId = isset($args["house_subscriber_id"]) ? (int) $args["house_subscriber_id"] : 0;
+        $daysBack = isset($args["days_back"]) ? max(1, min(90, (int) $args["days_back"])) : 0;
 
-        if ($houseId <= 0 || $since <= 0 || $until <= 0 || $until < $since) {
-            return ["error" => "invalid_params", "need" => ["house_id", "since_unix", "until_unix"]];
+        if ($houseId <= 0) {
+            return ["error" => "invalid_params", "need" => ["house_id"]];
+        }
+        if ($since <= 0 || $until <= 0 || $until < $since) {
+            $until = time();
+            $since = $until - ($daysBack > 0 ? $daysBack : 2) * 86400;
         }
 
         if ($scopeSubscriberId > 0) {
