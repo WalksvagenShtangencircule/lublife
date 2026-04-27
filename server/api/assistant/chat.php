@@ -34,12 +34,12 @@
                 if ($maxIter > 8) {
                     $maxIter = 8;
                 }
-                $maxToolExecTotal = isset($cfg["maxToolCallsPerRequest"]) ? (int) $cfg["maxToolCallsPerRequest"] : 6;
+                $maxToolExecTotal = isset($cfg["maxToolCallsPerRequest"]) ? (int) $cfg["maxToolCallsPerRequest"] : 15;
                 if ($maxToolExecTotal < 1) {
                     $maxToolExecTotal = 1;
                 }
-                if ($maxToolExecTotal > 12) {
-                    $maxToolExecTotal = 12;
+                if ($maxToolExecTotal > 25) {
+                    $maxToolExecTotal = 25;
                 }
                 $maxResponseTokens = isset($cfg["maxResponseTokens"]) ? (int) $cfg["maxResponseTokens"] : 1200;
                 if ($maxResponseTokens < 200) {
@@ -179,12 +179,37 @@
                     // Раньше мы требовали подстроку "DSML" или finish=tool_calls — из-за этого инструменты не выполнялись.
                     if (is_array($toolCalls) && count($toolCalls)) {
                         if ($forceNoTools) {
-                            // Раньше здесь был continue — на последней итерации ($iter === $maxIter) цикл while
-                            // уже не выполняется снова (iter < maxIter ложно), и ответ терялся → buildFallbackFromMeta.
+                            // Модель продолжает запрашивать инструменты несмотря на запрет.
+                            // Добавляем жёсткий системный запрет и делаем один дополнительный
+                            // проход без инструментов, чтобы получить финальный текстовый ответ.
                             $messages[] = [
                                 "role" => "system",
-                                "content" => "Новых вызовов инструментов больше делать нельзя. Ответь пользователю итогом на основании уже полученных результатов инструментов.",
+                                "content" => "СТОП. Инструменты вызывать больше нельзя. " .
+                                    "Сформируй финальный развёрнутый ответ пользователю исключительно " .
+                                    "на основании данных, уже полученных выше. Не запрашивай инструменты.",
                             ];
+                            $bud2 = self::assistantBudgetSeconds($wallDeadline);
+                            $curlT2 = self::nextCurlTimeout($bud2, 5, 55);
+                            if ($curlT2 <= 0) {
+                                return self::answerTimeBudget($assistantMeta, $iter);
+                            }
+                            $raw2 = self::httpJson("POST", $baseUrl . "/chat/completions", $apiKey, [
+                                "model" => $model,
+                                "messages" => $messages,
+                                "temperature" => 0.2,
+                                "max_tokens" => $maxResponseTokens,
+                            ], $curlT2);
+                            $reply2 = "";
+                            if ($raw2 !== null) {
+                                $reply2 = (string) (@$raw2["choices"][0]["message"]["content"] ?? "");
+                            }
+                            if ($reply2 !== "") {
+                                return api::ANSWER([
+                                    "reply" => $reply2,
+                                    "iterations" => $iter + 1,
+                                    "meta" => $assistantMeta,
+                                ], "assistantChat");
+                            }
                             return api::ANSWER([
                                 "reply" => self::buildFallbackFromMeta($assistantMeta),
                                 "iterations" => $iter,
@@ -195,13 +220,35 @@
                         $messages[] = $msg;
                         foreach ($toolCalls as $tc) {
                             if ($toolExecTotal >= $maxToolExecTotal) {
+                                // Лимит инструментов исчерпан — дать модели один финальный проход
+                                // без инструментов чтобы синтезировать ответ по уже собранным данным.
+                                $messages[] = [
+                                    "role" => "system",
+                                    "content" => "СТОП. Лимит вызовов инструментов исчерпан. " .
+                                        "Сформируй финальный развёрнутый ответ пользователю " .
+                                        "исключительно на основе данных, уже полученных выше. Не запрашивай новые инструменты.",
+                                ];
+                                $bud3 = self::assistantBudgetSeconds($wallDeadline);
+                                $curlT3 = self::nextCurlTimeout($bud3, 5, 55);
+                                $reply3 = "";
+                                if ($curlT3 > 0) {
+                                    $raw3 = self::httpJson("POST", $baseUrl . "/chat/completions", $apiKey, [
+                                        "model" => $model,
+                                        "messages" => $messages,
+                                        "temperature" => 0.2,
+                                        "max_tokens" => $maxResponseTokens,
+                                    ], $curlT3);
+                                    if ($raw3 !== null) {
+                                        $reply3 = (string) (@$raw3["choices"][0]["message"]["content"] ?? "");
+                                    }
+                                }
                                 return api::ANSWER([
-                                    "reply" => self::buildFallbackFromMeta($assistantMeta) .
-                                        "\n\n— Лимит быстрых инструментов достигнут. Уточните запрос (дом, абонент, период), чтобы ответ пришёл быстрее.",
+                                    "reply" => $reply3 !== ""
+                                        ? $reply3
+                                        : self::buildFallbackFromMeta($assistantMeta),
                                     "iterations" => $iter,
                                     "meta" => $assistantMeta,
-                                    "fallback" => true,
-                                    "tool_limit" => true,
+                                    "fallback" => $reply3 === "",
                                 ], "assistantChat");
                             }
                             $id = @$tc["id"];
@@ -496,7 +543,7 @@
                         "type" => "function",
                         "function" => [
                             "name" => "rfid_events_in_period",
-                            "description" => "Сколько событий в журнале plog (ClickHouse) по ключу RFID за период unix-времени для дома.",
+                            "description" => "Сколько событий в журнале plog (ClickHouse) по ключу RFID за период для дома. since_unix/until_unix или days_back; по умолчанию последние 7 дней.",
                             "parameters" => [
                                 "type" => "object",
                                 "properties" => [
@@ -504,8 +551,9 @@
                                     "rfid" => ["type" => "string"],
                                     "since_unix" => ["type" => "integer"],
                                     "until_unix" => ["type" => "integer"],
+                                    "days_back" => ["type" => "integer", "description" => "Альтернатива since_unix: сколько дней назад (1–90)"],
                                 ],
-                                "required" => ["house_id", "rfid", "since_unix", "until_unix"],
+                                "required" => ["house_id", "rfid"],
                             ],
                         ],
                     ],
@@ -513,15 +561,17 @@
                         "type" => "function",
                         "function" => [
                             "name" => "flat_activity_in_house",
-                            "description" => "Топ квартир по числу событий plog за период (unix-время).",
+                            "description" => "Топ квартир по числу событий plog за период — находит самые активные квартиры (потенциально аномальные). since_unix/until_unix или days_back; по умолчанию последние 7 дней.",
                             "parameters" => [
                                 "type" => "object",
                                 "properties" => [
                                     "house_id" => ["type" => "integer"],
-                                    "since_unix" => ["type" => "integer"],
-                                    "until_unix" => ["type" => "integer"],
+                                    "since_unix" => ["type" => "integer", "description" => "Начало периода (unix). Если не указан — используется days_back или последние 7 дней"],
+                                    "until_unix" => ["type" => "integer", "description" => "Конец периода (unix). По умолчанию сейчас"],
+                                    "days_back" => ["type" => "integer", "description" => "Альтернатива since_unix: сколько дней назад (1–90)"],
+                                    "top_limit" => ["type" => "integer", "description" => "Сколько квартир в топе, 5–100. По умолчанию 20"],
                                 ],
-                                "required" => ["house_id", "since_unix", "until_unix"],
+                                "required" => ["house_id"],
                             ],
                         ],
                     ],

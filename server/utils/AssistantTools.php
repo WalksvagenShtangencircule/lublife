@@ -229,8 +229,13 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
         $rfid = isset($args["rfid"]) ? strtoupper(preg_replace("/[^0-9A-F]/i", "", (string) $args["rfid"])) : "";
         $since = isset($args["since_unix"]) ? (int) $args["since_unix"] : 0;
         $until = isset($args["until_unix"]) ? (int) $args["until_unix"] : 0;
-        if ($houseId <= 0 || strlen($rfid) < 6 || $since <= 0 || $until <= 0 || $until < $since) {
-            return ["error" => "invalid_params", "need" => ["house_id", "rfid", "since_unix", "until_unix"]];
+        $daysBack = isset($args["days_back"]) ? max(1, min(90, (int) $args["days_back"])) : 0;
+        if ($houseId <= 0 || strlen($rfid) < 4) {
+            return ["error" => "invalid_params", "need" => ["house_id", "rfid"]];
+        }
+        if ($since <= 0 || $until <= 0 || $until < $since) {
+            $until = time();
+            $since = $until - ($daysBack > 0 ? $daysBack : 7) * 86400;
         }
         $flatIds = assistant_tools_flat_ids_for_house($db, $houseId);
         $ff = assistant_tools_flat_filter_sql($flatIds);
@@ -265,8 +270,14 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
         $houseId = isset($args["house_id"]) ? (int) $args["house_id"] : 0;
         $since = isset($args["since_unix"]) ? (int) $args["since_unix"] : 0;
         $until = isset($args["until_unix"]) ? (int) $args["until_unix"] : 0;
-        if ($houseId <= 0 || $since <= 0 || $until <= 0 || $until < $since) {
-            return ["error" => "invalid_params"];
+        $daysBack = isset($args["days_back"]) ? max(1, min(90, (int) $args["days_back"])) : 0;
+        $topLimit = isset($args["top_limit"]) ? max(5, min(100, (int) $args["top_limit"])) : 20;
+        if ($houseId <= 0) {
+            return ["error" => "invalid_params", "need" => ["house_id"]];
+        }
+        if ($since <= 0 || $until <= 0 || $until < $since) {
+            $until = time();
+            $since = $until - ($daysBack > 0 ? $daysBack : 7) * 86400;
         }
         $flatIds = assistant_tools_flat_ids_for_house($db, $houseId);
         $ff = assistant_tools_flat_filter_sql($flatIds);
@@ -279,12 +290,28 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
             and (" . $ff . ")
             group by flat_id
             order by cnt desc
-            limit 20
+            limit " . (int) $topLimit . "
         ";
         $data = assistant_tools_ch_select($config, $q);
         if ($data === null) {
             return ["error" => "clickhouse_unavailable_or_query_failed"];
         }
+        foreach ($data as &$row) {
+            $fid = isset($row["flat_id"]) ? (int) $row["flat_id"] : 0;
+            if ($fid > 0) {
+                $flat = $db->get(
+                    "SELECT hf.house_flat_id, hf.address_house_id AS house_id,
+                            CAST(hf.flat AS VARCHAR) AS flat_number
+                     FROM houses_flats hf WHERE hf.house_flat_id = :fid LIMIT 1",
+                    ["fid" => $fid], [], ["silent", "singlify"]
+                );
+                if (is_array($flat)) {
+                    $row["flat_number"] = $flat["flat_number"];
+                    $row["_url"] = "?#addresses.subscribers&flatId={$fid}&houseId=" . $flat["house_id"];
+                }
+            }
+        }
+        unset($row);
         return ["house_id" => $houseId, "since_unix" => $since, "until_unix" => $until, "top_flats" => $data];
     }
 
