@@ -3,6 +3,9 @@
 
     /** История диалога для контекста (user/assistant). В запрос уходит только хвост CONTEXT_LIMIT. */
     transcript: [],
+    _savedThreadHtml: "",
+    _savedContextHtml: "",
+    _formBuilt: false,
 
     CONTEXT_LIMIT: 6,
 
@@ -597,6 +600,13 @@
             page404();
             return;
         }
+
+        // Сохраняем состояние чата перед возможной перерисовкой
+        if (modules.assistant._formBuilt && document.getElementById("assistantThread")) {
+            modules.assistant._savedThreadHtml  = $("#assistantThread").html();
+            modules.assistant._savedContextHtml = $("#assistantContextPanel").html();
+        }
+
         if (!document.getElementById("assistantMdStyles")) {
             let s = document.createElement("style");
             s.id = "assistantMdStyles";
@@ -650,7 +660,19 @@
 
             "</div></div>"
         );
-        modules.assistant.transcript = [];
+        modules.assistant._formBuilt = true;
+
+        // Восстанавливаем историю чата и контекст если они были сохранены
+        if (modules.assistant._savedThreadHtml) {
+            $("#assistantThread").html(modules.assistant._savedThreadHtml);
+            let $box = $("#assistantThread");
+            $box.scrollTop($box[0].scrollHeight);
+        }
+        if (modules.assistant._savedContextHtml) {
+            $("#assistantContextPanel").html(modules.assistant._savedContextHtml);
+            $("#assistantContextPanel").closest(".card").show();
+        }
+
         modules.assistant.loadSystemStats();
         $("#assistantStatsRefresh").off("click").on("click", e => {
             e.preventDefault();
@@ -719,6 +741,12 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         });
+        // Сохраняем состояние чата при переходе по ссылкам из контекстной панели
+        $("#mainForm").off("click.assistantNav").on("click.assistantNav", "#assistantContextPanel a, .assistant-md-body a", function () {
+            modules.assistant._savedThreadHtml  = $("#assistantThread").html();
+            modules.assistant._savedContextHtml = $("#assistantContextPanel").html();
+        });
+
         loadingDone();
     },
 }).init();
