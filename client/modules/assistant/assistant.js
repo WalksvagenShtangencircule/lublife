@@ -15,18 +15,18 @@
     },
 
     /** Извлекает объекты из rendered HTML ответа ассистента и обновляет контекстную панель. */
-    updateContextPanel: function (replyHtml) {
-        let parser = new DOMParser();
-        let doc = parser.parseFromString(replyHtml, "text/html");
-        let anchors = doc.querySelectorAll("a[href]");
-
+    updateContextPanel: function (markdownText) {
+        // Парсим Markdown напрямую regex-ом — надёжнее чем через remarkable,
+        // который может изменять href (кодировать ?# и т.д.)
         let houses = [], flats = [], subscribers = [], domophones = [], cameras = [];
         let seen = {};
 
-        for (let a of anchors) {
-            let href = (a.getAttribute("href") || "").trim();
-            if (!href.startsWith("?#addresses")) continue;
-            let label = (a.textContent || "").trim();
+        // Ищем все Markdown-ссылки: [текст](href)
+        let re = /\[([^\]]+)\]\((\?#addresses[^)]*)\)/g;
+        let m;
+        while ((m = re.exec(markdownText)) !== null) {
+            let label = m[1].trim();
+            let href  = m[2].trim();
             if (!label || seen[href]) continue;
             seen[href] = true;
 
@@ -491,7 +491,7 @@
                 }
                 let renderedReply = modules.assistant.renderMarkdown(reply || "—");
                 modules.assistant.appendBubble("assistant", reply || "—");
-                modules.assistant.updateContextPanel(renderedReply);
+                modules.assistant.updateContextPanel(reply || "");
             }).
             always(loadingDone);
     },
