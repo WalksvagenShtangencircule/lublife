@@ -25,6 +25,9 @@
         "talk_me_token": "<!-- put your talkMe chat rest Api Token here --!>",
         "phone_pattern": "7 (###) ###-##-##",
         "time_zone": "Europe/Moscow",
+        // Глубина архива по умолчанию (дней) для камер, у которых не задан dvrRetentionDays в карточке.
+        // Если параметр не указан или 0 — используется 7 дней.
+        "archive_fallback_days": 7,
         // guest_access posible values: "turnOnOnly" or "turnOnAndOff"
         "guest_access": "turnOnOnly",
         // How to show cameras in the mobile app. One of: list, tree, userDefined. List(default) - cameras are shown on the map; tree - cameras are shown as a tree structure; userDefined - user has a switch in the common settings
