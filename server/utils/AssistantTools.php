@@ -62,13 +62,15 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
                 return $len;
             }
         );
-        curl_setopt($curl, CURLOPT_POSTFIELDS, trim($query) . " FORMAT JSON");
+        // Для быстрого UX режем долгие CH-запросы жёстче.
+        $body = trim($query) . " SETTINGS max_execution_time = 7, max_result_rows = 300000 FORMAT JSON";
+        curl_setopt($curl, CURLOPT_POSTFIELDS, $body);
         curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
         curl_setopt($curl, CURLOPT_URL, "http://{$host}:{$port}/");
         curl_setopt($curl, CURLOPT_POST, true);
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl, CURLOPT_TIMEOUT, 45);
+        curl_setopt($curl, CURLOPT_TIMEOUT, 10);
         $raw = curl_exec($curl);
         curl_close($curl);
         if (@$headers["x-clickhouse-exception-code"]) {

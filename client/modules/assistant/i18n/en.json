@@ -1,7 +1,9 @@
 {
-    "assistant": "Assistant",
-    "title": "Assistant (DeepSeek)",
-    "hint": "About this SmartAccess server only: addresses, flats, subscribers & app, keys, access events (plog). Not for generic trivia—the assistant uses your DB and ClickHouse.",
+    "assistant": "AI assistant",
+    "pageTitle": "AI assistant",
+    "pageHint": "Work uses only data inside the system.",
+    "title": "AI assistant",
+    "hint": "Work uses only data inside the system.",
     "quick": {
         "title": "Готовые сценарии",
         "hint": "Нажмите ссылку, чтобы сразу отправить стартовый запрос и начать работу.",
@@ -65,7 +67,7 @@
     "deepseekUnreachable": "Could not reach DeepSeek. Check API key and server network.",
     "methods": {
         "assistant": {
-            "_title": "Assistant",
+            "_title": "AI assistant",
             "chat": {
                 "_title": "Assistant chat",
                 "POST": "Send message"

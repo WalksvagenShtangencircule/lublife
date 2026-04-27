@@ -4,7 +4,7 @@
     /** История диалога для контекста (user/assistant). В запрос уходит только хвост CONTEXT_LIMIT. */
     transcript: [],
 
-    CONTEXT_LIMIT: 10,
+    CONTEXT_LIMIT: 6,
 
     t: function (key) {
         let a = lang && lang.assistant ? lang.assistant : null;
@@ -142,8 +142,8 @@
         A.askText(A.t("askHouseSearch"), "", search => {
             loadingStart();
             QUERY("houses", "search", { search: search }, true).
-                fail(() => {
-                    FAIL();
+                fail(xhr => {
+                    FAIL(xhr);
                     A.askNumber(A.t("askHouseIdFallback"), "", callback);
                 }).
                 done(r => {
@@ -196,8 +196,8 @@
         A.askText(A.t("askSubscriberSearch"), "", search => {
             loadingStart();
             QUERY("subscribers", "search", { search: search }, true).
-                fail(() => {
-                    FAIL();
+                fail(xhr => {
+                    FAIL(xhr);
                     A.askText(A.t("askSubscriberIdFallback"), "", sid => {
                         callback(sid);
                     });
@@ -247,8 +247,8 @@
             }
             loadingStart();
             QUERY("subscribers", "searchRf", { search: search }, true).
-                fail(() => {
-                    FAIL();
+                fail(xhr => {
+                    FAIL(xhr);
                     A.askOptionalText(A.t("askRfidOptional"), search, callback);
                 }).
                 done(r => {
@@ -289,6 +289,27 @@
     sendPrompt: function (prompt) {
         $("#assistantInput").val(String(prompt || ""));
         modules.assistant.send();
+    },
+
+    /**
+     * Заголовок левой карточки — строки зашиты в код, без i18n/json: иначе при неизменном ?ver=
+     * в кэше остаётся старый assistant.js с i18n("assistant.title") → «Ассистент (DeepSeek)».
+     */
+    cardPageTitle: function () {
+        let l = typeof lStore === "function" ? lStore("_lang") : "";
+        if (!l && typeof config === "object" && config) {
+            l = config.defaultLanguage || "";
+        }
+        return (l === "en") ? "AI assistant" : "ИИ ассистент";
+    },
+
+    /** Подсказка под заголовком — тоже без JSON, только язык интерфейса. */
+    cardPageHint: function () {
+        let l = typeof lStore === "function" ? lStore("_lang") : "";
+        if (!l && typeof config === "object" && config) {
+            l = config.defaultLanguage || "";
+        }
+        return (l === "en") ? "Work uses only data inside the system." : "Работа ведётся только с данными внутри системы.";
     },
 
     runScenarioWizard: function (key) {
@@ -456,9 +477,9 @@
             "<div class='row'>" +
             "<div class='col-lg-8 mb-3'>" +
             "<div class='card card-outline card-primary h-100'>" +
-            "<div class='card-header'><h3 class='card-title mb-0'>" + escapeHTML(i18n("assistant.title")) + "</h3></div>" +
+            "<div class='card-header'><h3 class='card-title mb-0'>" + escapeHTML(modules.assistant.cardPageTitle()) + "</h3></div>" +
             "<div class='card-body'>" +
-            "<p class='text-muted small'>" + escapeHTML(i18n("assistant.hint")) + "</p>" +
+            "<p class='text-muted small'>" + escapeHTML(modules.assistant.cardPageHint()) + "</p>" +
             "<div id='assistantThread' class='border rounded p-2 mb-2' style='min-height:220px;max-height:55vh;overflow:auto;background:#faf9f7'></div>" +
             "<div class='input-group'>" +
             "<textarea id='assistantInput' class='form-control' rows='2' placeholder='" + escapeHTML(i18n("assistant.placeholder")) + "'></textarea>" +

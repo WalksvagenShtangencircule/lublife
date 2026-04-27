@@ -347,8 +347,18 @@ function handleMobileIntercom(context, extension)
             elseif status == "ANSWER" then
                 -- разговор был; иначе цикл сразу делает второй Dial на тот же контакт — срыв следующего вызова с панели
                 break
-            elseif status == "BUSY" or status == "CONGESTION" or status == "CANCEL" then
+            elseif status == "CANCEL" then
+                -- отмена со стороны вызывающего (панель сбросила)
                 break
+            elseif status == "BUSY" then
+                -- занято / отклонено абонентом — не долбим повтором до общего таймаута
+                break
+            elseif status == "CONGESTION" then
+                -- часто временно после REGISTER или перегрузка медиа — пауза и повтор
+                logDebug(extension .. ": dial CONGESTION, retry after pause")
+                app.Wait(2)
+            elseif status == "NOANSWER" then
+                app.Wait(1)
             end
         else
             app.Wait(0.5)

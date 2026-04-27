@@ -6,266 +6,285 @@
     <title>Вызов с панели</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --ral7021: #3d3f42;
-            --ral-dark: #2a2c2f;
-            --metal-light: #8a8f98;
-            --metal-mid: #5c6068;
-            --metal-dark: #3a3d44;
-            --led-red: #ff2a1a;
-            --led-dim: rgba(255, 42, 26, .22);
+            --glass: rgba(255, 255, 255, .14);
+            --glass-border: rgba(255, 255, 255, .32);
+            --ink: #12081c;
+            --muted: rgba(255, 255, 255, .78);
+            --digit-on: #5cffe8;
+            --digit-dim: rgba(92, 255, 232, .28);
         }
         * { box-sizing: border-box; }
+        @keyframes hue-flow {
+            0% { background-position: 0% 40%; }
+            50% { background-position: 100% 60%; }
+            100% { background-position: 0% 40%; }
+        }
+        @keyframes floaty {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(6%, -4%) scale(1.05); }
+        }
         body {
             margin: 0;
             min-height: 100vh;
-            font-family: system-ui, -apple-system, sans-serif;
-            background:
-                radial-gradient(ellipse 80% 60% at 50% 20%, #2a2d32 0%, #141518 70%);
-            color: #c8c4bc;
+            font-family: "Outfit", system-ui, sans-serif;
+            color: #fff;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px 14px;
+            padding: 24px 16px;
+            background: linear-gradient(
+                130deg,
+                #ff006e 0%,
+                #7b2cbf 22%,
+                #4361ee 48%,
+                #06ffa5 78%,
+                #ffbe0b 100%
+            );
+            background-size: 320% 320%;
+            animation: hue-flow 14s ease-in-out infinite;
         }
-        .wrap { width: 100%; max-width: 340px; }
+        @media (prefers-reduced-motion: reduce) {
+            body { animation: none; background-size: 100% 100%; }
+            .deco-blob { animation: none !important; }
+        }
+        .wrap {
+            position: relative;
+            width: 100%;
+            max-width: 360px;
+        }
+        .deco-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(40px);
+            opacity: .55;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .deco-blob.a {
+            width: 180px;
+            height: 180px;
+            top: -50px;
+            right: -40px;
+            background: #ff5c8a;
+            animation: floaty 9s ease-in-out infinite;
+        }
+        .deco-blob.b {
+            width: 140px;
+            height: 140px;
+            bottom: -30px;
+            left: -30px;
+            background: #48cae4;
+            animation: floaty 11s ease-in-out infinite reverse;
+        }
         .panel {
             position: relative;
-            background:
-                repeating-linear-gradient(
-                    90deg,
-                    transparent 0 2px,
-                    rgba(0,0,0,.03) 2px 3px
-                ),
-                linear-gradient(165deg, #45484e 0%, var(--ral7021) 22%, var(--ral-dark) 100%);
-            border-radius: 4px;
-            padding: 18px 16px 20px;
-            box-shadow:
-                0 16px 48px rgba(0,0,0,.65),
-                inset 0 1px 0 rgba(255,255,255,.12),
-                inset 0 -8px 24px rgba(0,0,0,.4);
-            border: 1px solid #1e2024;
-        }
-        .panel::before,
-        .panel::after {
-            content: '';
-            position: absolute;
-            width: 9px;
-            height: 9px;
-            border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, #6a6e76, #2a2c30 55%, #1a1b1e);
-            box-shadow: inset 0 1px 2px rgba(255,255,255,.15), 0 1px 2px rgba(0,0,0,.5);
-        }
-        .panel::before { top: 8px; left: 8px; }
-        .panel::after { top: 8px; right: 8px; }
-        .screw-bl,
-        .screw-br {
-            position: absolute;
-            width: 9px;
-            height: 9px;
-            border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, #6a6e76, #2a2c30 55%, #1a1b1e);
-            box-shadow: inset 0 1px 2px rgba(255,255,255,.15), 0 1px 2px rgba(0,0,0,.5);
-            bottom: 8px;
-        }
-        .screw-bl { left: 8px; }
-        .screw-br { right: 8px; }
-        h1 {
-            font-size: .95rem;
-            font-weight: 700;
-            margin: 0 0 10px;
-            text-align: center;
-            letter-spacing: .28em;
-            text-transform: uppercase;
-            color: rgba(230, 228, 220, .88);
-            text-shadow: 0 1px 0 rgba(0,0,0,.45);
-        }
-        .speaker-row {
+            z-index: 1;
             display: flex;
+            flex-direction: column;
             align-items: stretch;
-            gap: 10px;
-            margin-bottom: 10px;
+            padding: 26px 20px 22px;
+            border-radius: 28px;
+            background: var(--glass);
+            -webkit-backdrop-filter: blur(22px);
+            backdrop-filter: blur(22px);
+            border: 1px solid var(--glass-border);
+            box-shadow:
+                0 24px 60px rgba(20, 0, 40, .35),
+                inset 0 1px 0 rgba(255, 255, 255, .35);
         }
-        .grille {
-            flex: 1;
-            min-height: 44px;
-            border-radius: 2px;
-            background: #1a1b1e;
-            box-shadow: inset 0 2px 6px rgba(0,0,0,.85);
-            background-image: repeating-linear-gradient(
-                180deg,
-                #25262b 0 3px,
-                #121316 3px 5px
-            );
-            border: 1px solid #0d0e10;
-        }
-        .cam-dot {
-            width: 36px;
-            flex-shrink: 0;
-            border-radius: 50%;
-            background: radial-gradient(circle at 35% 35%, #2a2d35 0%, #0a0b0d 70%);
-            box-shadow: inset 0 2px 5px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.04);
+        .panel-badge {
+            display: inline-flex;
+            align-items: center;
             align-self: center;
-            height: 36px;
+            gap: 6px;
+            padding: 6px 12px;
+            margin: 0 0 14px;
+            border-radius: 999px;
+            font-size: .68rem;
+            font-weight: 700;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, .92);
+            background: rgba(0, 0, 0, .18);
+            border: 1px solid rgba(255, 255, 255, .22);
+        }
+        .panel-badge-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #06ffa5;
+            box-shadow: 0 0 10px #06ffa5;
+        }
+        .panel-head {
+            text-align: center;
+        }
+        h1 {
+            font-size: 1.35rem;
+            font-weight: 800;
+            margin: 0 0 6px;
+            line-height: 1.2;
+            letter-spacing: -.02em;
+            text-shadow: 0 2px 18px rgba(0, 0, 0, .2);
         }
         .sub {
-            font-size: .72rem;
-            opacity: .58;
-            margin: 0 0 10px;
-            text-align: center;
-            line-height: 1.35;
+            font-size: .88rem;
+            font-weight: 500;
+            color: var(--muted);
+            margin: 0 0 18px;
+            line-height: 1.4;
         }
         .display-wrap {
-            background: #0d0e11;
-            border-radius: 2px;
-            padding: 4px 6px;
-            margin-bottom: 14px;
-            box-shadow: inset 0 2px 10px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.04);
+            border-radius: 18px;
+            padding: 3px;
+            margin-bottom: 18px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, .45), rgba(255, 255, 255, .08));
+            box-shadow: 0 12px 28px rgba(0, 0, 0, .18);
         }
         .display {
-            background: #08090a;
-            border-radius: 1px;
-            padding: 10px 12px 12px;
-            font-family: "Orbitron", ui-monospace, monospace;
-            font-size: 1.55rem;
+            border-radius: 15px;
+            padding: 14px 16px;
+            font-family: "JetBrains Mono", ui-monospace, monospace;
+            font-size: 1.7rem;
             font-weight: 600;
-            letter-spacing: .22em;
+            letter-spacing: .14em;
             text-align: right;
-            min-height: 46px;
+            min-height: 54px;
             font-variant-numeric: tabular-nums;
-            color: var(--led-red);
-            text-shadow:
-                0 0 8px rgba(255, 50, 30, .85),
-                0 0 20px rgba(255, 40, 20, .35);
+            color: var(--digit-on);
+            background: linear-gradient(165deg, #1a0a2e 0%, #0d0620 100%);
+            text-shadow: 0 0 16px rgba(92, 255, 232, .65);
+            border: 1px solid rgba(92, 255, 232, .25);
         }
-        .display:empty::before,
         .display.is-placeholder {
-            color: var(--led-dim);
+            color: var(--digit-dim);
             text-shadow: none;
         }
-        .keypad-rfid {
-            display: flex;
-            gap: 12px;
-            align-items: stretch;
-        }
         .keys {
-            flex: 1;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 9px;
-            min-width: 0;
+            gap: 11px;
         }
         button.key {
             aspect-ratio: 1;
             border: none;
-            border-radius: 50%;
+            border-radius: 18px;
             padding: 0;
-            font-size: 1.15rem;
-            font-weight: 700;
-            color: #1a1a1a;
+            font-size: 1.25rem;
+            font-weight: 800;
+            font-family: inherit;
+            color: #fff;
             cursor: pointer;
-            background:
-                radial-gradient(circle at 30% 25%, #d8dce3 0%, var(--metal-light) 18%, var(--metal-mid) 45%, var(--metal-dark) 100%);
+            border: 1px solid rgba(255, 255, 255, .28);
             box-shadow:
-                0 3px 0 #1f2126,
-                0 4px 8px rgba(0,0,0,.45),
-                inset 0 2px 3px rgba(255,255,255,.55),
-                inset 0 -2px 4px rgba(0,0,0,.25);
+                0 6px 0 rgba(0, 0, 0, .22),
+                0 10px 20px rgba(0, 0, 0, .15),
+                inset 0 1px 0 rgba(255, 255, 255, .35);
+            transition: transform .08s ease, box-shadow .08s ease, filter .15s ease;
+        }
+        button.key:hover {
+            filter: brightness(1.06);
         }
         button.key:active {
-            transform: translateY(2px);
+            transform: translateY(4px);
             box-shadow:
-                0 1px 0 #1f2126,
-                inset 0 3px 8px rgba(0,0,0,.35);
+                0 2px 0 rgba(0, 0, 0, .2),
+                inset 0 2px 8px rgba(0, 0, 0, .2);
+        }
+        /* Цифры 1–9: три цветных ряда */
+        .keys > button.key:nth-child(1),
+        .keys > button.key:nth-child(2),
+        .keys > button.key:nth-child(3) {
+            background: linear-gradient(145deg, #ff6b6b, #ee5a24);
+        }
+        .keys > button.key:nth-child(4),
+        .keys > button.key:nth-child(5),
+        .keys > button.key:nth-child(6) {
+            background: linear-gradient(145deg, #a855f7, #6366f1);
+        }
+        .keys > button.key:nth-child(7),
+        .keys > button.key:nth-child(8),
+        .keys > button.key:nth-child(9) {
+            background: linear-gradient(145deg, #22d3ee, #0ea5e9);
+        }
+        /* Кнопка B — вызов */
+        button.key.call {
+            background: linear-gradient(145deg, #34d399, #059669) !important;
+            font-size: 1.1rem;
+            letter-spacing: .04em;
+        }
+        /* Цифра 0 */
+        .keys > button.key:nth-child(11) {
+            background: linear-gradient(145deg, #fbbf24, #f59e0b);
+            color: #1a1003;
+        }
+        /* Кнопка C — сброс */
+        .keys > button.key:nth-child(12) {
+            background: linear-gradient(145deg, #fb7185, #db2777);
         }
         button.call:disabled {
-            opacity: 0.4;
+            opacity: 0.38;
             cursor: not-allowed;
             pointer-events: none;
+            filter: grayscale(.25);
         }
         button.hangup {
             display: none;
             width: 100%;
-            margin-top: 12px;
+            margin-top: 14px;
             border: none;
-            border-radius: 8px;
-            padding: 12px 0;
-            font-size: .9rem;
-            font-weight: 600;
+            border-radius: 16px;
+            padding: 14px 0;
+            font-size: .95rem;
+            font-weight: 700;
+            font-family: inherit;
             cursor: pointer;
-            background: linear-gradient(180deg, #8a3838 0%, #5c2020 100%);
-            color: #f0e8e8;
-            box-shadow: 0 3px 0 #2a1010, inset 0 1px 0 rgba(255,255,255,.12);
+            color: #fff;
+            background: linear-gradient(145deg, #f43f5e, #be123c);
+            border: 1px solid rgba(255, 255, 255, .25);
+            box-shadow: 0 5px 0 rgba(120, 20, 50, .5), inset 0 1px 0 rgba(255, 255, 255, .25);
         }
-        button.hangup:active { transform: translateY(1px); box-shadow: 0 1px 0 #2a1010; }
-        .rfid {
-            width: 72px;
-            flex-shrink: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding-top: 4px;
+        button.hangup:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(120, 20, 50, .45); }
+        .status {
+            margin-top: 14px;
+            font-size: .78rem;
+            font-weight: 500;
+            color: rgba(255, 255, 255, .82);
+            min-height: 2.2em;
+            text-align: center;
         }
-        .rfid-key {
-            width: 22px;
-            height: 14px;
-            opacity: .35;
-            background: no-repeat center / contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 16'%3E%3Cpath fill='%23aaa' d='M8 2a2 2 0 0 0-2 2v2H4v2h2v6h2V8h2V6h-2V4a2 2 0 0 1 2-2h8V0H8zm6 4v2h6V6h-6zm0 4v2h4v-2h-4z'/%3E%3C/svg%3E");
+        .err {
+            color: #ffe4e6;
+            font-size: .85rem;
+            font-weight: 600;
+            margin-top: 8px;
+            text-align: center;
+            text-shadow: 0 0 12px rgba(244, 63, 94, .45);
         }
-        .rfid-dish {
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            background:
-                radial-gradient(circle at 30% 25%, #c5cad2 0%, #8a909a 40%, #4a5058 100%);
-            box-shadow:
-                0 3px 0 #252830,
-                inset 0 2px 4px rgba(255,255,255,.45),
-                inset 0 -3px 6px rgba(0,0,0,.35);
-        }
-        .rfid-dish::after {
-            content: '';
-            display: block;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            background: no-repeat center / 70% 70% url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath fill='none' stroke='%23333' stroke-width='2' opacity='.35' d='M24 36c6 0 11-5 11-11S30 14 24 14 13 19 13 25s5 11 11 11z'/%3E%3Cpath fill='none' stroke='%23333' stroke-width='2' opacity='.25' d='M24 32c4 0 7-3 7-7s-3-7-7-7-7 3-7 7 3 7 7 7z'/%3E%3Cpath fill='none' stroke='%23333' stroke-width='2' opacity='.2' d='M24 28c2 0 4-2 4-4s-2-4-4-4-4 2-4 4 2 4 4 4z'/%3E%3C/svg%3E");
-        }
-        .status { margin-top: 12px; font-size: .7rem; opacity: .5; min-height: 2.2em; text-align: center; }
-        .err { color: #ff9088; font-size: .8rem; margin-top: 8px; text-align: center; }
         #remoteAudio { display: none; }
         @media (max-width: 360px) {
-            .rfid { width: 64px; }
-            .rfid-dish { width: 50px; height: 50px; }
-            button.key { font-size: 1.05rem; }
+            .panel { padding: 22px 16px 18px; }
+            .display { font-size: 1.45rem; }
+            button.key { font-size: 1.12rem; border-radius: 16px; }
         }
     </style>
 </head>
 <body>
     <div class="wrap">
+        <div class="deco-blob a" aria-hidden="true"></div>
+        <div class="deco-blob b" aria-hidden="true"></div>
         <div class="panel">
-            <span class="screw-bl" aria-hidden="true"></span>
-            <span class="screw-br" aria-hidden="true"></span>
-            <h1 id="titleLine">Домофон</h1>
-            <div class="speaker-row" aria-hidden="true">
-                <div class="grille"></div>
-                <div class="cam-dot"></div>
+            <div class="panel-badge"><span class="panel-badge-dot"></span> Виртуальная панель</div>
+            <div class="panel-head">
+                <h1 id="titleLine">Домофон</h1>
+                <div class="sub" id="subLine">Наберите номер квартиры</div>
             </div>
-            <div class="sub" id="subLine">Наберите номер квартиры</div>
             <div class="display-wrap">
                 <div class="display is-placeholder" id="disp">—</div>
             </div>
-            <div class="keypad-rfid">
-                <div class="keys" id="keys"></div>
-                <div class="rfid" aria-hidden="true">
-                    <div class="rfid-key"></div>
-                    <div class="rfid-dish"></div>
-                </div>
-            </div>
+            <div class="keys" id="keys"></div>
             <button type="button" class="hangup" id="hangupBtn" aria-label="Отбой">Отбой</button>
             <div class="status" id="status"></div>
             <audio id="remoteAudio" autoplay playsinline></audio>

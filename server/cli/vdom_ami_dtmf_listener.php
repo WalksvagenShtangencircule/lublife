@@ -107,6 +107,11 @@ function vdom_ami_write($sock, array $fields): void {
     fwrite($sock, $s);
 }
 
+/** Не запускать демон при require из cli.php — только при прямом вызове этого файла. */
+if (PHP_SAPI !== 'cli' || !isset($_SERVER['argv'][0]) || realpath((string) $_SERVER['argv'][0]) !== realpath(__FILE__)) {
+    return;
+}
+
 $config = vdom_load_config();
 $vd = $config['vdom_dtmf'] ?? [];
 $ami = $vd['ami'] ?? [];

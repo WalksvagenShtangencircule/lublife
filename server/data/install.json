@@ -292,5 +292,11 @@
     ],
     "92": [
         "v92_mediaserver_audit.sql"
+    ],
+    "93": [
+        "v93_web_keys_module.sql"
+    ],
+    "94": [
+        "v94_subscriber_purchased_rfids.sql"
     ]
 }

@@ -1,0 +1,34 @@
+{
+    "title": "Key sales",
+    "lead": "RFID numbers in this catalog can be attached to a flat by residents in the app. Upload a CSV with one RFID per line or in the first column.",
+    "uploadTitle": "CSV import",
+    "uploadHint": "One RFID per line (6–32 characters). The first line may be a header \"rfid\". Lines starting with # are skipped.",
+    "chooseFile": "Choose file",
+    "runImport": "Import",
+    "needFile": "Choose a CSV file.",
+    "badResponse": "Could not parse server response.",
+    "totalLabel": "Total in catalog:",
+    "createdAt": "Created (UTC)",
+    "resultTitle": "Import",
+    "resultImported": "New rows: %s.",
+    "resultDuplicates": "Already in catalog (skipped): %s.",
+    "resultErrors": "Parse errors: %s.",
+    "confirmDelete": "Remove this RFID from the catalog?",
+    "methods": {
+        "vendorKeys": {
+            "_title": "Key sales",
+            "catalog": {
+                "_title": "View catalog",
+                "GET": "Open"
+            },
+            "importCsv": {
+                "_title": "Import CSV into catalog",
+                "POST": "Upload"
+            },
+            "remove": {
+                "_title": "Remove from catalog",
+                "POST": "Remove"
+            }
+        }
+    }
+}

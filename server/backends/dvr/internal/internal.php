@@ -655,8 +655,39 @@
                 } else {
                     // Flussonic Server by default
                     $flussonic_token = $this->getDVRTokenForCam($cam, $subscriberId);
-                    $request_url = $this->getDVRStreamURLForCam($cam)."/recording_status.json?from=1525186456&token=$flussonic_token";
-                    $ranges = json_decode(file_get_contents($request_url), true);
+                    $baseUrl = $this->getDVRStreamURLForCam($cam)."/recording_status.json";
+                    $from = 1525186456;
+
+                    $isTokenPlaceholder =
+                        strpos($flussonic_token, "<!--") !== false ||
+                        strpos($flussonic_token, "--!>") !== false;
+
+                    $requestUrls = [];
+                    if (!$isTokenPlaceholder && $flussonic_token !== "") {
+                        $requestUrls[] = $baseUrl . "?" . http_build_query([
+                            "from" => $from,
+                            "token" => $flussonic_token
+                        ]);
+                    }
+                    $requestUrls[] = $baseUrl . "?" . http_build_query([
+                        "from" => $from
+                    ]);
+
+                    $ranges = [];
+                    foreach ($requestUrls as $request_url) {
+                        $body = @file_get_contents($request_url);
+                        if ($body === false || $body === "") {
+                            continue;
+                        }
+
+                        $decoded = json_decode($body, true);
+                        if (!is_array($decoded)) {
+                            continue;
+                        }
+
+                        $ranges = $decoded;
+                        break;
+                    }
                 }
                 return $ranges;
             }
