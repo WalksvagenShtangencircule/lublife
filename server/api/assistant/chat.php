@@ -761,7 +761,7 @@
                     "temperature" => 0.2,
                 ];
                 $bud = self::assistantBudgetSeconds($wallDeadline);
-                        $curlT = self::nextCurlTimeout($bud, 4, 40);
+                    $curlT = self::nextCurlTimeout($bud, 4, 40);
                 if ($curlT <= 0) {
                     return null;
                 }
