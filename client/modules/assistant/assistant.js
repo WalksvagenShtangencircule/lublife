@@ -420,7 +420,8 @@
 
     sendPrompt: function (prompt) {
         let text = String(prompt || "");
-        $("#assistantInput").val(text);
+        let $input = $("#assistantInput");
+        $input.val(text);
         modules.assistant.send();
     },
 

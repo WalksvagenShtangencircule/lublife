@@ -238,7 +238,7 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
         );
         return [
             "house_id" => $houseId,
-            "total_unique_user_agents" => $totalUa !== false ? (int)$totalUa : count($rows),
+            "total_unique_user_agents" => $totalUa !== false ? (int) $totalUa : count($rows),
             "list_limit" => $limit,
             "list_returned" => count($rows),
             "user_agents" => $rows
@@ -326,7 +326,7 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
             and (" . $ff . ")
         ";
         $totalData = assistant_tools_ch_select($config, $totalQ);
-        $totalFlatsWithActivity = is_array($totalData) && isset($totalData[0]["c"]) ? (int)$totalData[0]["c"] : count($data);
+        $totalFlatsWithActivity = is_array($totalData) && isset($totalData[0]["c"]) ? (int) $totalData[0]["c"] : count($data);
         foreach ($data as &$row) {
             $fid = isset($row["flat_id"]) ? (int) $row["flat_id"] : 0;
             if ($fid > 0) {
@@ -650,8 +650,8 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
 
         $active = array_values(array_filter($rows, fn($r) => $r["active"]));
 
-        $totalSubscribers = is_array($totals) ? (int)($totals["total_subscribers"] ?? count($rows)) : count($rows);
-        $activeInPeriod   = is_array($totals) ? (int)($totals["active_in_period"]   ?? count($active)) : count($active);
+        $totalSubscribers = is_array($totals) ? (int) ($totals["total_subscribers"] ?? count($rows)) : count($rows);
+        $activeInPeriod   = is_array($totals) ? (int) ($totals["active_in_period"]   ?? count($active)) : count($active);
 
         return [
             "house_id"                  => $houseId,
@@ -860,7 +860,7 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
             " . $extra . $phoneCond . "
         ";
         $cntData = assistant_tools_ch_select($config, $cntQ);
-        $totalEvents = is_array($cntData) && isset($cntData[0]["cnt"]) ? (int)$cntData[0]["cnt"] : count($data);
+        $totalEvents = is_array($cntData) && isset($cntData[0]["cnt"]) ? (int) $cntData[0]["cnt"] : count($data);
 
         $out = [];
         foreach ($data as $r) {
@@ -964,7 +964,9 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
             [],
             ["silent"]
         );
-        if ($subs === false) $subs = [];
+        if ($subs === false) {
+            $subs = [];
+        }
         foreach ($subs as &$s) {
             $s["role_name"] = (int)($s["role"] ?? 0) === 0 ? "владелец" : "пользователь";
             $s["_url"] = "?#addresses.subscriberDevices&subscriberId=" . $s["house_subscriber_id"];
@@ -1117,7 +1119,7 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
         return [
             "house_id" => $houseId,
             "block_type_filter" => $blockType,
-            "total_blocked_flats" => $totalBlocked !== false ? (int)$totalBlocked : count($rows),
+            "total_blocked_flats" => $totalBlocked !== false ? (int) $totalBlocked : count($rows),
             "list_limit" => $limit,
             "list_returned" => count($rows),
             "flats" => $rows,
@@ -1205,7 +1207,7 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
 
         return [
             "rfid_query" => $rfid,
-            "total_matches" => $totalMatches !== false ? (int)$totalMatches : count($rows),
+            "total_matches" => $totalMatches !== false ? (int) $totalMatches : count($rows),
             "list_limit" => 20,
             "list_returned" => count($rows),
             "keys" => $rows,
@@ -1257,7 +1259,7 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
 
         return [
             "search" => $search,
-            "total_houses" => $totalHouses !== false ? (int)$totalHouses : count($rows),
+            "total_houses" => $totalHouses !== false ? (int) $totalHouses : count($rows),
             "list_limit" => $limit,
             "list_returned" => count($rows),
             "houses" => $rows,
