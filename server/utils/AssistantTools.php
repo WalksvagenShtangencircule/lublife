@@ -221,7 +221,28 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
         if ($rows === false) {
             return ["error" => "db_error"];
         }
-        return ["house_id" => $houseId, "user_agents" => $rows];
+        $totalUa = $db->get(
+            "select count(*)::int as c
+             from (
+                select coalesce(d.ua, '') as ua
+                from houses_subscribers_devices d
+                inner join houses_subscribers_mobile m on m.house_subscriber_id = d.house_subscriber_id
+                inner join houses_flats_subscribers fs on fs.house_subscriber_id = m.house_subscriber_id
+                inner join houses_flats f on f.house_flat_id = fs.house_flat_id
+                where f.address_house_id = :hid and coalesce(d.ua, '') <> ''
+                group by d.ua
+             ) t",
+            ["hid" => $houseId],
+            ["c" => "count"],
+            ["fieldlify", "silent"]
+        );
+        return [
+            "house_id" => $houseId,
+            "total_unique_user_agents" => $totalUa !== false ? (int)$totalUa : count($rows),
+            "list_limit" => $limit,
+            "list_returned" => count($rows),
+            "user_agents" => $rows
+        ];
     }
 
     function assistant_tool_rfid_events_in_period($db, array $config, array $args): array {
@@ -296,6 +317,16 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
         if ($data === null) {
             return ["error" => "clickhouse_unavailable_or_query_failed"];
         }
+        $totalQ = "
+            select countDistinct(flat_id) as c
+            from plog
+            where not hidden
+            and date >= " . (int) $since . "
+            and date <= " . (int) $until . "
+            and (" . $ff . ")
+        ";
+        $totalData = assistant_tools_ch_select($config, $totalQ);
+        $totalFlatsWithActivity = is_array($totalData) && isset($totalData[0]["c"]) ? (int)$totalData[0]["c"] : count($data);
         foreach ($data as &$row) {
             $fid = isset($row["flat_id"]) ? (int) $row["flat_id"] : 0;
             if ($fid > 0) {
@@ -312,7 +343,15 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
             }
         }
         unset($row);
-        return ["house_id" => $houseId, "since_unix" => $since, "until_unix" => $until, "top_flats" => $data];
+        return [
+            "house_id" => $houseId,
+            "since_unix" => $since,
+            "until_unix" => $until,
+            "total_flats_with_activity" => $totalFlatsWithActivity,
+            "list_limit" => $topLimit,
+            "list_returned" => count($data),
+            "top_flats" => $data
+        ];
     }
 
     function assistant_tool_flats_count($db, array $args): array {
@@ -812,6 +851,17 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
         if ($data === null) {
             return ["error" => "clickhouse_unavailable_or_query_failed"];
         }
+        $cntQ = "
+            select count(*) as cnt
+            from plog
+            where not hidden
+            and date >= " . (int) $since . "
+            and date <= " . (int) $until . "
+            and (" . $ff . ")
+            " . $extra . $phoneCond . "
+        ";
+        $cntData = assistant_tools_ch_select($config, $cntQ);
+        $totalEvents = is_array($cntData) && isset($cntData[0]["cnt"]) ? (int)$cntData[0]["cnt"] : count($data);
 
         $out = [];
         foreach ($data as $r) {
@@ -840,7 +890,9 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
             "house_subscriber_id_filter" => $scopeSubscriberId > 0 ? $scopeSubscriberId : null,
             "since_unix" => $since,
             "until_unix" => $until,
-            "returned" => count($out),
+            "total_events_in_period" => $totalEvents,
+            "list_limit" => $limit,
+            "list_returned" => count($out),
             "events" => $out,
         ];
     }
@@ -1041,6 +1093,14 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
         if ($rows === false) {
             return ["error" => "db_error"];
         }
+        $totalBlocked = $db->get(
+            "SELECT COUNT(*)::int AS c
+             FROM houses_flats hf
+             WHERE " . $where,
+            ["hid" => $houseId],
+            ["c" => "count"],
+            ["fieldlify", "silent"]
+        );
 
         foreach ($rows as &$r) {
             $fid  = (int) $r["house_flat_id"];
@@ -1058,7 +1118,9 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
         return [
             "house_id" => $houseId,
             "block_type_filter" => $blockType,
-            "count" => count($rows),
+            "total_blocked_flats" => $totalBlocked !== false ? (int)$totalBlocked : count($rows),
+            "list_limit" => $limit,
+            "list_returned" => count($rows),
             "flats" => $rows,
         ];
     }
@@ -1089,6 +1151,15 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
         if (!count($rows)) {
             return ["error" => "rfid_not_found", "rfid" => $rfid];
         }
+
+        $totalMatches = $db->get(
+            "SELECT COUNT(*)::int AS c
+             FROM houses_rfids r
+             WHERE upper(r.rfid) LIKE :q",
+            ["q" => "%" . $rfid . "%"],
+            ["c" => "count"],
+            ["fieldlify", "silent"]
+        );
 
         foreach ($rows as &$r) {
             $accessType = (int) $r["access_type"];
@@ -1135,7 +1206,9 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
 
         return [
             "rfid_query" => $rfid,
-            "count" => count($rows),
+            "total_matches" => $totalMatches !== false ? (int)$totalMatches : count($rows),
+            "list_limit" => 20,
+            "list_returned" => count($rows),
             "keys" => $rows,
         ];
     }
@@ -1169,6 +1242,14 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
         if ($rows === false) {
             return ["error" => "db_error"];
         }
+        $totalHouses = $db->get(
+            "SELECT COUNT(*)::int AS c
+             FROM addresses_houses ah
+             WHERE " . $where,
+            $search !== "" ? ["q" => "%" . $search . "%"] : [],
+            ["c" => "count"],
+            ["fieldlify", "silent"]
+        );
 
         foreach ($rows as &$r) {
             $r["_url"] = "?#addresses.houses&houseId=" . $r["house_id"];
@@ -1177,7 +1258,9 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
 
         return [
             "search" => $search,
-            "count" => count($rows),
+            "total_houses" => $totalHouses !== false ? (int)$totalHouses : count($rows),
+            "list_limit" => $limit,
+            "list_returned" => count($rows),
             "houses" => $rows,
         ];
     }

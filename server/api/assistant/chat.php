@@ -82,6 +82,7 @@
                         "Подъезды дома: house_entrances_list. Домофоны дома: house_domophones_list. " .
                         "Карточка абонента (квартиры, устройства, ключи): subscriber_lookup. " .
                         "Список абонентов дома: active_subscribers_for_house — поле total_subscribers_in_house содержит ТОЧНОЕ общее число абонентов, active_in_period_count — активных за период; list_returned — это лишь размер выборки (≤limit), НЕ общий счёт. " .
+                        "Для любых инструментов, где есть total_* (например total_blocked_flats, total_events_in_period, total_houses, total_matches, total_flats_with_activity, total_unique_user_agents), в тексте отчёта используй именно total_* как итог, а list_returned — только как размер выведенного фрагмента. " .
                         "Мобильные учётки и plog-активность: mobile_users_stats. " .
                         "Воронка за несколько периодов одним вызовом: mobile_access_funnel(house_id, periods_days:[7,30]). " .
                         "Журнал событий (проходы/открытия): plog_events_list. " .
@@ -915,8 +916,12 @@
                     if (isset($result["flats_count"])) {
                         $flatsCount = (int) $result["flats_count"];
                     }
-                    if ($tool === "plog_events_list" && isset($result["returned"])) {
-                        $eventsReturned = (int) $result["returned"];
+                    if ($tool === "plog_events_list") {
+                        if (isset($result["total_events_in_period"])) {
+                            $eventsReturned = (int) $result["total_events_in_period"];
+                        } elseif (isset($result["list_returned"])) {
+                            $eventsReturned = (int) $result["list_returned"];
+                        }
                     }
                     if (isset($result["error"])) {
                         $errors[] = $tool . ": " . (string) $result["error"];
@@ -1118,8 +1123,10 @@
                 $lines[] = "";
                 $lines[] = "3) События доступа (plog)";
                 if (!isset($events["error"])) {
-                    $ret = isset($events["returned"]) ? (int) $events["returned"] : 0;
-                    $lines[] = "• Найдено событий: " . $ret . ".";
+                    $ret = isset($events["total_events_in_period"])
+                        ? (int) $events["total_events_in_period"]
+                        : (isset($events["list_returned"]) ? (int) $events["list_returned"] : 0);
+                    $lines[] = "• Найдено событий за период: " . $ret . ".";
                     if ($ret > 0 && isset($events["events"][0]) && is_array($events["events"][0])) {
                         $e0 = $events["events"][0];
                         $lines[] = "• Последнее событие: " .
