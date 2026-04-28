@@ -613,28 +613,30 @@
             modules.assistant._savedContextHtml = $("#assistantContextPanel").html();
         }
 
-        if (!document.getElementById("assistantMdStyles")) {
-            let s = document.createElement("style");
+        let mdCss = [
+            ".assistant-md-body h1,.assistant-md-body h2,.assistant-md-body h3{margin:8px 0 4px;font-size:1em;font-weight:700;color:#1a2a3a}",
+            ".assistant-md-body p{margin:0 0 6px}",
+            ".assistant-md-body ul,.assistant-md-body ol{margin:0 0 6px;padding-left:18px}",
+            ".assistant-md-body li{margin-bottom:2px}",
+            ".assistant-md-body table{border-collapse:collapse;width:100%;margin:6px 0;font-size:13px}",
+            ".assistant-md-body th{background:#f0f4f8;color:#2c3e50;padding:5px 8px;border:1px solid #dde3ea;text-align:left}",
+            ".assistant-md-body td{padding:4px 8px;border:1px solid #eaecef;vertical-align:top}",
+            ".assistant-md-body tr:nth-child(even) td{background:#f8fafc}",
+            ".assistant-md-body code{background:#f0f4f8;padding:1px 4px;border-radius:3px;font-size:12px;font-family:monospace;color:#1f2d3d !important}",
+            ".assistant-md-body pre{background:#f0f4f8;padding:8px;border-radius:4px;overflow-x:auto;font-size:12px;color:#1f2d3d !important}",
+            ".assistant-md-body pre code{color:#1f2d3d !important;background:transparent !important}",
+            ".assistant-md-body .hljs,.assistant-md-body pre .hljs{background:#f0f4f8 !important;color:#1f2d3d !important;display:block}",
+            ".assistant-md-body .hljs *{color:#1f2d3d !important;background:transparent !important}",
+            ".assistant-md-body strong{font-weight:700}",
+            ".assistant-md-body hr{border:none;border-top:1px solid #eaecef;margin:8px 0}",
+        ].join("");
+        let s = document.getElementById("assistantMdStyles");
+        if (!s) {
+            s = document.createElement("style");
             s.id = "assistantMdStyles";
-            s.textContent = [
-                ".assistant-md-body h1,.assistant-md-body h2,.assistant-md-body h3{margin:8px 0 4px;font-size:1em;font-weight:700;color:#1a2a3a}",
-                ".assistant-md-body p{margin:0 0 6px}",
-                ".assistant-md-body ul,.assistant-md-body ol{margin:0 0 6px;padding-left:18px}",
-                ".assistant-md-body li{margin-bottom:2px}",
-                ".assistant-md-body table{border-collapse:collapse;width:100%;margin:6px 0;font-size:13px}",
-                ".assistant-md-body th{background:#f0f4f8;color:#2c3e50;padding:5px 8px;border:1px solid #dde3ea;text-align:left}",
-                ".assistant-md-body td{padding:4px 8px;border:1px solid #eaecef;vertical-align:top}",
-                ".assistant-md-body tr:nth-child(even) td{background:#f8fafc}",
-                ".assistant-md-body code{background:#f0f4f8;padding:1px 4px;border-radius:3px;font-size:12px;font-family:monospace}",
-                ".assistant-md-body pre{background:#f0f4f8;padding:8px;border-radius:4px;overflow-x:auto;font-size:12px}",
-                ".assistant-md-body pre,.assistant-md-body pre code{color:#1f2d3d !important}",
-                ".assistant-md-body .hljs{background:#f0f4f8 !important;color:#1f2d3d !important;display:block}",
-                ".assistant-md-body .hljs *{color:inherit !important}",
-                ".assistant-md-body strong{font-weight:700}",
-                ".assistant-md-body hr{border:none;border-top:1px solid #eaecef;margin:8px 0}",
-            ].join("");
             document.head.appendChild(s);
         }
+        s.textContent = mdCss;
 
         $("#mainForm").html(
             "<div class='row'>" +
@@ -732,6 +734,8 @@
                 "ul,ol{padding-left:20px}" +
                 "li{margin-bottom:3px}" +
                 "a{color:#2e3f7c}" +
+                ".hljs,pre .hljs{background:#f4f4f4 !important;color:#1f2d3d !important;display:block}" +
+                ".hljs *{color:#1f2d3d !important;background:transparent !important}" +
                 "hr{border:none;border-top:1px solid #dee2e6;margin:16px 0}" +
                 ".footer{margin-top:32px;font-size:11px;color:#aaa;border-top:1px solid #eee;padding-top:8px}" +
                 "</style></head><body>" +
@@ -751,16 +755,20 @@
             URL.revokeObjectURL(url);
         });
         // Сохраняем состояние чата и нормализуем hash-ссылки перед переходом
-        $("#mainForm").off("click.assistantNav").on("click.assistantNav", "#assistantContextPanel a, .assistant-md-body a", function () {
+        $("#mainForm").off("click.assistantNav").on("click.assistantNav", "#assistantContextPanel a, .assistant-md-body a", function (e) {
             modules.assistant._savedThreadHtml  = $("#assistantThread").html();
             modules.assistant._savedContextHtml = $("#assistantContextPanel").html();
 
             let href = ($(this).attr("href") || "").trim();
             if (!href) return;
+            href = href.replace(/&amp;/g, "&");
 
             // Исправляем кодированный префикс hash-роута
-            if (href.indexOf("?%23") === 0) {
+            if (href.indexOf("?%23") === 0 || href.indexOf("?%2523") === 0) {
                 href = "?#" + href.slice(4);
+            }
+            if (href.indexOf("%23addresses.") >= 0) {
+                href = href.replace("%23addresses.", "#addresses.");
             }
             if (href.indexOf("#addresses.") === 0) {
                 href = "?" + href;
@@ -772,11 +780,15 @@
                 let label = ($(this).text() || "").trim();
                 let m = label.match(/(\d+[A-Za-zА-Яа-я\-\/]*)/);
                 if (m && m[1]) {
-                    href += (href.indexOf("&") >= 0 ? "&" : "") + "flat=" + encodeURIComponent(m[1]);
+                    href += (href.indexOf("?") >= 0 ? "&" : "?") + "flat=" + encodeURIComponent(m[1]);
                 }
             }
-
             $(this).attr("href", href);
+            if (href.indexOf("?#addresses.") === 0) {
+                e.preventDefault();
+                window.location.href = href;
+                return false;
+            }
         });
 
         loadingDone();
