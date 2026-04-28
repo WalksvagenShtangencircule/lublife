@@ -48,28 +48,15 @@
 
         let total = houses.length + flats.length + subscribers.length + domophones.length + cameras.length;
 
-        function section(icon, title, items, maxItems) {
-            if (!items.length) return "";
-            let s = "<div class='mb-2'><div style='font-size:10px;font-weight:700;text-transform:uppercase;" +
-                "letter-spacing:0.05em;color:#8898aa;margin-bottom:4px'>" + title + "</div>";
-            for (let x of items.slice(0, maxItems || 6)) {
-                s += "<div class='mb-1' style='overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px'>" +
-                    "<i class='" + icon + " mr-1' style='color:#aab;width:12px'></i>" +
-                    "<a href='" + escapeHTML(x.href) + "' style='color:#2c3e50'>" + escapeHTML(x.label) + "</a>" +
-                    "</div>";
-            }
-            return s + "</div>";
-        }
-
         let html = "";
         if (!total) {
             html = "<p class='text-muted' style='font-size:12px;margin-top:8px'>Ответ не содержит ссылок на объекты системы.</p>";
         } else {
-            html += section("fas fa-building", "Дома", houses, 8);
-            html += section("fas fa-door-open", "Квартиры", flats, 8);
-            html += section("fas fa-user", "Абоненты", subscribers, 8);
-            html += section("fas fa-phone-square", "Домофоны", domophones, 6);
-            html += section("fas fa-video", "Камеры", cameras, 6);
+            html += modules.assistant.renderContextSection("fas fa-building", "Дома", houses, 8);
+            html += modules.assistant.renderContextSection("fas fa-door-open", "Квартиры", flats, 8);
+            html += modules.assistant.renderContextSection("fas fa-user", "Абоненты", subscribers, 8);
+            html += modules.assistant.renderContextSection("fas fa-phone-square", "Домофоны", domophones, 6);
+            html += modules.assistant.renderContextSection("fas fa-video", "Камеры", cameras, 6);
         }
 
         let $panel = $("#assistantContextPanel");
@@ -104,6 +91,19 @@
             }
         }
         return out;
+    },
+
+    renderContextSection: function (icon, title, items, maxItems) {
+        if (!items.length) return "";
+        let s = "<div class='mb-2'><div style='font-size:10px;font-weight:700;text-transform:uppercase;" +
+            "letter-spacing:0.05em;color:#8898aa;margin-bottom:4px'>" + title + "</div>";
+        for (let x of items.slice(0, maxItems || 6)) {
+            s += "<div class='mb-1' style='overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px'>" +
+                "<i class='" + icon + " mr-1' style='color:#aab;width:12px'></i>" +
+                "<a href='" + escapeHTML(x.href) + "' style='color:#2c3e50'>" + escapeHTML(x.label) + "</a>" +
+                "</div>";
+        }
+        return s + "</div>";
     },
 
     /** Загружает и отображает быструю статистику системы в панели дашборда. */
