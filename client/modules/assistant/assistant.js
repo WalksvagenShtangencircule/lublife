@@ -10,9 +10,9 @@
     CONTEXT_LIMIT: 6,
 
     t: function (key) {
-        let a = lang && lang.assistant ? lang.assistant : null;
-        if (a && a.quick && Object.prototype.hasOwnProperty.call(a.quick, key)) {
-            return String(a.quick[key]);
+        let assistantLang = lang && lang.assistant ? lang.assistant : null;
+        if (assistantLang && assistantLang.quick && Object.prototype.hasOwnProperty.call(assistantLang.quick, key)) {
+            return String(assistantLang.quick[key]);
         }
         return i18n("assistant.quick." + key);
     },
@@ -52,7 +52,7 @@
             }
         }
 
-        let total = houses.length + flats.length + subscribers.length + domophones.length + cameras.length;
+        let total = [houses, flats, subscribers, domophones, cameras].reduce((sum, list) => sum + list.length, 0);
 
         let html = "";
         if (!total) {
@@ -104,7 +104,9 @@
     },
 
     renderContextSection: function (icon, title, items, maxItems) {
-        if (!items.length) return "";
+        if (!items.length) {
+            return "";
+        }
         let limit = maxItems || 6;
         let s = "<div class='mb-2'><div style='font-size:10px;font-weight:700;text-transform:uppercase;" +
             "letter-spacing:0.05em;color:#8898aa;margin-bottom:4px'>" + title + "</div>";
@@ -244,11 +246,21 @@
             "2",
             v => {
                 let x = parseInt($.trim(String(v || "")), 10);
-                if (x === 1) return callback(1);
-                if (x === 2) return callback(7);
-                if (x === 3) return callback(14);
-                if (x === 4) return callback(30);
-                if (x === 5) return A.askNumber(A.t("askDays"), String(defDays || 14), callback);
+                if (x === 1) {
+                    return callback(1);
+                }
+                if (x === 2) {
+                    return callback(7);
+                }
+                if (x === 3) {
+                    return callback(14);
+                }
+                if (x === 4) {
+                    return callback(30);
+                }
+                if (x === 5) {
+                    return A.askNumber(A.t("askDays"), String(defDays || 14), callback);
+                }
                 warning(A.t("invalidNumber"));
             }
         );
@@ -608,7 +620,9 @@
             if (!isNaN(idx) && modules.assistant._quickCache && modules.assistant._quickCache[idx]) {
                 key = String(modules.assistant._quickCache[idx].key || "");
             }
-            if (!key) return;
+            if (!key) {
+                return;
+            }
             modules.assistant.runScenarioWizard(key);
         }).on("mouseenter", function () {
             let idx = parseInt($(this).attr("data-idx"), 10);
