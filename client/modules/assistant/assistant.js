@@ -747,10 +747,33 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         });
-        // Сохраняем состояние чата при переходе по ссылкам из контекстной панели
+        // Сохраняем состояние чата и нормализуем hash-ссылки перед переходом
         $("#mainForm").off("click.assistantNav").on("click.assistantNav", "#assistantContextPanel a, .assistant-md-body a", function () {
             modules.assistant._savedThreadHtml  = $("#assistantThread").html();
             modules.assistant._savedContextHtml = $("#assistantContextPanel").html();
+
+            let href = ($(this).attr("href") || "").trim();
+            if (!href) return;
+
+            // Исправляем кодированный префикс hash-роута
+            if (href.indexOf("?%23") === 0) {
+                href = "?#" + href.slice(4);
+            }
+            if (href.indexOf("#addresses.") === 0) {
+                href = "?" + href;
+            }
+
+            // Для страницы квартиры обязателен параметр flat.
+            // Если его нет (или он пустой), пробуем восстановить из текста ссылки "кв. 159".
+            if (href.indexOf("?#addresses.subscribers") === 0 && href.indexOf("flat=") === -1) {
+                let label = ($(this).text() || "").trim();
+                let m = label.match(/(\d+[A-Za-zА-Яа-я\-\/]*)/);
+                if (m && m[1]) {
+                    href += (href.indexOf("&") >= 0 ? "&" : "") + "flat=" + encodeURIComponent(m[1]);
+                }
+            }
+
+            $(this).attr("href", href);
         });
 
         loadingDone();
