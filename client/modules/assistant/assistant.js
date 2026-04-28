@@ -199,28 +199,30 @@
             label,
             modules.assistant.t("wizardTitle"),
             defValue || "",
-            v => callback($.trim(String(v || "")))
+            v => {
+                callback($.trim(String(v || "")));
+            }
         );
         modules.assistant.hardenPromptInput();
     },
 
     hardenPromptInput: function () {
         setTimeout(() => {
-            let $i = $("#promptModalInput");
-            $i.attr("autocomplete", "new-password");
-            $i.attr("autocapitalize", "off");
-            $i.attr("autocorrect", "off");
-            $i.attr("spellcheck", "false");
-            $i.attr("data-lpignore", "true");
-            $i.attr("data-form-type", "other");
-            $i.attr("name", "assistantPromptInput_" + Date.now());
+            let $input = $("#promptModalInput");
+            $input.attr("autocomplete", "new-password");
+            $input.attr("autocapitalize", "off");
+            $input.attr("autocorrect", "off");
+            $input.attr("spellcheck", "false");
+            $input.attr("data-lpignore", "true");
+            $input.attr("data-form-type", "other");
+            $input.attr("name", "assistantPromptInput_" + Date.now());
             // Анти-автозаполнение: временный readonly снимаем на фокусе.
-            $i.prop("readonly", true);
-            $i.off("focus.assistantAutofill").on("focus.assistantAutofill", function () {
+            $input.prop("readonly", true);
+            $input.off("focus.assistantAutofill").on("focus.assistantAutofill", function () {
                 $(this).prop("readonly", false);
             });
             // На мобильных иногда first focus не приходит, снимаем через tick.
-            setTimeout(() => $i.prop("readonly", false), 180);
+            setTimeout(() => $input.prop("readonly", false), 180);
         }, 20);
     },
 
@@ -417,7 +419,8 @@
     },
 
     sendPrompt: function (prompt) {
-        $("#assistantInput").val(String(prompt || ""));
+        let text = String(prompt || "");
+        $("#assistantInput").val(text);
         modules.assistant.send();
     },
 
