@@ -251,11 +251,7 @@
                     }
 
                     let top = rows.slice(0, 10);
-                    let variants = [];
-                    for (let i = 0; i < top.length; i++) {
-                        let h = top[i];
-                        variants.push((i + 1) + ") " + (h.houseFull || ("#" + h.houseId)));
-                    }
+                    let variants = top.map((h, i) => (i + 1) + ") " + (h.houseFull || ("#" + h.houseId)));
                     mPrompt(
                         A.t("pickHouseFromList") + "<br><br>" + escapeHTML(variants.join("\n")).replace(/\n/g, "<br>"),
                         A.t("wizardTitle"),
@@ -302,12 +298,10 @@
                         return;
                     }
                     let top = rows.slice(0, 10);
-                    let variants = [];
-                    for (let i = 0; i < top.length; i++) {
-                        let s = top[i];
+                    let variants = top.map((s, i) => {
                         let label = "#" + s.subscriberId + " " + (s.subscriberFull || "") + (s.mobile ? (" (" + s.mobile + ")") : "");
-                        variants.push((i + 1) + ") " + label);
-                    }
+                        return (i + 1) + ") " + label;
+                    });
                     mPrompt(
                         A.t("pickSubscriberFromList") + "<br><br>" + escapeHTML(variants.join("\n")).replace(/\n/g, "<br>"),
                         A.t("wizardTitle"),
@@ -351,11 +345,7 @@
                         return;
                     }
                     let top = rows.slice(0, 10);
-                    let variants = [];
-                    for (let i = 0; i < top.length; i++) {
-                        let x = top[i];
-                        variants.push((i + 1) + ") " + (x.rfId || ("#" + (x.keyId || i + 1))));
-                    }
+                    let variants = top.map((x, i) => (i + 1) + ") " + (x.rfId || ("#" + (x.keyId || i + 1))));
                     mPrompt(
                         A.t("pickRfidFromList") + "<br><br>" + escapeHTML(variants.join("\n")).replace(/\n/g, "<br>"),
                         A.t("wizardTitle"),
