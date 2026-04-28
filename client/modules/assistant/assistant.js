@@ -503,7 +503,13 @@
         if (window.remarkable && window.remarkable.Remarkable) {
             try {
                 let md = new window.remarkable.Remarkable({ html: false, breaks: true });
-                return md.render(text);
+                let html = md.render(text);
+                // remarkable иногда кодирует hash-роуты "?#..." в "?%23...",
+                // из-за чего переходы по ссылкам открывают не тот маршрут.
+                html = html
+                    .replace(/href=\"\?%23/g, "href=\"?#")
+                    .replace(/href='\?%23/g, "href='?#");
+                return html;
             } catch (e) {}
         }
         return escapeHTML(text).replace(/\n/g, "<br>");
