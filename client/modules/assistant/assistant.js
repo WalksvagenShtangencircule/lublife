@@ -693,8 +693,8 @@
 
         // Восстанавливаем историю чата и контекст если они были сохранены
         if (modules.assistant._savedThreadHtml) {
-            $("#assistantThread").html(modules.assistant._savedThreadHtml);
             let $box = $("#assistantThread");
+            $box.html(modules.assistant._savedThreadHtml);
             $box.scrollTop($box[0].scrollHeight);
         }
         if (modules.assistant._savedContextHtml) {
