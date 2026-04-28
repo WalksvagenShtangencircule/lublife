@@ -1099,15 +1099,21 @@
                     "until_unix" => $until,
                     "limit" => 25,
                 ], $db, $config);
+                $blocked = assistant_tools_run("blocked_flats", [
+                    "house_id" => $houseId,
+                    "limit" => 30,
+                ], $db, $config);
 
                 $meta = [
                     ["tool" => "flats_count", "args" => ["house_id" => $houseId], "result" => $flats],
                     ["tool" => "mobile_access_funnel", "args" => ["house_id" => $houseId, "periods_days" => [$days], "until_unix" => $until], "result" => $funnel],
                     ["tool" => "plog_events_list", "args" => ["house_id" => $houseId, "since_unix" => $since, "until_unix" => $until, "limit" => 25], "result" => $events],
+                    ["tool" => "blocked_flats", "args" => ["house_id" => $houseId, "limit" => 30], "result" => $blocked],
                 ];
 
                 $lines = [];
-                $lines[] = "Паспорт дома #" . $houseId . " за " . $days . " дн. (" . self::fmtUnix($since) . " — " . self::fmtUnix($until) . ")";
+                $houseUrl = "?#addresses.houses&houseId=" . $houseId;
+                $lines[] = "Паспорт дома [#" . $houseId . "](" . $houseUrl . ") за " . $days . " дн. (" . self::fmtUnix($since) . " — " . self::fmtUnix($until) . ")";
                 $lines[] = "";
 
                 if (!isset($flats["error"])) {
@@ -1153,6 +1159,32 @@
                     }
                 } else {
                     $lines[] = "• Ошибка: " . (string) $events["error"] . ".";
+                }
+
+                $lines[] = "";
+                $lines[] = "4) Заблокированные квартиры";
+                if (!isset($blocked["error"])) {
+                    $totalBlocked = isset($blocked["total_blocked_flats"]) ? (int)$blocked["total_blocked_flats"] : 0;
+                    $returnedBlocked = isset($blocked["list_returned"]) ? (int)$blocked["list_returned"] : 0;
+                    $lines[] = "• Всего заблокированных: " . $totalBlocked . ".";
+                    if ($returnedBlocked > 0 && isset($blocked["flats"]) && is_array($blocked["flats"])) {
+                        $preview = array_slice($blocked["flats"], 0, 10);
+                        $links = [];
+                        foreach ($preview as $f) {
+                            $label = isset($f["flat_number"]) ? ("кв. " . (string)$f["flat_number"]) : ("flatId " . (string)($f["house_flat_id"] ?? ""));
+                            $url = isset($f["_url"]) ? (string)$f["_url"] : "";
+                            if ($url !== "") {
+                                $links[] = "[" . $label . "](" . $url . ")";
+                            } else {
+                                $links[] = $label;
+                            }
+                        }
+                        if (count($links)) {
+                            $lines[] = "• Ссылки на квартиры: " . implode(", ", $links) . ".";
+                        }
+                    }
+                } else {
+                    $lines[] = "• Ошибка: " . (string) $blocked["error"] . ".";
                 }
 
                 $lines[] = "";
