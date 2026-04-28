@@ -346,6 +346,9 @@
         } else {
             for (let i in modules.permissions.rights.users) {
                 let t = modules.permissions.rights.users[i];
+                if (!m[t.aid] || !m[t.aid].api || !m[t.aid].method || !m[t.aid].action) {
+                    continue;
+                }
                 if (!x[t.uid]) {
                     x[t.uid] = {};
                 }
@@ -519,82 +522,97 @@
 
     render: function () {
         loadingStart();
+        let isFinished = false;
+        let finishLoading = function () {
+            if (isFinished) {
+                return;
+            }
+            isFinished = true;
+            loadingDone();
+        };
 
         GET("authorization", "rights", false, true).done(r => {
-            modules.permissions.rights = r.rights;
+            try {
+                modules.permissions.rights = r.rights;
 
-            QUERY("authorization", "methods", {
-                all: 0,
-            }).done(_m => {
-                let m = {};
+                QUERY("authorization", "methods", {
+                    all: 0,
+                }).done(_m => {
+                    let m = {};
 
-                for (let i in _m.methods) {
-                    for (let j in _m.methods[i]) {
-                        for (let k in _m.methods[i][j]) {
-                            m[_m.methods[i][j][k]] = {
-                                api: i,
-                                api_text: (lang.methods[i] && lang.methods[i]._title) ? lang.methods[i]._title : i,
-                                method: j,
-                                method_text: (lang.methods[i] && lang.methods[i][j] && lang.methods[i][j]._title) ? lang.methods[i][j]._title : j,
-                                action: k,
-                                action_text: (lang.methods[i] && lang.methods[i][j] && lang.methods[i][j][k]) ? lang.methods[i][j][k] : k,
-                            };
+                    for (let i in _m.methods) {
+                        for (let j in _m.methods[i]) {
+                            for (let k in _m.methods[i][j]) {
+                                m[_m.methods[i][j][k]] = {
+                                    api: i,
+                                    api_text: (lang.methods[i] && lang.methods[i]._title) ? lang.methods[i]._title : i,
+                                    method: j,
+                                    method_text: (lang.methods[i] && lang.methods[i][j] && lang.methods[i][j]._title) ? lang.methods[i][j]._title : j,
+                                    action: k,
+                                    action_text: (lang.methods[i] && lang.methods[i][j] && lang.methods[i][j][k]) ? lang.methods[i][j][k] : k,
+                                };
+                            }
                         }
                     }
-                }
 
-                modules.permissions.methods = _m.methods;
+                    modules.permissions.methods = _m.methods;
 
-                function accountsUsers(g, m) {
-                    GET("accounts", "users").done(_u => {
-                        modules.permissions.users = _u.users;
+                    function accountsUsers(g, m) {
+                        GET("accounts", "users").done(_u => {
+                            modules.permissions.users = _u.users;
 
-                        let u = {};
+                            let u = {};
 
-                        for (let i in _u.users) {
-                            u[_u.users[i].uid] = _u.users[i];
-                        }
+                            for (let i in _u.users) {
+                                u[_u.users[i].uid] = _u.users[i];
+                            }
 
-                        if (AVAIL("accounts", "group", "POST")) {
-                            modules.permissions.rightsForm(true, g, u, m, "#mainForm");
-                            modules.permissions.rightsForm(false, g, u, m, "#altForm").show();
-                        } else {
-                            modules.permissions.rightsForm(false, g, u, m, "#mainForm");
-                        }
+                            if (AVAIL("accounts", "group", "POST")) {
+                                modules.permissions.rightsForm(true, g, u, m, "#mainForm");
+                                modules.permissions.rightsForm(false, g, u, m, "#altForm").show();
+                            } else {
+                                modules.permissions.rightsForm(false, g, u, m, "#mainForm");
+                            }
 
-                        loadingDone();
-                    }).
-                    fail(FAIL).
-                    fail(loadingDone);
-                }
+                            finishLoading();
+                        }).
+                        fail(xhr => {
+                            FAIL(xhr);
+                            finishLoading();
+                        });
+                    }
 
-                if (AVAIL("accounts", "group", "POST")) {
-                    GET("accounts", "groups").done(_g => {
-                        modules.permissions.groups = _g.groups;
+                    if (AVAIL("accounts", "group", "POST")) {
+                        GET("accounts", "groups").done(_g => {
+                            modules.permissions.groups = _g.groups;
 
-                        let g = {};
+                            let g = {};
 
-                        for (let i in _g.groups) {
-                            g[_g.groups[i].gid] = _g.groups[i];
-                        }
-                        accountsUsers(g, m);
-                    }).
-                    fail(xhr => {
-                        FAILPAGE(xhr);
-                        loadingDone();
-                    });
-                } else {
-                    accountsUsers(false, m);
-                }
-            }).
-            fail(xhr => {
-                FAILPAGE(xhr);
-                loadingDone();
-            });
+                            for (let i in _g.groups) {
+                                g[_g.groups[i].gid] = _g.groups[i];
+                            }
+                            accountsUsers(g, m);
+                        }).
+                        fail(xhr => {
+                            FAILPAGE(xhr);
+                            finishLoading();
+                        });
+                    } else {
+                        accountsUsers(false, m);
+                    }
+                }).
+                fail(xhr => {
+                    FAILPAGE(xhr);
+                    finishLoading();
+                });
+            } catch (e) {
+                FAILPAGE(e);
+                finishLoading();
+            }
         }).
         fail(xhr => {
             FAILPAGE(xhr);
-            loadingDone();
+            finishLoading();
         });
     },
 
