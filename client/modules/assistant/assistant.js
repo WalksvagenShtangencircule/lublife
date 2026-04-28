@@ -19,9 +19,13 @@
 
     /** Извлекает объекты из Markdown-ответа ассистента и обновляет контекстную панель. */
     updateContextPanel: function (markdownText) {
-        // Парсим Markdown напрямую regex-ом — надёжнее чем через remarkable,
+        // Парсим Markdown напрямую регулярным выражением — надёжнее чем через remarkable,
         // который может изменять href (кодировать ?# и т.д.)
-        let houses = [], flats = [], subscribers = [], domophones = [], cameras = [];
+        let houses = [];
+        let flats = [];
+        let subscribers = [];
+        let domophones = [];
+        let cameras = [];
         let seen = {};
 
         // Ищем все Markdown-ссылки: [текст](href)
@@ -29,8 +33,10 @@
         let m;
         while ((m = re.exec(markdownText)) !== null) {
             let label = m[1].trim();
-            let href  = m[2].trim();
-            if (!label || seen[href]) continue;
+            let href = m[2].trim();
+            if (!label || seen[href]) {
+                continue;
+            }
             seen[href] = true;
 
             if (href.includes("subscriberId=")) {
@@ -65,14 +71,18 @@
     },
 
     saveViewState: function () {
-        if (!document.getElementById("assistantThread")) return;
+        if (!document.getElementById("assistantThread")) {
+            return;
+        }
         modules.assistant._savedThreadHtml = $("#assistantThread").html();
         modules.assistant._savedContextHtml = $("#assistantContextPanel").html();
     },
 
     normalizeInternalHref: function (href, labelText) {
         let out = (href || "").trim().replace(/&amp;/g, "&");
-        if (!out) return out;
+        if (!out) {
+            return out;
+        }
 
         if (out.indexOf("?%23") === 0 || out.indexOf("?%2523") === 0) {
             out = "?#" + out.slice(4);
@@ -95,9 +105,10 @@
 
     renderContextSection: function (icon, title, items, maxItems) {
         if (!items.length) return "";
+        let limit = maxItems || 6;
         let s = "<div class='mb-2'><div style='font-size:10px;font-weight:700;text-transform:uppercase;" +
             "letter-spacing:0.05em;color:#8898aa;margin-bottom:4px'>" + title + "</div>";
-        for (let x of items.slice(0, maxItems || 6)) {
+        for (let x of items.slice(0, limit)) {
             s += "<div class='mb-1' style='overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px'>" +
                 "<i class='" + icon + " mr-1' style='color:#aab;width:12px'></i>" +
                 "<a href='" + escapeHTML(x.href) + "' style='color:#2c3e50'>" + escapeHTML(x.label) + "</a>" +
@@ -692,14 +703,16 @@
         modules.assistant._formBuilt = true;
 
         // Восстанавливаем историю чата и контекст если они были сохранены
-        if (modules.assistant._savedThreadHtml) {
+        let savedThreadHtml = modules.assistant._savedThreadHtml;
+        if (savedThreadHtml) {
             let $box = $("#assistantThread");
-            $box.html(modules.assistant._savedThreadHtml);
+            $box.html(savedThreadHtml);
             $box.scrollTop($box[0].scrollHeight);
         }
-        if (modules.assistant._savedContextHtml) {
+        let savedContextHtml = modules.assistant._savedContextHtml;
+        if (savedContextHtml) {
             let $contextPanel = $("#assistantContextPanel");
-            $contextPanel.html(modules.assistant._savedContextHtml);
+            $contextPanel.html(savedContextHtml);
             $contextPanel.closest(".card").show();
         }
 
@@ -778,7 +791,9 @@
             modules.assistant.saveViewState();
 
             let href = ($(this).attr("href") || "").trim();
-            if (!href) return;
+            if (!href) {
+                return;
+            }
             href = modules.assistant.normalizeInternalHref(href, $(this).text() || "");
             $(this).attr("href", href);
             if (href.indexOf("?#addresses.") === 0) {
