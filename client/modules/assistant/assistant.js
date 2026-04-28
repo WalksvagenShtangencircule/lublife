@@ -17,7 +17,7 @@
         return i18n("assistant.quick." + key);
     },
 
-    /** Извлекает объекты из rendered HTML ответа ассистента и обновляет контекстную панель. */
+    /** Извлекает объекты из Markdown-ответа ассистента и обновляет контекстную панель. */
     updateContextPanel: function (markdownText) {
         // Парсим Markdown напрямую regex-ом — надёжнее чем через remarkable,
         // который может изменять href (кодировать ?# и т.д.)
@@ -75,6 +75,12 @@
         let $panel = $("#assistantContextPanel");
         $panel.html(html);
         $panel.closest(".card").show();
+    },
+
+    saveViewState: function () {
+        if (!document.getElementById("assistantThread")) return;
+        modules.assistant._savedThreadHtml = $("#assistantThread").html();
+        modules.assistant._savedContextHtml = $("#assistantContextPanel").html();
     },
 
     /** Загружает и отображает быструю статистику системы в панели дашборда. */
@@ -599,8 +605,7 @@
 
         // Сохраняем состояние чата перед возможной перерисовкой
         if (modules.assistant._formBuilt && document.getElementById("assistantThread")) {
-            modules.assistant._savedThreadHtml  = $("#assistantThread").html();
-            modules.assistant._savedContextHtml = $("#assistantContextPanel").html();
+            modules.assistant.saveViewState();
         }
 
         let mdCss = [
@@ -746,8 +751,7 @@
         });
         // Сохраняем состояние чата и нормализуем hash-ссылки перед переходом
         $("#mainForm").off("click.assistantNav").on("click.assistantNav", "#assistantContextPanel a, .assistant-md-body a", function (e) {
-            modules.assistant._savedThreadHtml  = $("#assistantThread").html();
-            modules.assistant._savedContextHtml = $("#assistantContextPanel").html();
+            modules.assistant.saveViewState();
 
             let href = ($(this).attr("href") || "").trim();
             if (!href) return;
