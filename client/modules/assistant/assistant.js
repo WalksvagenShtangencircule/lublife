@@ -698,8 +698,9 @@
             $box.scrollTop($box[0].scrollHeight);
         }
         if (modules.assistant._savedContextHtml) {
-            $("#assistantContextPanel").html(modules.assistant._savedContextHtml);
-            $("#assistantContextPanel").closest(".card").show();
+            let $contextPanel = $("#assistantContextPanel");
+            $contextPanel.html(modules.assistant._savedContextHtml);
+            $contextPanel.closest(".card").show();
         }
 
         modules.assistant.loadSystemStats();
