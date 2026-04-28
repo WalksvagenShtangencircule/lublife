@@ -649,7 +649,6 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
         unset($r);
 
         $active = array_values(array_filter($rows, fn($r) => $r["active"]));
-        $inactive = array_values(array_filter($rows, fn($r) => !$r["active"]));
 
         $totalSubscribers = is_array($totals) ? (int)($totals["total_subscribers"] ?? count($rows)) : count($rows);
         $activeInPeriod   = is_array($totals) ? (int)($totals["active_in_period"]   ?? count($active)) : count($active);
