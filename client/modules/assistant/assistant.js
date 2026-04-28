@@ -627,6 +627,9 @@
                 ".assistant-md-body tr:nth-child(even) td{background:#f8fafc}",
                 ".assistant-md-body code{background:#f0f4f8;padding:1px 4px;border-radius:3px;font-size:12px;font-family:monospace}",
                 ".assistant-md-body pre{background:#f0f4f8;padding:8px;border-radius:4px;overflow-x:auto;font-size:12px}",
+                ".assistant-md-body pre,.assistant-md-body pre code{color:#1f2d3d !important}",
+                ".assistant-md-body .hljs{background:#f0f4f8 !important;color:#1f2d3d !important;display:block}",
+                ".assistant-md-body .hljs *{color:inherit !important}",
                 ".assistant-md-body strong{font-weight:700}",
                 ".assistant-md-body hr{border:none;border-top:1px solid #eaecef;margin:8px 0}",
             ].join("");
