@@ -83,6 +83,29 @@
         modules.assistant._savedContextHtml = $("#assistantContextPanel").html();
     },
 
+    normalizeInternalHref: function (href, labelText) {
+        let out = (href || "").trim().replace(/&amp;/g, "&");
+        if (!out) return out;
+
+        if (out.indexOf("?%23") === 0 || out.indexOf("?%2523") === 0) {
+            out = "?#" + out.slice(4);
+        }
+        if (out.indexOf("%23addresses.") >= 0) {
+            out = out.replace("%23addresses.", "#addresses.");
+        }
+        if (out.indexOf("#addresses.") === 0) {
+            out = "?" + out;
+        }
+
+        if (out.indexOf("?#addresses.subscribers") === 0 && out.indexOf("flat=") === -1) {
+            let m = String(labelText || "").trim().match(/(\d+[A-Za-zА-Яа-я\-\/]*)/);
+            if (m && m[1]) {
+                out += (out.indexOf("?") >= 0 ? "&" : "?") + "flat=" + encodeURIComponent(m[1]);
+            }
+        }
+        return out;
+    },
+
     /** Загружает и отображает быструю статистику системы в панели дашборда. */
     loadSystemStats: function () {
         if (!AVAIL("assistant", "stats", "GET")) {
@@ -755,28 +778,7 @@
 
             let href = ($(this).attr("href") || "").trim();
             if (!href) return;
-            href = href.replace(/&amp;/g, "&");
-
-            // Исправляем кодированный префикс hash-роута
-            if (href.indexOf("?%23") === 0 || href.indexOf("?%2523") === 0) {
-                href = "?#" + href.slice(4);
-            }
-            if (href.indexOf("%23addresses.") >= 0) {
-                href = href.replace("%23addresses.", "#addresses.");
-            }
-            if (href.indexOf("#addresses.") === 0) {
-                href = "?" + href;
-            }
-
-            // Для страницы квартиры обязателен параметр flat.
-            // Если его нет (или он пустой), пробуем восстановить из текста ссылки "кв. 159".
-            if (href.indexOf("?#addresses.subscribers") === 0 && href.indexOf("flat=") === -1) {
-                let label = ($(this).text() || "").trim();
-                let m = label.match(/(\d+[A-Za-zА-Яа-я\-\/]*)/);
-                if (m && m[1]) {
-                    href += (href.indexOf("?") >= 0 ? "&" : "?") + "flat=" + encodeURIComponent(m[1]);
-                }
-            }
+            href = modules.assistant.normalizeInternalHref(href, $(this).text() || "");
             $(this).attr("href", href);
             if (href.indexOf("?#addresses.") === 0) {
                 e.preventDefault();
