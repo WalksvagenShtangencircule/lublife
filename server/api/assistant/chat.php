@@ -1042,14 +1042,31 @@
                 if ($userText === "") {
                     return null;
                 }
-                if (!preg_match('/паспорт\\s+дома/iu', $userText)) {
-                    return null;
-                }
-                if (!preg_match('/house_id\\s*=\\s*(\\d+)/i', $userText, $hm)) {
+                // Быстрый путь запускаем не только по явной фразе "паспорт дома",
+                // но и по типовым формулировкам оператора: "отчет/отчёт/сводка по ..."
+                if (!preg_match('/(паспорт\\s+дома|\\bотч[её]т\\b|\\bсводк[ауы]\\b)/iu', $userText)) {
                     return null;
                 }
 
-                $houseId = (int) $hm[1];
+                $houseId = 0;
+                if (preg_match('/house_id\\s*=\\s*(\\d+)/i', $userText, $hm)) {
+                    $houseId = (int) $hm[1];
+                } else {
+                    // Попробуем извлечь адрес из запроса: "отчет по Северина 12"
+                    $search = "";
+                    if (preg_match('/(?:по|для)\\s+(.+)$/iu', $userText, $am)) {
+                        $search = trim((string)$am[1], " \t\n\r\0\x0B\"'`.,:;!?");
+                    }
+                    if ($search === "" && mb_strlen($userText) >= 3) {
+                        $search = $userText;
+                    }
+                    if ($search !== "") {
+                        $resolved = assistant_tools_run("resolve_house", ["search" => $search], $db, $config);
+                        if (is_array($resolved) && isset($resolved["houses"]) && is_array($resolved["houses"]) && count($resolved["houses"]) === 1) {
+                            $houseId = (int)($resolved["houses"][0]["houseId"] ?? 0);
+                        }
+                    }
+                }
                 if ($houseId <= 0) {
                     return null;
                 }
