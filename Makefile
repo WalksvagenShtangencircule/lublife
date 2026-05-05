@@ -6,9 +6,9 @@ APP_DIR = /opt/rbt
 SERVER_LIB_DIR = /opt/rbt/server/lib
 CLIENT_LIB_DIR = /opt/rbt/client/lib
 MONGO_DIR = /opt/rbt/server/mzfc/mongodb
-CLIENT_CONFIG_SRC = /opt/rbt/client/config/config.sample.json
+CLIENT_CONFIG_SRC = /opt/rbt/client/config/config.sample.json5
 CLIENT_CONFIG_DST = /opt/rbt/client/config/config.json
-SERVER_CONFIG_SRC = /opt/rbt/server/config/config.sample.json
+SERVER_CONFIG_SRC = /opt/rbt/server/config/config.sample.json5
 SERVER_CONFIG_DST = /opt/rbt/server/config/config.json
 
 # Default task
@@ -23,20 +23,20 @@ all: ## Execute all setup tasks
 
 get-server-libs: ## Clone server-side libraries
 	cd $(SERVER_LIB_DIR) && \
-	git clone https://github.com/PHPMailer/PHPMailer && \
-	git clone https://github.com/ezyang/htmlpurifier && \
-	git clone -b 1.7.x https://github.com/erusev/parsedown && \
-	git clone https://github.com/PHPGangsta/GoogleAuthenticator &&\
+	[ -d PHPMailer/.git ] || git clone https://github.com/PHPMailer/PHPMailer && \
+	[ -d htmlpurifier/.git ] || git clone https://github.com/ezyang/htmlpurifier && \
+	[ -d parsedown/.git ] || git clone -b 1.7.x https://github.com/erusev/parsedown && \
+	[ -d GoogleAuthenticator/.git ] || git clone https://github.com/PHPGangsta/GoogleAuthenticator &&\
 	cd $(MONGO_DIR) && \
 	composer require mongodb/mongodb --no-interaction
 
 get-client-libs: ## Clone client-side libraries and build Leaflet
 	cd $(CLIENT_LIB_DIR) && \
-	git clone --branch v3.2.0 https://github.com/ColorlibHQ/AdminLTE && \
-	git clone https://github.com/davidshimjs/qrcodejs && \
-	git clone https://github.com/loadingio/loading-bar && \
-	git clone https://github.com/ajaxorg/ace-builds/ && \
-	git clone https://github.com/Leaflet/Leaflet && \
+	[ -d AdminLTE/.git ] || git clone --branch v3.2.0 https://github.com/ColorlibHQ/AdminLTE && \
+	[ -d qrcodejs/.git ] || git clone https://github.com/davidshimjs/qrcodejs && \
+	[ -d loading-bar/.git ] || git clone https://github.com/loadingio/loading-bar && \
+	[ -d ace-builds/.git ] || git clone https://github.com/ajaxorg/ace-builds/ && \
+	[ -d Leaflet/.git ] || git clone --branch v1.9.2 https://github.com/Leaflet/Leaflet && \
 	cd Leaflet && npm install && npm run build
 
 init-client-conf: ## Copy client configuration example
