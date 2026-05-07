@@ -1,1 +1,13 @@
 *.ova filter=lfs diff=lfs merge=lfs -text
+
+# При слиянии с origin/main примените однажды в клоне:
+#   scripts/configure-merge-protection.sh
+# Эти файлы — серверный слой поверх апстрима; при конфликте остаётся наша версия.
+server/api/custom/custom.php merge=ours
+install/nginx/rbt_force_ssl merge=ours
+asterisk/extensions.lua merge=ours
+asterisk/manager.conf merge=ours
+server/backends/dvr/internal/internal.php merge=ours
+client/modules/mediaserver/mediaserver.js merge=ours
+server/hw/ip/domophone/models/iscomx1plus.json merge=ours
+server/config/config.sample.json5 merge=ours

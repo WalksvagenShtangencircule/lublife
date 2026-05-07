@@ -157,3 +157,6 @@ server/db/migration/*.tar.gz
 server/db/migration/mongo_dump_*/
 server/db/migration/INSTRUKCIYA_PERENOS_DRUGOJ_CHAT.md
 server/db/migration/.test
+
+# Локальные копии конфигов с меткой даты (не коммитить)
+*.bak-*

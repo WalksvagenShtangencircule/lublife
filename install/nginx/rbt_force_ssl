@@ -9,6 +9,7 @@ server {
 # IPv6
 #        listen [::]:80 default_server;
 
+
         location /.well-known {
                 root /var/www/html;
         }
@@ -38,17 +39,24 @@ server {
                 fastcgi_pass unix:/var/run/php/php-fpm.sock;
         }
 
+
+
         location /internal {
                 rewrite ^.*$ /internal.php last;
         }
 
         location = /internal.php {
                 allow 127.0.0.1;
+                allow 176.57.72.151;
+                allow 94.102.122.133;
                 deny all;
                 root /opt/rbt/server;
                 include snippets/fastcgi-php.conf;
                 fastcgi_pass unix:/var/run/php/php-fpm.sock;
         }
+
+
+
 
         location / {
                 return 302 https://$host$request_uri;
@@ -66,13 +74,83 @@ server {
 
         client_max_body_size 100M;
 
+location /smart {
+        alias /var/www/SmartYard;
+        index index.html;
+        try_files $uri $uri/ /smart/index.html;
+        # CORS заголовки
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Access-Control-Allow-Credentials' 'true';
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,X-Mx-ReqToken,Keep-Alive,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+        
+        if ($request_method = 'OPTIONS') {
+            add_header 'Access-Control-Allow-Origin' '*';
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+            add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization';
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Type' 'text/plain; charset=utf-8';
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+    }
+
         location / {
                 root /opt/rbt/client;
                 try_files $uri $uri/ =404;
         }
 
-        location /frontend {
-                rewrite ^.*$ /frontend.php last;
+
+
+
+location /frontend {
+    set $cors_origin "";
+    if ($http_origin ~* "^https://(dawson\.farm\.cpx2\.ru|starshiy\.online)$") {
+        set $cors_origin $http_origin;
+    }
+    
+    if ($request_method = 'OPTIONS') {
+        add_header 'Access-Control-Allow-Origin' $cors_origin;
+        add_header 'Access-Control-Allow-Credentials' 'true';
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+        add_header 'Access-Control-Allow-Headers' 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization,X-Api-Refresh,Accept-Language';
+        add_header 'Access-Control-Max-Age' 1728000;
+        add_header 'Content-Type' 'text/plain charset=UTF-8';
+        add_header 'Content-Length' 0;
+        return 204;
+    }
+    add_header 'Access-Control-Allow-Origin' $cors_origin always;
+    add_header 'Access-Control-Allow-Credentials' 'true' always;
+    add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+    add_header 'Access-Control-Allow-Headers' 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization,X-Api-Refresh,Accept-Language' always;
+    
+    rewrite ^.*$ /frontend.php last;
+}
+
+
+
+        # Прокси для нашего Spring API (должен быть ДО location /api)
+        location /api/contract/ {
+            proxy_pass http://localhost:8081/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            
+            # CORS заголовки
+            add_header 'Access-Control-Allow-Origin' '*' always;
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+            add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+            
+            if ($request_method = 'OPTIONS') {
+                add_header 'Access-Control-Allow-Origin' '*';
+                add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+                add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization';
+                add_header 'Access-Control-Max-Age' 1728000;
+                add_header 'Content-Type' 'text/plain; charset=utf-8';
+                add_header 'Content-Length' 0;
+                return 204;
+            }
         }
 
         location /api {
@@ -89,38 +167,18 @@ server {
                 rewrite ^.*$ /md.php last;
         }
 
+# ДОБАВИТЬ этот блок в server на порту 443 после location /md:
+location /wh {
+    rewrite ^.*$ /wh.php last;
+}
+
+location = /wh.php {
+    root /opt/rbt/server;
+    include snippets/fastcgi-php.conf;
+    fastcgi_pass unix:/var/run/php/php-fpm.sock;
+}
+
         location = /md.php {
-                root /opt/rbt/server;
-                include snippets/fastcgi-php.conf;
-                fastcgi_pass unix:/var/run/php/php-fpm.sock;
-        }
-
-
-        location /wh {
-                rewrite ^.*$ /wh.php last;
-        }
-
-        location = /wh.php {
-                root /opt/rbt/server;
-                include snippets/fastcgi-php.conf;
-                fastcgi_pass unix:/var/run/php/php-fpm.sock;
-        }
-
-        location /ud363 {
-                rewrite ^.*$ /ud363.php last;
-        }
-
-        location = /ud363.php {
-                root /opt/rbt/server;
-                include snippets/fastcgi-php.conf;
-                fastcgi_pass unix:/var/run/php/php-fpm.sock;
-        }
-
-        location /qr {
-                rewrite ^.*$ /qr.php last;
-        }
-
-        location = /qr.php {
                 root /opt/rbt/server;
                 include snippets/fastcgi-php.conf;
                 fastcgi_pass unix:/var/run/php/php-fpm.sock;
@@ -181,6 +239,10 @@ server {
         }
 
         location /wss {
+                # Soft per-IP throttling to protect upstream from reconnect storms.
+                limit_req zone=wss_rate burst=20 nodelay;
+                limit_conn wss_conn 30;
+
                 proxy_pass http://127.0.0.1:8088/ws;
                 proxy_http_version 1.1;
                 proxy_set_header Upgrade $http_upgrade;
@@ -207,10 +269,6 @@ server {
                 try_files $uri $uri/ =404;
         }
 
-        location /portal {
-                root /opt/rbt/static;
-                try_files $uri $uri/ =404;
-        }
 
         location /print {
                 root /tmp;

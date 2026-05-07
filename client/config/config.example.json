@@ -6,8 +6,9 @@
         "en": "English"
     },
     "modules": [
-        "asterisk",
+        "assistant",
         "addresses",
+        "virtualDomophones",
         "analytics",
         "mediaserver",
         "queues",
@@ -15,12 +16,23 @@
         "groups",
         "permissions",
         "tt",
+        "diagnostics",
+        "tools",
+        "vendorKeys",
+        "asterisk",
         "cs",
         "darkmode",
         "custom",
-        "diagnostics",
-        "tools",
-        "assistant"
+        "about",
+        "companies",
+        "providers",
+        "geocoder",
+        "mqtt",
+        "contacts",
+        "mkb",
+        "notes",
+        "notifications",
+        "map"
     ],
     "asterisk": {
         "ws": "wss://your-host.example/wss",
@@ -48,7 +60,7 @@
         "phone": "^(7 \\(\\d{3}\\) \\d{3}-\\d{2}-\\d{2}|7\\d{10})$",
         "rfid": "^[0-9A-F]{14}$"
     },
-    "defaultRoute": "#addresses",
+    "defaultRoute": "#about",
     "logo": "rbt",
     "phonePattern": "7 (###) ###-##-##",
     "printServer": "https://your-host.example/print",
