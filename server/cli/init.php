@@ -5,25 +5,37 @@
         class init {
 
             private function latest($pre = false) {
-                $versions = @json_decode(file_get_contents("https://api.github.com/repos/rosteleset/SmartYard-Server/releases", false, stream_context_create([ 'http' => [ 'method' => 'GET', 'header' => [ 'User-Agent: PHP', 'Content-type: application/x-www-form-urlencoded' ] ] ])), true);
-
-                if (!$versions || !count($versions)) {
+                $dir = __DIR__ . "/../..";
+                $raw = trim((string)`git -C $dir tag --sort=-creatordate`);
+                if (!$raw) {
                     return false;
                 }
 
-                $latest_tag_name = false;
-                $latest_updated_at = "";
+                $tags = explode("\n", $raw);
 
-                foreach ($versions as $v) {
-                    if ($pre && $v["prerelease"] || (!$pre && !$v["prerelease"])) {
-                        if ($v["created_at"] > $latest_updated_at) {
-                            $latest_updated_at = $v["created_at"];
-                            $latest_tag_name = $v["tag_name"];
-                        }
+                foreach ($tags as $tag) {
+                    $tag = trim($tag);
+                    if ($tag === "") {
+                        continue;
+                    }
+
+                    $isPre = (bool)preg_match('/(?:-|\.)(alpha|beta|rc|pre)/i', $tag);
+                    if (($pre && $isPre) || (!$pre && !$isPre)) {
+                        return $tag;
                     }
                 }
 
-                return $latest_tag_name;
+                // Если в репозитории нет разделения по pre/stable — берём самый свежий тег.
+                return trim($tags[0]);
+            }
+
+            private function defaultBranch() {
+                $dir = __DIR__ . "/../..";
+                $branch = trim((string)`git -C $dir symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null`);
+                if ($branch !== "" && strpos($branch, "origin/") === 0) {
+                    return substr($branch, strlen("origin/"));
+                }
+                return "main";
             }
 
             function __construct(&$global_cli) {
@@ -174,26 +186,42 @@
                     \cliUsage();
                 }
 
-                if (@$args["--version"]) {
+                chdir("$dir/../..");
+                exec("git fetch --tags origin 2>&1");
+
+                $defaultBranch = $this->defaultBranch();
+                $targetRef = false;
+                $version = false;
+                $version_date = "";
+
+                if ($devel) {
+                    $targetRef = "origin/" . $defaultBranch;
+                    $version = trim((string)`git rev-parse --short $targetRef`);
+                    $version_date = " (" . date("Y-m-d") . ")";
+                } elseif (@$args["--version"]) {
+                    $targetRef = $args["--version"];
                     $version = $args["--version"];
                 } else {
                     $version = $this->latest($pre);
-                }
-
-                if (!$version) {
-                    echo "No releases found\n";
-                    exit(2);
-                }
-
-                chdir("$dir/../..");
-
-                if ($devel) {
-                    $version = @substr(json_decode(file_get_contents("https://api.github.com/repos/rosteleset/SmartYard-Server/commits/main", false, stream_context_create([ 'http' => [ 'method' => 'GET', 'header' => [ 'User-Agent: PHP', 'Content-type: application/x-www-form-urlencoded' ] ] ])), true)["sha"], 0, 7);
+                    if ($version) {
+                        $targetRef = $version;
+                    } else {
+                        $targetRef = "origin/" . $defaultBranch;
+                        $version = trim((string)`git rev-parse --short $targetRef`);
+                        $version_date = " (" . date("Y-m-d") . ")";
+                    }
                 }
 
                 $currentVersion = @explode(" ", file_get_contents("version"))[0];
+                $currentHash = trim((string)`git rev-parse --short HEAD`);
+                $targetHash = trim((string)`git rev-parse --short $targetRef 2>/dev/null`);
 
-                if ($version == $currentVersion && !$force) {
+                if (!$targetHash) {
+                    echo "Target reference not found: $targetRef\n";
+                    exit(2);
+                }
+
+                if (($version == $currentVersion || $currentHash == $targetHash) && !$force) {
                     echo "No new releases found\n";
                     exit(2);
                 }
@@ -207,14 +235,12 @@
                 $code = false;
                 $out = [];
 
-                $version_date = '';
-
                 if ($devel) {
-                    exec("git pull https://github.com/rosteleset/SmartYard-Server main 2>&1 && git checkout main 2>&1 && git pull 2>&1", $out, $code);
-                    $version = substr(explode(" ", explode("\n", `git log -1`)[0])[1], 0, 7);
-                    $version_date = " (" . date("Y-m-d") . ")";
+                    $escapedBranch = escapeshellarg($defaultBranch);
+                    exec("git checkout $escapedBranch 2>&1 && git pull --ff-only origin $escapedBranch 2>&1", $out, $code);
                 } else {
-                    exec("git pull https://github.com/rosteleset/SmartYard-Server main 2>&1 && git checkout main 2>&1 && git pull 2>&1 && git -c advice.detachedHead=false checkout $version 2>&1", $out, $code);
+                    $escapedTargetRef = escapeshellarg($targetRef);
+                    exec("git -c advice.detachedHead=false checkout $escapedTargetRef 2>&1", $out, $code);
                 }
 
                 if ($code !== 0) {

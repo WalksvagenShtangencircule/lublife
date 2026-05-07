@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ключи квартиры</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 16px; background: #f4f6f8; color: #1a1a1a; }
+        .card { max-width: 520px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 12px; }
+        h1 { font-size: 1.05rem; margin: 0 0 10px; font-weight: 600; }
+        h2 { font-size: 0.95rem; margin: 0 0 8px; font-weight: 600; }
+        select, textarea, input[type="text"] { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cfd6dd; font-size: 0.95rem; }
+        label { display: block; font-size: 0.75rem; color: #555; margin-bottom: 4px; }
+        button {
+            padding: 10px 14px; border: none; border-radius: 8px; background: #1565c0; color: #fff; font-size: 0.9rem; cursor: pointer;
+        }
+        button.secondary { background: #546e7a; }
+        button.linkish { background: transparent; color: #1565c0; padding: 4px 8px; font-size: 0.85rem; }
+        .keys { list-style: none; padding: 0; margin: 0; }
+        .keys li { padding: 10px 0; border-bottom: 1px solid #eee; font-size: 0.9rem; word-break: break-all; }
+        .keys li:last-child { border-bottom: none; }
+        .muted { color: #777; font-size: 0.82rem; }
+        .err { color: #c62828; margin-top: 6px; font-size: 0.85rem; }
+        .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        @media (max-width: 420px) { .row2 { grid-template-columns: 1fr; } }
+        .rfid-line { font-weight: 600; }
+        .cmt { margin-top: 4px; color: #444; }
+        .edit-row { margin-top: 8px; display: none; }
+        .edit-row.open { display: block; }
+    </style>
+</head>
+<body>
+    <div id="gate" class="card" style="display:none;">
+        <p class="muted">Нет привязанных квартир.</p>
+    </div>
+
+    <div id="main" style="display:none;">
+        <div class="card">
+            <h1>Ключи квартиры</h1>
+            <label for="flatSel">Квартира</label>
+            <select id="flatSel"></select>
+            <div style="margin-top:8px;">
+                <button type="button" id="reload" class="secondary">Обновить</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-top:0;">В квартире</h2>
+            <ul class="keys" id="keyList"></ul>
+            <p id="listErr" class="err"></p>
+        </div>
+
+        <div class="card" id="addCard" style="display:none;">
+            <h2 style="margin-top:0;">Добавить</h2>
+            <div class="row2">
+                <div>
+                    <label for="rfidIn">RFID</label>
+                    <input type="text" id="rfidIn" autocomplete="off" inputmode="text">
+                </div>
+                <div>
+                    <label for="commentIn">Комментарий</label>
+                    <input type="text" id="commentIn" maxlength="128" autocomplete="off">
+                </div>
+            </div>
+            <div style="margin-top:10px;">
+                <button type="button" id="addBtn">Добавить</button>
+            </div>
+            <p id="addErr" class="err"></p>
+        </div>
+    </div>
+
+    <script src="keys-common.js"></script>
+    <script>
+        (function () {
+            var flats = [];
+
+            function errLabel(code) {
+                var m = {
+                    not_in_catalog: "нет в каталоге",
+                    duplicate: "уже привязан",
+                    invalid_rfid: "неверный RFID",
+                    add_failed: "ошибка записи",
+                    comments_too_long: "комментарий слишком длинный"
+                };
+                return m[code] || code;
+            }
+
+            function loadFlats() {
+                postLoadingStarted();
+                return keysApiFetch("/mobile/address/getSettingsList", {}).then(function (r) {
+                    var j = r.json;
+                    if (j.code !== 200 || !j.data) {
+                        throw new Error(j.message || "Не удалось загрузить квартиры");
+                    }
+                    flats = j.data || [];
+                    if (!flats.length) {
+                        document.getElementById("gate").style.display = "block";
+                        document.getElementById("main").style.display = "none";
+                        return;
+                    }
+                    document.getElementById("gate").style.display = "none";
+                    document.getElementById("main").style.display = "block";
+                    var sel = document.getElementById("flatSel");
+                    sel.innerHTML = "";
+                    flats.forEach(function (f) {
+                        var opt = document.createElement("option");
+                        opt.value = String(f.flatId);
+                        opt.textContent = (f.address || "") + " (кв. " + (f.flatNumber || "") + ")";
+                        sel.appendChild(opt);
+                    });
+                    document.getElementById("addCard").style.display = "block";
+                    return loadKeys(true);
+                }).finally(function () {
+                    postLoadingFinished();
+                });
+            }
+
+            function currentFlatId() {
+                return parseInt(document.getElementById("flatSel").value, 10);
+            }
+
+            function renderKeyRow(k) {
+                var li = document.createElement("li");
+                li.setAttribute("data-key-id", String(k.keyId));
+                var c0 = (k.comments || "").trim();
+
+                var rf = document.createElement("div");
+                rf.className = "rfid-line";
+                rf.textContent = k.rfId;
+                li.appendChild(rf);
+
+                var cdiv = document.createElement("div");
+                cdiv.className = "cmt muted";
+                cdiv.textContent = c0 || "—";
+                li.appendChild(cdiv);
+
+                var tb = document.createElement("div");
+                tb.style.marginTop = "6px";
+                var toggle = document.createElement("button");
+                toggle.type = "button";
+                toggle.className = "linkish edit-toggle";
+                toggle.textContent = "Комментарий";
+                tb.appendChild(toggle);
+                li.appendChild(tb);
+
+                var editRow = document.createElement("div");
+                editRow.className = "edit-row";
+                var inp = document.createElement("input");
+                inp.type = "text";
+                inp.className = "edit-inp";
+                inp.maxLength = 128;
+                inp.value = c0;
+                editRow.appendChild(inp);
+                var saveBtn = document.createElement("button");
+                saveBtn.type = "button";
+                saveBtn.className = "secondary save-cmt";
+                saveBtn.style.marginTop = "6px";
+                saveBtn.textContent = "Сохранить";
+                editRow.appendChild(saveBtn);
+                var errP = document.createElement("p");
+                errP.className = "edit-err err";
+                editRow.appendChild(errP);
+                li.appendChild(editRow);
+
+                toggle.addEventListener("click", function () {
+                    editRow.classList.toggle("open");
+                    if (editRow.classList.contains("open")) {
+                        inp.focus();
+                    }
+                });
+                saveBtn.addEventListener("click", function () {
+                    errP.textContent = "";
+                    var flatId = currentFlatId();
+                    var keyId = parseInt(li.getAttribute("data-key-id"), 10);
+                    var comments = (inp.value || "").trim();
+                    postLoadingStarted();
+                    keysApiFetch("/mobile/keys/updateKeyComment", {
+                        flatId: flatId,
+                        keyId: keyId,
+                        comments: comments
+                    }).then(function (r) {
+                        var j = r.json;
+                        if (j.code !== 200) {
+                            errP.textContent = j.message || "Ошибка";
+                            return;
+                        }
+                        editRow.classList.remove("open");
+                        loadKeys(false);
+                    }).catch(function (e) {
+                        errP.textContent = e.message || "Сеть";
+                    }).finally(function () {
+                        postLoadingFinished();
+                    });
+                });
+                return li;
+            }
+
+            function loadKeys(skipLoading) {
+                var flatId = currentFlatId();
+                var listEl = document.getElementById("keyList");
+                var errEl = document.getElementById("listErr");
+                errEl.textContent = "";
+                listEl.innerHTML = "";
+                if (!skipLoading) {
+                    postLoadingStarted();
+                }
+                return keysApiFetch("/mobile/keys/listForFlat", { flatId: flatId }).then(function (r) {
+                    var j = r.json;
+                    if (j.code !== 200) {
+                        errEl.textContent = j.message || "Ошибка";
+                        return;
+                    }
+                    var keys = j.data || [];
+                    if (!keys.length) {
+                        listEl.innerHTML = "<li class=\"muted\">Пусто</li>";
+                    } else {
+                        keys.forEach(function (k) {
+                            listEl.appendChild(renderKeyRow(k));
+                        });
+                    }
+                }).catch(function (e) {
+                    errEl.textContent = e.message;
+                }).finally(function () {
+                    if (!skipLoading) {
+                        postLoadingFinished();
+                    }
+                });
+            }
+
+            document.getElementById("reload").addEventListener("click", function () { loadKeys(false); });
+            document.getElementById("flatSel").addEventListener("change", function () { loadKeys(false); });
+
+            document.getElementById("addBtn").addEventListener("click", function () {
+                var errEl = document.getElementById("addErr");
+                errEl.textContent = "";
+                var flatId = currentFlatId();
+                var rf = (document.getElementById("rfidIn").value || "").trim();
+                var com = (document.getElementById("commentIn").value || "").trim();
+                if (!rf) {
+                    errEl.textContent = "Укажите RFID";
+                    return;
+                }
+                postLoadingStarted();
+                keysApiFetch("/mobile/keys/batchAdd", {
+                    flatId: flatId,
+                    keys: [ { rfId: rf, comments: com } ]
+                }).then(function (r) {
+                    var j = r.json;
+                    if (j.code !== 200 || !j.data || !j.data.results || !j.data.results[0]) {
+                        errEl.textContent = (j && j.message) ? j.message : "Ошибка";
+                        return;
+                    }
+                    var row = j.data.results[0];
+                    if (!row.ok) {
+                        errEl.textContent = errLabel(row.error || "");
+                        return;
+                    }
+                    document.getElementById("rfidIn").value = "";
+                    document.getElementById("commentIn").value = "";
+                    loadKeys(false);
+                }).catch(function (e) {
+                    errEl.textContent = e.message || "Сеть";
+                }).finally(function () {
+                    postLoadingFinished();
+                });
+            });
+
+            document.addEventListener("DOMContentLoaded", function () {
+                postLoadingStarted();
+                loadFlats().catch(function (e) {
+                    document.getElementById("gate").style.display = "block";
+                    document.getElementById("main").style.display = "none";
+                    document.getElementById("gate").querySelector("p").textContent = e.message;
+                }).finally(function () {
+                    postLoadingFinished();
+                });
+            });
+        })();
+    </script>
+</body>
+</html>
