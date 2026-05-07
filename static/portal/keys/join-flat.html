@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ключ на старт!!!</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 16px; background: #f4f6f8; color: #1a1a1a; }
+        .card { max-width: 480px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+        h1 { font-size: 1.15rem; margin: 0 0 16px; }
+        label { display: block; font-size: 0.85rem; color: #555; margin-bottom: 4px; }
+        input[type="text"] {
+            width: 100%; padding: 10px 12px; border: 1px solid #cfd6dd; border-radius: 8px; font-size: 1rem; margin-bottom: 14px;
+        }
+        .checks { margin: 16px 0; }
+        .checks label { display: flex; align-items: flex-start; gap: 8px; font-size: 0.9rem; cursor: pointer; }
+        .checks input { margin-top: 3px; }
+        .links a { color: #1565c0; }
+        button {
+            width: 100%; padding: 12px; border: none; border-radius: 8px; background: #1565c0; color: #fff; font-size: 1rem; cursor: pointer;
+        }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .err { color: #c62828; font-size: 0.9rem; margin-top: 8px; }
+        .ok { color: #2e7d32; font-size: 0.95rem; margin-top: 12px; }
+        .hint { font-size: 0.8rem; color: #777; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Ключ на старт!!!</h1>
+        <p class="hint">Укажите <strong>номер квартиры</strong> и <strong>RFID ключа</strong> в формате RBT: <strong>14 символов 0–9, A–F</strong>; если номер короче — он дополняется <strong>нулями слева</strong> (пример: <code>00000000ABCDEF</code>). Ключ должен уже быть привязан к этой квартире.</p>
+
+        <label for="flatNumber">Номер квартиры</label>
+        <input type="text" id="flatNumber" placeholder="например 45" autocomplete="off">
+
+        <label for="rfId">Номер ключа (RFID)</label>
+        <input type="text" id="rfId" placeholder="00000000ABCDEF или короче — дополним нулями" autocomplete="off" maxlength="32" inputmode="text">
+        <p id="rfPreview" class="hint" style="margin-top:-8px; min-height:1.2em;"></p>
+
+        <div class="checks">
+            <label>
+                <input type="checkbox" id="acceptTerms">
+                <span>Ознакомлен и согласен с <a class="ext" href="terms.html#smart-yard-external">пользовательским соглашением</a></span>
+            </label>
+            <label>
+                <input type="checkbox" id="acceptPrivacy">
+                <span>Принимаю <a class="ext" href="privacy.html#smart-yard-external">политику конфиденциальности</a></span>
+            </label>
+        </div>
+
+        <button type="button" id="btn">Отправить заявку</button>
+        <div id="msg" class="err"></div>
+        <div id="ok" class="ok"></div>
+    </div>
+
+    <script src="keys-common.js"></script>
+    <script>
+        (function () {
+            var btn = document.getElementById("btn");
+            var msg = document.getElementById("msg");
+            var ok = document.getElementById("ok");
+            var rfInput = document.getElementById("rfId");
+            var rfPreview = document.getElementById("rfPreview");
+
+            function refreshRfPreview() {
+                var raw = rfInput.value || "";
+                var n = typeof normalizeRfidJoinFlat === "function" ? normalizeRfidJoinFlat(raw) : null;
+                var hexOnly = String(raw).replace(/[^0-9A-Fa-f]/g, "");
+                if (!hexOnly.length) {
+                    rfPreview.textContent = "";
+                    return;
+                }
+                if (hexOnly.length > 14) {
+                    rfPreview.textContent = "Слишком длинный номер: не больше 14 hex-цифр (0–9, A–F).";
+                    return;
+                }
+                if (n) {
+                    rfPreview.textContent = "Будет отправлено: " + n;
+                } else {
+                    rfPreview.textContent = "";
+                }
+            }
+
+            rfInput.addEventListener("input", refreshRfPreview);
+            rfInput.addEventListener("blur", refreshRfPreview);
+
+            document.querySelectorAll("a.ext").forEach(function (a) {
+                if (a.getAttribute("href").indexOf("smart-yard-external") >= 0) return;
+                var h = a.getAttribute("href") || "";
+                if (h.indexOf("#") >= 0) a.setAttribute("href", h.split("#")[0] + "#smart-yard-external");
+                else a.setAttribute("href", h + "#smart-yard-external");
+            });
+
+            btn.addEventListener("click", function () {
+                msg.textContent = "";
+                ok.textContent = "";
+                var flatNumber = (document.getElementById("flatNumber").value || "").trim();
+                var rfId = typeof normalizeRfidJoinFlat === "function" ? normalizeRfidJoinFlat(document.getElementById("rfId").value) : null;
+                var acceptTerms = document.getElementById("acceptTerms").checked;
+                var acceptPrivacy = document.getElementById("acceptPrivacy").checked;
+
+                if (!acceptTerms || !acceptPrivacy) {
+                    msg.textContent = "Отметьте оба согласия.";
+                    return;
+                }
+                if (!flatNumber) {
+                    msg.textContent = "Укажите номер квартиры.";
+                    return;
+                }
+                if (!rfId) {
+                    msg.textContent = "Укажите RFID: 1–14 hex-цифр (0–9, A–F), как в RBT; короткий номер дополняется нулями слева до 14 символов.";
+                    return;
+                }
+
+                btn.disabled = true;
+                postLoadingStarted();
+                keysApiFetch("/mobile/keys/joinFlat", {
+                    flatNumber: flatNumber,
+                    rfId: rfId,
+                    acceptTerms: true,
+                    acceptPrivacy: true
+                }).then(function (r) {
+                    var j = r.json;
+                    if (j.code === 200 && j.data) {
+                        if (j.data.alreadyMember) {
+                            ok.textContent = j.message || "Вы уже в списке жильцов этой квартиры.";
+                        } else {
+                            ok.textContent = j.message || "Готово. Квартира добавлена в приложение.";
+                        }
+                    } else {
+                        msg.textContent = (j && j.message) ? j.message : "Ошибка запроса";
+                    }
+                }).catch(function (e) {
+                    msg.textContent = e.message || "Сеть недоступна";
+                }).finally(function () {
+                    btn.disabled = false;
+                    postLoadingFinished();
+                });
+            });
+        })();
+    </script>
+</body>
+</html>
