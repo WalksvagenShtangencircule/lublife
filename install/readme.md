@@ -16,7 +16,8 @@
 14. [Mosquitto](14.mosquitto.md)
 15. [ONLYOFFICE Document Builder](15.onlyoffice.md)
 16. [Виртуальная QR-панель — AMI/DTMF из приложения](16.vdom_qr_dtmf.md)
-17. [Post install](99.post_install.md)
+17. [Safe update and scaling checklist](18.safe_update.md)
+18. [Post install](99.post_install.md)
 
 ___
 

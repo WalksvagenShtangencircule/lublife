@@ -136,3 +136,24 @@ asterisk/logger.conf
 server/config/config_backup*.json
 server/config/config_bacup.json
 server/hw/**/models/*_backup.json
+
+# Критичные кастомизации SmartAccess (должны храниться в git)
+!client/modules/custom/
+!client/modules/custom/**
+!client/modules/custom/custom.js
+!client/modules/custom/i18n/
+!client/modules/custom/i18n/*.json
+!server/mobile/ext/custom/ext.php
+!server/mobile/ext/custom/list.php
+!server/mobile/ext/custom/options.php
+!server/mobile/address/custom/offices.php
+!static/portal/
+!static/portal/keys/
+!static/portal/keys/**
+
+# Артефакты миграции и бандлы (не коммитить)
+server/db/migration/*.json
+server/db/migration/*.tar.gz
+server/db/migration/mongo_dump_*/
+server/db/migration/INSTRUKCIYA_PERENOS_DRUGOJ_CHAT.md
+server/db/migration/.test
