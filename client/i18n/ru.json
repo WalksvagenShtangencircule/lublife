@@ -153,5 +153,37 @@
     },
     "images": {
         "maintenance": "maintenance_ru.jpg"
+    },
+    "objectSeniors": {
+        "objectSeniors": "Старшие по объектам",
+        "menuTitle": "Старшие по объектам",
+        "listTitle": "Личные кабинеты старших",
+        "add": "Добавить кабинет",
+        "addTitle": "Новый личный кабинет",
+        "editTitle": "Редактирование кабинета",
+        "cabinetLink": "Ссылка в ЛК",
+        "colTitle": "Название",
+        "colHouse": "Объект",
+        "colLogin": "Логин",
+        "colFlags": "Права",
+        "house": "Дом / объект",
+        "labelTitle": "Подпись",
+        "login": "Логин кабинета",
+        "password": "Пароль",
+        "passwordNew": "Новый пароль (оставьте пустым, если не менять)",
+        "canEvents": "Просмотр событий",
+        "canSubs": "Управление жильцами",
+        "canEntr": "Назначение подъездов",
+        "scopedFlatsTitle": "Квартиры (ID)",
+        "scopedFlatsHint": "Ограничение по квартирам (ID через запятую; пусто = весь дом)",
+        "badPassword": "Пароль не менее 6 символов",
+        "created": "Кабинет создан",
+        "saved": "Сохранено",
+        "slugRotated": "Новый slug",
+        "confirmDelete": "Удалить запись кабинета?",
+        "delete": "Удалить",
+        "deleted": "Удалено",
+        "edit": "Изменить",
+        "rotateSlug": "Новая ссылка (slug)"
     }
 }

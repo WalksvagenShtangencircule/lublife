@@ -74,7 +74,11 @@ function cfg(c) {
         if (!l) {
             l = "ru";
         }
-        $.get("i18n/" + l + ".json?ver=" + version).
+        $.ajax({
+            url: "i18n/" + l + ".json?ver=" + version + "&_=" + Math.random(),
+            cache: false,
+            dataType: "json",
+        }).
         done(t => {
             lang = t;
             initAll();
