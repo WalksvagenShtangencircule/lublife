@@ -1317,9 +1317,20 @@ function cardForm(params) {
     for (let i in params.fields) {
         if (params.fields[i].id === "-") continue;
 
-        if (params.fields[i].value) {
+        let v = params.fields[i].value;
+        if (v !== undefined && v !== null) {
             switch (params.fields[i].type) {
-                case "select":
+                case "select": {
+                    let sv = v;
+                    if (typeof sv === "boolean") {
+                        sv = sv ? "1" : "0";
+                    } else if (typeof sv === "number" && (sv === 0 || sv === 1)) {
+                        sv = String(sv);
+                    }
+                    $(`#${_prefix}${params.fields[i].id}`).val(sv);
+                    break;
+                }
+
                 case "email":
                 case "number":
                 case "tel":
@@ -1328,7 +1339,7 @@ function cardForm(params) {
                 case "text":
                 case "color":
                 case "area":
-                    $(`#${_prefix}${params.fields[i].id}`).val(params.fields[i].value);
+                    $(`#${_prefix}${params.fields[i].id}`).val(v);
                     break;
 
                 case "date":
@@ -1427,7 +1438,7 @@ function cardForm(params) {
                 });
             }
 
-            if (params.fields[i].value) {
+            if (params.fields[i].value !== undefined && params.fields[i].value !== null) {
                 $(`#${_prefix}${params.fields[i].id}`).val(params.fields[i].value).trigger("change");
             }
 

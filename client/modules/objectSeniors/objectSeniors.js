@@ -198,9 +198,9 @@ function __osBool01(v) {
                     { id: "title", type: "text", title: i18n("objectSeniors.labelTitle"), required: false },
                     { id: "login", type: "text", title: i18n("objectSeniors.login"), required: true },
                     { id: "password", type: "password", title: i18n("objectSeniors.password"), required: true },
-                    { id: "can_view_events", type: "yesno", title: i18n("objectSeniors.canEvents"), value: true },
-                    { id: "can_manage_subscribers", type: "yesno", title: i18n("objectSeniors.canSubs"), value: true },
-                    { id: "can_manage_entrance_access", type: "yesno", title: i18n("objectSeniors.canEntr"), value: true },
+                    { id: "can_view_events", type: "yesno", title: i18n("objectSeniors.canEvents"), value: "1" },
+                    { id: "can_manage_subscribers", type: "yesno", title: i18n("objectSeniors.canSubs"), value: "1" },
+                    { id: "can_manage_entrance_access", type: "yesno", title: i18n("objectSeniors.canEntr"), value: "1" },
                     { id: "scopedFlatIdsText", type: "text", title: __osTxt("scopedFlatsTitle"), hint: __osTxt("scopedFlatsHint"), required: false },
                 ],
                 callback: data => {
@@ -254,13 +254,13 @@ function __osBool01(v) {
                 topApply: true,
                 apply: i18n("save"),
                 fields: [
-                    { id: "title", type: "text", title: i18n("objectSeniors.labelTitle"), value: row.title || "" },
-                    { id: "login", type: "text", title: i18n("objectSeniors.login"), value: row.login || "", required: true },
+                    { id: "title", type: "text", title: i18n("objectSeniors.labelTitle"), value: row.title != null ? String(row.title) : "" },
+                    { id: "login", type: "text", title: i18n("objectSeniors.login"), value: row.login != null ? String(row.login) : "", required: true },
                     { id: "password", type: "password", title: i18n("objectSeniors.passwordNew"), required: false },
-                    { id: "can_view_events", type: "yesno", title: i18n("objectSeniors.canEvents"), value: !!row.can_view_events },
-                    { id: "can_manage_subscribers", type: "yesno", title: i18n("objectSeniors.canSubs"), value: !!row.can_manage_subscribers },
-                    { id: "can_manage_entrance_access", type: "yesno", title: i18n("objectSeniors.canEntr"), value: !!row.can_manage_entrance_access },
-                    { id: "scopedFlatIdsText", type: "text", title: __osTxt("scopedFlatsTitle"), hint: __osTxt("scopedFlatsHint"), value: (row.scopedFlatIds || []).join(",") },
+                    { id: "can_view_events", type: "yesno", title: i18n("objectSeniors.canEvents"), value: row.can_view_events ? "1" : "0" },
+                    { id: "can_manage_subscribers", type: "yesno", title: i18n("objectSeniors.canSubs"), value: row.can_manage_subscribers ? "1" : "0" },
+                    { id: "can_manage_entrance_access", type: "yesno", title: i18n("objectSeniors.canEntr"), value: row.can_manage_entrance_access ? "1" : "0" },
+                    { id: "scopedFlatIdsText", type: "text", title: __osTxt("scopedFlatsTitle"), hint: __osTxt("scopedFlatsHint"), value: Array.isArray(row.scopedFlatIds) && row.scopedFlatIds.length ? row.scopedFlatIds.join(",") : "" },
                 ],
                 callback: data => {
                     const body = {
