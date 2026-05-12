@@ -22,7 +22,7 @@
                 return null;
             }
             $rows = $db->get(
-                "SELECT s.*, h.house_full AS house_full FROM houses_object_seniors s LEFT JOIN addresses_houses h ON h.address_house_id = s.address_house_id WHERE s.slug = :slug",
+                "SELECT s.*, h.house_full AS house_full FROM houses_object_seniors s LEFT JOIN addresses_houses h ON h.address_house_id = s.address_house_id WHERE lower(s.slug) = lower(:slug)",
                 [ "slug" => $slug ],
                 [],
                 [ "singlify" ]

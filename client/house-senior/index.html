@@ -40,7 +40,7 @@
     var m = new RegExp("[?&]" + name + "=([^&]*)").exec(window.location.search);
     return m ? decodeURIComponent(m[1].replace(/\+/g, " ")) : "";
   }
-  var slug = qs("t") || qs("slug") || "";
+  var slug = (qs("t") || qs("slug") || "").replace(/^\s+|\s+$/g, "").replace(/\s+/g, "").toLowerCase();
   var token = sessionStorage.getItem("os_token") || "";
   var me = null;
 
@@ -117,13 +117,20 @@
       "</div>"
     );
     $("#os_btn").on("click", function () {
-      var s = $.trim($("#os_slug").val());
+      var s = $.trim($("#os_slug").val()).replace(/\s+/g, "").toLowerCase();
       var l = $.trim($("#os_login").val());
       var p = $("#os_pass").val();
       apiFetch("POST", "/objectSeniorAuth/login", { slug: s, login: l, password: p }).then(function (j) {
         if (!j._httpOk) {
           var err = firstErrorPayload(j) || firstErrorPayload(unwrap200(j)) || j._snippet;
-          alert("Ошибка входа" + (err ? (": " + err) : "") + " (HTTP " + j._httpStatus + ")");
+          var msg = "Ошибка входа";
+          if (err === "accessDenied") {
+            msg += ": неверный код ссылки (slug), логин или пароль. Убедитесь, что кабинет создан в админке, slug скопирован полностью из ссылки «Ссылка в ЛК».";
+          } else if (err) {
+            msg += ": " + err;
+          }
+          msg += " (HTTP " + j._httpStatus + ")";
+          alert(msg);
           return;
         }
         var u = unwrap200(j);
