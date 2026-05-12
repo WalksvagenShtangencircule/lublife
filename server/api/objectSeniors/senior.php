@@ -148,8 +148,8 @@ namespace api\objectSeniors {
             return [
                 "POST" => "#same(addresses,house,POST)",
                 "PUT" => "#same(addresses,house,PUT)",
-                /* Не house/DELETE (удаление здания): иначе у роли с созданием/редактированием дома нет права убрать ЛК старшего. */
-                "DELETE" => "#same(addresses,house,POST)",
+                /* Кто видит список ЛК (items GET), тот может удалить запись; house/POST у части ролей нет. */
+                "DELETE" => "#same(objectSeniors,items,GET)",
             ];
         }
     }
