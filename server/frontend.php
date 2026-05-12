@@ -31,6 +31,7 @@
     require_once "utils/PDOExt.php";
     require_once "utils/debug.php";
     require_once "utils/i18n.php";
+    require_once "utils/ObjectSeniorAuth.php";
 
     require_once "backends/backend.php";
 
@@ -157,6 +158,31 @@
             if (is_readable($vdi)) {
                 header("Content-Type: text/html; charset=utf-8");
                 readfile($vdi);
+                exit;
+            }
+        }
+    }
+
+    
+    if (strncmp($request, "/frontend/house-senior/", strlen("/frontend/house-senior/")) === 0) {
+        $tail = substr($request, strlen("/frontend/house-senior/"));
+        if ($tail === "" || $tail === "index.html") {
+            $hs = __DIR__ . "/../client/house-senior/index.html";
+            if (is_readable($hs)) {
+                header("Content-Type: text/html; charset=utf-8");
+                readfile($hs);
+                exit;
+            }
+        }
+    }
+
+    if (strncmp($request, "/house-senior/", strlen("/house-senior/")) === 0) {
+        $tail = substr($request, strlen("/house-senior/"));
+        if ($tail === "" || $tail === "index.html") {
+            $hs = __DIR__ . "/../client/house-senior/index.html";
+            if (is_readable($hs)) {
+                header("Content-Type: text/html; charset=utf-8");
+                readfile($hs);
                 exit;
             }
         }
@@ -335,15 +361,29 @@
                 "error" => "noCredentials",
             ]);
         }
+    } else
+    if (strcasecmp((string)$api, "objectSeniorAuth") === 0 && strcasecmp((string)$method, "login") === 0 && $params["_request_method"] === "POST") {
+        // ЛК старшего: логин без Bearer
     } else {
         if ($http_authorization) {
-            $auth = $backends["authentication"]->auth($http_authorization, @$_SERVER["HTTP_USER_AGENT"], $ip);
-            if (!$auth) {
-                $params["_ip"] = $ip;
-                $params["_login"] = '-';
-                response(403, [
-                    "error" => "tokenNotFound",
-                ]);
+            $rawOm = \ObjectSeniorAuth::bearerRawToken($http_authorization);
+            $omSess = \ObjectSeniorAuth::loadSession($redis, $rawOm);
+            if (is_array($omSess) && !empty($omSess["seniorId"])) {
+                $params["_objectSenior"] = $omSess;
+                $auth = [
+                    "uid" => -3,
+                    "login" => "objectSenior",
+                    "token" => $rawOm,
+                ];
+            } else {
+                $auth = $backends["authentication"]->auth($http_authorization, @$_SERVER["HTTP_USER_AGENT"], $ip);
+                if (!$auth) {
+                    $params["_ip"] = $ip;
+                    $params["_login"] = '-';
+                    response(403, [
+                        "error" => "tokenNotFound",
+                    ]);
+                }
             }
         } else {
             $params["_ip"] = $ip;
@@ -360,8 +400,10 @@
         $params["_login"] = $auth["login"];
         $params["_token"] = $auth["token"];
 
-        foreach ($backends as $backend) {
-            $backend->setCreds($auth["uid"], $auth["login"]);
+        if (empty($params["_objectSenior"])) {
+            foreach ($backends as $backend) {
+                $backend->setCreds($auth["uid"], $auth["login"]);
+            }
         }
     }
 
@@ -387,7 +429,7 @@
     if (file_exists(__DIR__ . "/api/$api/$method.php")) {
         if ($backends["authorization"]->allow($params)) {
             /* Матрица прав не должна жить в FRONT-кэше: смена групп не меняет URL/_md5 */
-            $skipFrontCache = ($api === "authorization" && $method === "available");
+            $skipFrontCache = ($api === "authorization" && $method === "available") || strcasecmp((string)$api, "objectSenior") === 0 || strcasecmp((string)$api, "objectSeniorAuth") === 0 || strcasecmp((string)$api, "objectSeniors") === 0 || !empty($params["_objectSenior"]);
 
             $cache = false;
             if ($params["_request_method"] === "GET" && !$skipFrontCache && $authUid > 0) {

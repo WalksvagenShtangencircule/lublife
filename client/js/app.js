@@ -231,7 +231,19 @@ function hashChange() {
                 if (module.menu) {
                     $("#topMenuLeft").html(`<li id="topMenuLeftCaption" class="noselect ml-3 mr-3 nav-item d-none d-sm-inline-block text-bold text-lg">${menu(module.menu)}</li>`).removeClass("cut-text");
                 } else {
-                    $("#topMenuLeft").html(`<li id="topMenuLeftCaption" class="cut-text ml-3 mr-3 nav-item d-none d-sm-inline-block text-bold text-lg">${i18n(c)}</li>`).addClass("cut-text");
+                    let topCap = i18n(c);
+                    if (topCap === c) {
+                        const modName = route.split(".")[0];
+                        if (lang && lang[modName] && typeof lang[modName] === "object") {
+                            const g = lang[modName];
+                            if (typeof g[modName] === "string") {
+                                topCap = g[modName];
+                            } else if (typeof g.menuTitle === "string") {
+                                topCap = g.menuTitle;
+                            }
+                        }
+                    }
+                    $("#topMenuLeft").html(`<li id="topMenuLeftCaption" class="cut-text ml-3 mr-3 nav-item d-none d-sm-inline-block text-bold text-lg">${topCap}</li>`).addClass("cut-text");
                 }
 
                 if (currentModule != module) {
@@ -877,7 +889,15 @@ function loadModule() {
         if (!l) {
             l = "ru";
         }
-        $.get("modules/" + module + "/i18n/" + l + ".json?ver=" + version, i18n => {
+        $.ajax({
+            url: "modules/" + module + "/i18n/" + l + ".json?ver=" + version + "&_=" + Math.random(),
+            cache: false,
+            dataType: "json",
+        }).
+        done(i18n => {
+            if (!i18n || typeof i18n !== "object") {
+                i18n = {};
+            }
             if (i18n.errors) {
                 if (!lang.errors) {
                     lang.errors = {};
@@ -894,11 +914,20 @@ function loadModule() {
                 lang.methods = mergeDeep(lang.methods, i18n.methods);
                 delete i18n.methods;
             }
-            lang[module] = i18n;
+            /* Слияние с уже загруженным корневым i18n (ru.json): иначе пустой modules/<m>/i18n/*.json затирает весь блок lang[m]. */
+            lang[module] = mergeDeep(lang[module] && typeof lang[module] === "object" ? lang[module] : {}, typeof i18n === "object" && i18n ? i18n : {});
         })
         .always(() => {
             if (config && config.customSubModules && config.customSubModules[module]) {
-                $.get("modules/" + module + "/custom/i18n/" + l + ".json?ver=" + version, i18n => {
+                $.ajax({
+                    url: "modules/" + module + "/custom/i18n/" + l + ".json?ver=" + version + "&_=" + Math.random(),
+                    cache: false,
+                    dataType: "json",
+                }).
+                done(i18n => {
+                    if (!i18n || typeof i18n !== "object") {
+                        i18n = {};
+                    }
                     if (i18n.errors) {
                         if (!lang.errors) {
                             lang.errors = {};
@@ -916,7 +945,7 @@ function loadModule() {
                         delete i18n.methods;
                     }
                     // lang[module] = {...lang[module], ...i18n};
-                    lang[module] = mergeDeep(lang[module], i18n);
+                    lang[module] = mergeDeep(lang[module] && typeof lang[module] === "object" ? lang[module] : {}, typeof i18n === "object" && i18n ? i18n : {});
                 }).always(() => {
                     $.getScript("modules/" + module + "/" + module + ".js?ver=" + version)
                     .fail(() => {

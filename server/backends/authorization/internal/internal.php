@@ -38,6 +38,14 @@
                     return true;
                 }
 
+                if (strcasecmp((string)$params["_path"]["api"], "objectSeniorAuth") === 0 && strcasecmp((string)$params["_path"]["method"], "login") === 0 && $params["_request_method"] === "POST") {
+                    return true;
+                }
+
+                if (!empty($params["_objectSenior"]) && is_array($params["_objectSenior"])) {
+                    return $this->allowObjectSenior($params);
+                }
+
                 if (!checkInt($params["_uid"])) {
                     return false;
                 }
@@ -200,6 +208,33 @@
                     error_log(print_r($e, true));
                 }
 
+                return false;
+            }
+
+            /**
+             * Доступ для Bearer-сессии ЛК старшего (Redis OM_AUTH).
+             */
+            private function allowObjectSenior(array $params): bool {
+                $a = (string) $params["_path"]["api"];
+                $m = (string) $params["_path"]["method"];
+                $rm = (string) $params["_request_method"];
+                $rules = [
+                    [ "objectSenior", "events", "GET" ],
+                    [ "objectSenior", "eventPreview", "GET" ],
+                    [ "objectSenior", "eventVideo", "GET" ],
+                    [ "objectSenior", "subscribers", "GET" ],
+                    [ "objectSenior", "flats", "GET" ],
+                    [ "objectSenior", "subscriber", "POST" ],
+                    [ "objectSenior", "subscriber", "DELETE" ],
+                    [ "objectSenior", "subscriberEntrances", "PUT" ],
+                    [ "objectSenior", "whoAmI", "GET" ],
+                    [ "objectSeniorAuth", "password", "PUT" ],
+                ];
+                foreach ($rules as $r) {
+                    if (strcasecmp($a, $r[0]) === 0 && strcasecmp($m, $r[1]) === 0 && $rm === $r[2]) {
+                        return true;
+                    }
+                }
                 return false;
             }
 
