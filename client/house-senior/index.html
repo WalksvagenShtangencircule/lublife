@@ -384,6 +384,7 @@
       var tbody = "";
       sorted.forEach(function (f) {
         var fid = Number(f.flatId);
+        var subList = uniqSubs(subsForFlat(houseSubscribersCache, fid));
         var hasSubs = subList.length > 0;
         var ownerPhones = subList.filter(function (s) { return isFlatOwner(s, fid); }).map(function (s) {
           return String(s.mobile || "").trim();
