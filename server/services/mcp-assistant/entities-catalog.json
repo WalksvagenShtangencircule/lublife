@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "SmartAccess — каталог HTTP API и модель сущностей",
+    "title": "CityHome — каталог HTTP API и модель сущностей",
     "version": 1,
     "urlShape": "{SMARTACCESS_BASE_URL}/{api}/{method}[/{id}][?query]",
     "virtualEndpoints": [
@@ -11,8 +11,8 @@
     ],
     "mcpTools": {
       "smapi_request": "Универсальный вызов API (метод задаётся телом; по умолчанию только GET, см. SMARTACCESS_MCP_HTTP_METHODS).",
-      "smartaccess_catalog": "Этот файл: список эндпоинтов, домены, пересечения сущностей.",
-      "smartaccess_capabilities": "GET authorization/available — какие методы разрешены текущему токену."
+      "cityhome_catalog": "Этот файл: список эндпоинтов, домены, пересечения сущностей.",
+      "cityhome_capabilities": "GET authorization/available — какие методы разрешены текущему токену."
     }
   },
   "domains": {

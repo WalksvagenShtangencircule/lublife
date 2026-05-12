@@ -140,10 +140,16 @@
                 $errors = [
                     "badRequest" => 400,
                     "forbidden" => 403,
+                    "accessDenied" => 403,
+                    "tokenNotFound" => 403,
+                    "noToken" => 403,
+                    "noCredentials" => 403,
+                    "inaccessible" => 403,
                     "notFound" => 404,
                     "notAcceptable" => 406,
                     "notConfigured" => 503,
                     "backend" => 500,
+                    "internal" => 500,
                 ];
 
                 $code = @$errors[$error] ?: 400;

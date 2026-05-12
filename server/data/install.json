@@ -298,5 +298,8 @@
     ],
     "94": [
         "v94_subscriber_purchased_rfids.sql"
+    ],
+    "95": [
+        "v95_object_senior.sql"
     ]
 }

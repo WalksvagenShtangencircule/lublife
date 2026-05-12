@@ -1,4 +1,4 @@
-# MCP-сервер SmartAccess (оболочка)
+# MCP-сервер CityHome (оболочка)
 
 Локальный MCP по stdio для Cursor и других клиентов. Вызывает **тот же HTTP API**, что и веб-клиент: путь вида `api/method` (включая **camelCase**, напр. `mcp_data/pgSelect`). Права определяет Bearer-токен.
 
@@ -7,9 +7,9 @@
 | Инструмент | Назначение |
 |------------|------------|
 | `smapi_request` | Универсальный HTTP: `path`, опционально `method`, `body`. |
-| `smartaccess_catalog` | `entities-catalog.json`: эндпоинты, домены, сущности, пересечения. |
-| `smartaccess_capabilities` | `GET authorization/available` — матрица для текущего токена. |
-| `smartaccess_suggested_questions` | `suggested-questions-ru.json` — примеры формулировок для полных ответов. |
+| `cityhome_catalog` | `entities-catalog.json`: эндпоинты, домены, сущности, пересечения. |
+| `cityhome_capabilities` | `GET authorization/available` — матрица для текущего токена. |
+| `cityhome_suggested_questions` | `suggested-questions-ru.json` — примеры формулировок для полных ответов. |
 | `smapi_get` | Псевдоним GET-only. |
 | **`mcp_deep_schema`** | `GET mcp_data/schema` — таблицы/колонки PostgreSQL (`information_schema`). |
 | **`mcp_deep_pg_select`** | `POST mcp_data/pgSelect` — один `SELECT`/`WITH`, read-only, лимит строк. |

@@ -152,5 +152,37 @@
     },
     "images": {
         "maintenance": "maintenance_en.jpg"
+    },
+    "objectSeniors": {
+        "objectSeniors": "Building representatives",
+        "menuTitle": "Building representatives",
+        "listTitle": "Senior dashboards",
+        "add": "Add dashboard",
+        "addTitle": "New dashboard",
+        "editTitle": "Edit dashboard",
+        "cabinetLink": "Dashboard link",
+        "colTitle": "Title",
+        "colHouse": "Site",
+        "colLogin": "Login",
+        "colFlags": "Rights",
+        "house": "House",
+        "labelTitle": "Label",
+        "login": "Login",
+        "password": "Password",
+        "passwordNew": "New password (leave empty to keep)",
+        "canEvents": "View events",
+        "canSubs": "Manage residents",
+        "canEntr": "Entrance access",
+        "scopedFlatsTitle": "Flat IDs",
+        "scopedFlatsHint": "Flat IDs (comma); empty = whole building",
+        "badPassword": "Password at least 6 characters",
+        "created": "Created",
+        "saved": "Saved",
+        "slugRotated": "New slug",
+        "confirmDelete": "Delete this dashboard?",
+        "delete": "Delete",
+        "deleted": "Deleted",
+        "edit": "Edit",
+        "rotateSlug": "Rotate link (slug)"
     }
 }

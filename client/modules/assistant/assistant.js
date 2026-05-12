@@ -767,7 +767,7 @@
             let bodyHtml = modules.assistant.renderMarkdown(md);
             let ts = new Date().toLocaleString("ru-RU");
             let html = "<!DOCTYPE html><html lang='ru'><head><meta charset='UTF-8'>" +
-                "<title>Отчёт SmartAccess — " + ts + "</title>" +
+                "<title>Отчёт CityHome — " + ts + "</title>" +
                 "<style>" +
                 "body{font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#212529;background:#fff;margin:40px auto;max-width:960px;padding:0 24px}" +
                 "h1,h2,h3,h4{color:#2c3e50;margin-top:1.2em}" +
@@ -789,10 +789,10 @@
                 "hr{border:none;border-top:1px solid #dee2e6;margin:16px 0}" +
                 ".footer{margin-top:32px;font-size:11px;color:#aaa;border-top:1px solid #eee;padding-top:8px}" +
                 "</style></head><body>" +
-                "<h1>Отчёт SmartAccess</h1>" +
+                "<h1>Отчёт CityHome</h1>" +
                 "<p style='font-size:12px;color:#888;margin-bottom:20px'>Сформировано: " + ts + "</p>" +
                 bodyHtml +
-                "<div class='footer'>SmartAccess &mdash; аналитический отчёт ИИ-ассистента</div>" +
+                "<div class='footer'>CityHome &mdash; аналитический отчёт ИИ-ассистента</div>" +
                 "</body></html>";
             let blob = new Blob([html], { type: "text/html;charset=utf-8" });
             let url = URL.createObjectURL(blob);

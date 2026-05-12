@@ -65,7 +65,7 @@
 
                 array_unshift($messages, [
                     "role" => "system",
-                    "content" => "Ты встроенный аналитический помощник **этого конкретного сервера SmartAccess**. " .
+                    "content" => "Ты встроенный аналитический помощник **этого конкретного сервера CityHome**. " .
                         "Отвечай **только** на основе данных, полученных через инструменты (БД PostgreSQL, журнал plog в ClickHouse). " .
                         "Если вопрос выходит за пределы доступных данных — прямо скажи об этом, не выдумывай. " .
                         "Отвечай по-русски, структурированно, используй Markdown (заголовки, таблицы, списки). " .
@@ -95,13 +95,13 @@
                         "**ПАСПОРТ ДОМА** (7 дней): flats_count → mobile_access_funnel(periods_days:[7]) → plog_events_list(limit:30). Не дублируй вызовы.",
                 ]);
 
+                $db = $params["_db"];
+                $config = $params["_config"];
+
                 $messages = self::sanitizeMessages($messages);
                 if (!count($messages)) {
                     return api::ANSWER(false, "badRequest");
                 }
-
-                $db = $params["_db"];
-                $config = $params["_config"];
 
                 $fast = self::tryFastHousePassport($messages, $db, $config);
                 if (is_array($fast)) {
@@ -352,12 +352,10 @@
              * @return array<int, array<string, mixed>>
              */
             private static function sanitizeMessages(array $messages): array {
-                $out = [];
                 /** Контекст короче для снижения задержки ответа модели. */
                 $maxChars = 18000;
                 $maxPerMessage = 3500;
-                $total = 0;
-
+                $norm = [];
                 foreach ($messages as $m) {
                     if (!is_array($m)) {
                         continue;
@@ -373,11 +371,44 @@
                     if (mb_strlen($content) > $maxPerMessage) {
                         $content = mb_substr($content, 0, $maxPerMessage) . "…";
                     }
-                    $total += mb_strlen($content);
-                    if ($total > $maxChars) {
+                    $norm[] = ["role" => $role, "content" => $content];
+                }
+                if (!count($norm)) {
+                    return [];
+                }
+                $out = [];
+                $startIdx = 0;
+                $head = null;
+                if ($norm[0]["role"] === "system") {
+                    $head = $norm[0];
+                    $startIdx = 1;
+                }
+                if ($head !== null) {
+                    $hl = mb_strlen($head["content"]);
+                    if ($hl > $maxChars) {
+                        $head["content"] = mb_substr($head["content"], 0, $maxChars - 1) . "…";
+                        $hl = mb_strlen($head["content"]);
+                    }
+                    $out[] = $head;
+                    $budget = $maxChars - $hl;
+                } else {
+                    $budget = $maxChars;
+                }
+                if ($budget <= 0 || $startIdx >= count($norm)) {
+                    return $out;
+                }
+                $tail = [];
+                $used = 0;
+                for ($i = count($norm) - 1; $i >= $startIdx; $i--) {
+                    $len = mb_strlen($norm[$i]["content"]);
+                    if ($used + $len > $budget) {
                         break;
                     }
-                    $out[] = ["role" => $role, "content" => $content];
+                    $tail[] = $norm[$i];
+                    $used += $len;
+                }
+                foreach (array_reverse($tail) as $piece) {
+                    $out[] = $piece;
                 }
                 return $out;
             }
@@ -473,7 +504,7 @@
                         "type" => "function",
                         "function" => [
                             "name" => "subscriber_lookup",
-                            "description" => "Данные одного абонента: ФИО/телефон, привязанные квартиры и дома, мобильные устройства (UA, last_seen), привязанные RFID-ключи.",
+                            "description" => "Данные одного абонента: ФИО/телефон, квартиры, устройства, RFID. Поиск телефона: сначала точное совпадение в БД, затем тот же полнотекстовый/триграммный поиск, что у GET subscribers/search (веб-поиск). Передавай phone как вводит пользователь.",
                             "parameters" => [
                                 "type" => "object",
                                 "properties" => [
