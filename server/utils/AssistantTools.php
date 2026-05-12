@@ -150,6 +150,21 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
         return preg_replace("/[^0-9]/", "", $phone);
     }
 
+    /**
+     * Для РФ: приводит строку из цифр к национальному виду без ведущей 7/8 (10 цифр, обычно 9…).
+     * Позволяет сопоставить 7915…, 8915… и 915… с записью в БД в любом из этих форматов.
+     */
+    function assistant_tools_ru_mobile_canonical_tail(string $digitsOnly): string {
+        $d = preg_replace("/[^0-9]/", "", $digitsOnly);
+        if ($d === "") {
+            return "";
+        }
+        if (strlen($d) === 11 && ($d[0] === "7" || $d[0] === "8")) {
+            return substr($d, 1);
+        }
+        return $d;
+    }
+
     function assistant_tool_resolve_house($db, array $args): array {
         $search = isset($args["search"]) ? trim((string) $args["search"]) : "";
         if (mb_strlen($search) < 2) {
@@ -672,7 +687,7 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
         $row = null;
         if ($sid > 0) {
             $row = $db->get(
-                "select house_subscriber_id, id as phone, platform, registered, last_seen,
+                "select house_subscriber_id, id as phone, registered,
                         subscriber_name, subscriber_patronymic, subscriber_last, subscriber_full
                  from houses_subscribers_mobile
                  where house_subscriber_id = :s limit 1",
@@ -685,18 +700,47 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
             if (strlen($digits) < 10) {
                 return ["error" => "phone_too_short"];
             }
+            $tail = assistant_tools_ru_mobile_canonical_tail($digits);
+            $idDigits = "regexp_replace(coalesce(id::text, ''), '[^0-9]', '', 'g')";
+            $idCanon = "(case when length($idDigits) = 11 and substring($idDigits, 1, 1) in ('7','8') then substring($idDigits, 2, 10) else $idDigits end)";
             $row = $db->get(
-                "select house_subscriber_id, id as phone, platform, registered, last_seen,
+                "select house_subscriber_id, id as phone, registered,
                         subscriber_name, subscriber_patronymic, subscriber_last, subscriber_full
                  from houses_subscribers_mobile
-                 where id = :p or regexp_replace(coalesce(id, ''), '[^0-9]', '', 'g') = :d
+                 where id = :p
+                    or regexp_replace(coalesce(id::text, ''), '[^0-9]', '', 'g') = :d
+                    or ($idCanon) = :tail
                  order by house_subscriber_id limit 1",
-                ["p" => $phone, "d" => $digits],
+                ["p" => $phone, "d" => $digits, "tail" => $tail],
                 [],
                 ["silent", "singlify"]
             );
         } else {
             return ["error" => "invalid_params", "need" => ["phone или house_subscriber_id"]];
+        }
+
+        if (($row === false || !is_array($row) || !isset($row["house_subscriber_id"])) && $phone !== "") {
+            $households = function_exists("loadBackend") ? loadBackend("households") : false;
+            if ($households) {
+                $hits = $households->searchSubscriber($phone);
+                if ((!is_array($hits) || !count($hits)) && isset($digits) && $digits !== "" && $digits !== $phone && strlen($digits) >= 10) {
+                    $hits = $households->searchSubscriber($digits);
+                }
+                if (is_array($hits) && count($hits) && isset($hits[0]["subscriberId"])) {
+                    $sidPick = (int) $hits[0]["subscriberId"];
+                    if ($sidPick > 0) {
+                        $row = $db->get(
+                            "select house_subscriber_id, id as phone, registered,
+                                    subscriber_name, subscriber_patronymic, subscriber_last, subscriber_full
+                             from houses_subscribers_mobile
+                             where house_subscriber_id = :s limit 1",
+                            ["s" => $sidPick],
+                            [],
+                            ["silent", "singlify"]
+                        );
+                    }
+                }
+            }
         }
 
         if ($row === false || !is_array($row) || !isset($row["house_subscriber_id"])) {
@@ -827,8 +871,11 @@ if (!function_exists("assistant_tools_flat_ids_for_house")) {
         if ($phone !== "") {
             $pd = assistant_tools_normalize_phone($phone);
             if (strlen($pd) >= 10) {
-                $pdEsc = str_replace("'", "''", $pd);
-                $phoneCond = " and replaceRegexpAll(trim(JSONExtractString(toJSONString(phones), 'user_phone')), '[^0-9]', '') = '" . $pdEsc . "'";
+                $tail = assistant_tools_ru_mobile_canonical_tail($pd);
+                $tailEsc = str_replace("'", "''", $tail);
+                $chDigits = "replaceRegexpAll(trim(JSONExtractString(toJSONString(phones), 'user_phone')), '[^0-9]', '')";
+                $chCanon = "if(length($chDigits) = 11 AND substring($chDigits, 1, 1) IN ('7','8'), substring($chDigits, 2), $chDigits)";
+                $phoneCond = " and $chCanon = '" . $tailEsc . "'";
             }
         }
 

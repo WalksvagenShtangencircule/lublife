@@ -1,5 +1,5 @@
 /**
- * MCP-сервер (stdio): обёртка над SmartAccess frontend API.
+ * MCP-сервер (stdio): обёртка над CityHome frontend API.
  * Права — как у Bearer-токена; путь валидируется по шаблону (без open proxy за пределы API).
  */
 import { readFileSync } from "node:fs";
@@ -135,15 +135,15 @@ function loadCatalog() {
 }
 
 const server = new McpServer({
-  name: "smartaccess-mcp",
-  version: "1.2.0",
+  name: "cityhome-mcp",
+  version: "1.2.1",
 });
 
 server.registerTool(
   "smapi_request",
   {
     description:
-      "Вызов SmartAccess HTTP API: путь относительно базы (как в клиенте), схема {api}/{method}[/{id}][?query]. " +
+      "Вызов CityHome HTTP API: путь относительно базы (как в клиенте), схема {api}/{method}[/{id}][?query]. " +
       "Права — токен SMARTACCESS_TOKEN. По умолчанию разрешены GET и POST (см. SMARTACCESS_MCP_HTTP_METHODS: GET, ALL, …).",
     inputSchema: {
       path: z
@@ -168,10 +168,10 @@ server.registerTool(
 );
 
 server.registerTool(
-  "smartaccess_catalog",
+  "cityhome_catalog",
   {
     description:
-      "Полный справочник: все известные пары api/method, описание доменов SmartAccess, узлы сущностей и таблица пересечений (связей).",
+      "Полный справочник: все известные пары api/method, описание доменов CityHome, узлы сущностей и таблица пересечений (связей).",
     inputSchema: z.object({}),
   },
   async () => ({
@@ -180,7 +180,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "smartaccess_capabilities",
+  "cityhome_capabilities",
   {
     description:
       "Текущие разрешённые для токена вызовы API (то же, что GET authorization/available в веб-клиенте).",
@@ -208,6 +208,22 @@ server.registerTool(
 );
 
 /** Глубокий read-only доступ (модуль mcp_data на сервере). Права как у diagnostics: check GET / action POST. */
+server.registerTool(
+  "subscriber_search_by_phone",
+  {
+    description:
+      "Поиск абонента по номеру телефона: GET subscribers/search (та же логика, что в веб-интерфейсе). Чёткое совпадение/полнотекст по настройкам сервера.",
+    inputSchema: {
+      phone: z.string().describe("Номер в любом виде: +7…, 8…, с пробелами и дефисами"),
+    },
+  },
+  async ({ phone }) => {
+    const q = encodeURIComponent(String(phone || "").trim());
+    const out = await smapiRequest("GET", `subscribers/search?search=${q}`);
+    return { content: [{ type: "text", text: out }] };
+  }
+);
+
 server.registerTool(
   "mcp_deep_schema",
   {
@@ -318,7 +334,7 @@ function loadQuestionBank() {
 }
 
 server.registerTool(
-  "smartaccess_suggested_questions",
+  "cityhome_suggested_questions",
   {
     description:
       "Готовые формулировки вопросов на русском (обзор БД, API, конфига, бизнес-сущностей) для максимально полных ответов через инструменты.",
