@@ -1,9 +1,9 @@
 {
-  "name": "smartaccess-mcp-assistant",
+  "name": "cityhome-mcp-assistant",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "MCP stdio: безопасные вызовы SmartAccess API (allowlist)",
+  "description": "MCP stdio: безопасные вызовы CityHome API (allowlist)",
   "main": "index.mjs",
   "scripts": {
     "start": "node index.mjs"

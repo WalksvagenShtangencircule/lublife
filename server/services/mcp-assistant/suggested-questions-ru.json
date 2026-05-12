@@ -1,5 +1,5 @@
 {
-  "aboutTools": "Используйте: smartaccess_capabilities → при необходимости smapi_request; для схемы БД mcp_deep_schema; для данных mcp_deep_pg_select / mcp_deep_ch_select; конфиг mcp_deep_config; индекс API mcp_deep_api_index.",
+  "aboutTools": "Используйте: cityhome_capabilities → при необходимости smapi_request; для схемы БД mcp_deep_schema; для данных mcp_deep_pg_select / mcp_deep_ch_select; конфиг mcp_deep_config; индекс API mcp_deep_api_index.",
   "questions": [
     "Какие таблицы есть в PostgreSQL и как называются колонки в houses_* и addresses_*?",
     "Сколько записей в таблицах домов, квартир, абонентов, ключей (через SELECT count)?",
