@@ -29,6 +29,23 @@ namespace api\objectSenior {
                 }
                 $list = $households->getSubscribers("flatId", $flatId);
                 if (is_array($list) && count($list) > 0) {
+                    $roleRows = $db->get(
+                        "SELECT house_subscriber_id, role FROM houses_flats_subscribers WHERE house_flat_id = :f",
+                        [ "f" => $flatId ],
+                        [],
+                        [ "silent" ]
+                    );
+                    $ownerBySub = [];
+                    if (is_array($roleRows)) {
+                        foreach ($roleRows as $rr) {
+                            $sidR = (int)($rr["house_subscriber_id"] ?? 0);
+                            if ($sidR <= 0) {
+                                continue;
+                            }
+                            /** role = 0 — владелец квартиры (см. getSettingsList / intercom) */
+                            $ownerBySub[$sidR] = ((int)($rr["role"] ?? 1)) === 0;
+                        }
+                    }
                     $bindRows = $db->get(
                         "SELECT house_subscriber_id, house_entrance_id FROM houses_flats_subscribers_entrances WHERE house_flat_id = :f",
                         [ "f" => $flatId ],
@@ -54,6 +71,7 @@ namespace api\objectSenior {
                     }
                     foreach ($list as &$subOne) {
                         $sid = (int)($subOne["subscriberId"] ?? 0);
+                        $subOne["flatOwner"] = $sid > 0 && !empty($ownerBySub[$sid]);
                         if ($sid > 0 && !empty($bySub[$sid])) {
                             $subOne["boundEntranceIds"] = array_values(array_unique($bySub[$sid]));
                             $subOne["entranceAccessAll"] = false;

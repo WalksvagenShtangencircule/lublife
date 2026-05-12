@@ -157,5 +157,42 @@
             }
             return true;
         }
+
+        /**
+         * Владелец квартиры: role = 0 (как в мобильном API). Не более одного владельца на квартиру.
+         */
+        public static function setSubscriberFlatOwner($db, int $flatId, int $subscriberId, bool $isOwner): bool {
+            $row = $db->get(
+                "SELECT 1 AS x FROM houses_flats_subscribers WHERE house_flat_id = :f AND house_subscriber_id = :s LIMIT 1",
+                [ "f" => $flatId, "s" => $subscriberId ],
+                [],
+                [ "singlify" ]
+            );
+            if (!$row || !is_array($row)) {
+                return false;
+            }
+            if ($isOwner) {
+                if ($db->modify(
+                    "UPDATE houses_flats_subscribers SET role = 1 WHERE house_flat_id = :f",
+                    [ "f" => $flatId ]
+                ) === false) {
+                    return false;
+                }
+                if ($db->modify(
+                    "UPDATE houses_flats_subscribers SET role = 0 WHERE house_flat_id = :f AND house_subscriber_id = :s",
+                    [ "f" => $flatId, "s" => $subscriberId ]
+                ) === false) {
+                    return false;
+                }
+            } else {
+                if ($db->modify(
+                    "UPDATE houses_flats_subscribers SET role = 1 WHERE house_flat_id = :f AND house_subscriber_id = :s",
+                    [ "f" => $flatId, "s" => $subscriberId ]
+                ) === false) {
+                    return false;
+                }
+            }
+            return true;
+        }
     }
 

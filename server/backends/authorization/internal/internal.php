@@ -227,6 +227,7 @@
                     [ "objectSenior", "subscriber", "POST" ],
                     [ "objectSenior", "subscriber", "DELETE" ],
                     [ "objectSenior", "subscriberEntrances", "PUT" ],
+                    [ "objectSenior", "subscriberOwner", "PUT" ],
                     [ "objectSenior", "whoAmI", "GET" ],
                     [ "objectSeniorAuth", "password", "PUT" ],
                 ];

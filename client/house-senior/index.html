@@ -17,6 +17,7 @@
     .os-fio-line { font-size: 0.9rem; padding: 0.15rem 0; border-bottom: 1px solid #eee; }
     .os-fio-line:last-child { border-bottom: 0; }
     .os-chev { width: 2rem; text-align: center; user-select: none; }
+    .os-flat-num { color: #198754; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -345,6 +346,17 @@
     return r;
   }
 
+  /** Владелец квартиры: role 0 в связке flat–subscriber (как в мобильном клиенте). */
+  function isFlatOwner(sub, flatId) {
+    var nf = Number(flatId);
+    if (sub && Object.prototype.hasOwnProperty.call(sub, "flatOwner")) {
+      return !!sub.flatOwner;
+    }
+    var fl = (sub.flats || []).find(function (f) { return Number(f.flatId) === nf; });
+    if (!fl) return false;
+    return Number(fl.role) === 0;
+  }
+
   function loadSubs() {
     $("#os_body").html("<p>Загрузка…</p>");
     Promise.all([
@@ -372,22 +384,33 @@
       var tbody = "";
       sorted.forEach(function (f) {
         var fid = Number(f.flatId);
-        var subList = uniqSubs(subsForFlat(houseSubscribersCache, fid));
-        var phones = subList.map(function (s) { return String(s.mobile || "").trim(); }).filter(Boolean);
-        var phoneCell = phones.length ? phones.join(", ") : "—";
+        var hasSubs = subList.length > 0;
+        var ownerPhones = subList.filter(function (s) { return isFlatOwner(s, fid); }).map(function (s) {
+          return String(s.mobile || "").trim();
+        }).filter(Boolean);
+        var phoneHtml = ownerPhones.length
+          ? $("<div>").text(ownerPhones.join(", ")).html()
+          : "<span class=\"text-muted\">нет владельца</span>";
         var flatLabel = String(f.flat != null && f.flat !== "" ? f.flat : fid);
+        var flatNumClass = hasSubs ? "os-flat-num" : "";
         tbody += "<tr class=\"os-flat-main\" data-fid=\"" + fid + "\" data-open=\"0\">" +
           "<td class=\"os-chev text-muted\">▸</td>" +
-          "<td><strong>кв. " + $("<div>").text(flatLabel).html() + "</strong></td>" +
-          "<td>" + $("<div>").text(phoneCell).html() + "</td>" +
+          "<td><strong" + (flatNumClass ? " class=\"" + flatNumClass + "\"" : "") + ">кв. " + $("<div>").text(flatLabel).html() + "</strong></td>" +
+          "<td>" + phoneHtml + "</td>" +
           "<td><button type=\"button\" class=\"btn btn-sm btn-outline-primary os-sel-flat\">Выбрать</button></td></tr>";
         var fioHtml = "";
         if (!subList.length) {
           fioHtml = "<div class=\"text-muted small\">Нет привязанных жильцов</div>";
         } else {
           subList.forEach(function (s) {
-            fioHtml += "<div class=\"os-fio-line\"><span class=\"text-monospace\">" + $("<div>").text(s.mobile || "").html() +
-              "</span> — " + $("<div>").text(s.subscriberFull || "—").html() + "</div>";
+            var own = isFlatOwner(s, fid);
+            if (own) {
+              fioHtml += "<div class=\"os-fio-line\"><span class=\"text-monospace\">" + $("<div>").text(s.mobile || "").html() +
+                "</span> — " + $("<div>").text(s.subscriberFull || "—").html() + "</div>";
+            } else {
+              fioHtml += "<div class=\"os-fio-line\"><span class=\"text-muted small\">(жилец, не владелец)</span> " +
+                $("<div>").text(s.subscriberFull || "—").html() + "</div>";
+            }
           });
         }
         tbody += "<tr class=\"os-flat-detail d-none\" data-fid=\"" + fid + "\"><td colspan=\"4\">" + fioHtml + "</td></tr>";
@@ -405,10 +428,10 @@
         "<div class=\"row\">" +
         "<div class=\"col-lg-7\">" +
         "<h6 class=\"mb-2\">Квартиры и телефоны</h6>" +
-        "<p class=\"small text-muted mb-2\">Строка: раскрыть ФИО. «Выбрать» — список жильцов и добавление.</p>" +
+        "<p class=\"small text-muted mb-2\">Номер квартиры <span class=\"os-flat-num\">зелёным</span>, если есть жильцы. В колонке телефонов — только <strong>владелец</strong> (для звонков). Строка: раскрыть ФИО.</p>" +
         "<div class=\"table-responsive border rounded bg-white\">" +
         "<table class=\"table table-sm table-hover os-flat-table mb-0\">" +
-        "<thead class=\"thead-light\"><tr><th class=\"os-chev\"></th><th>Квартира</th><th>Телефоны</th><th></th></tr></thead>" +
+        "<thead class=\"thead-light\"><tr><th class=\"os-chev\"></th><th>Квартира</th><th>Телефон владельца</th><th></th></tr></thead>" +
         "<tbody id=\"os_flat_tbody\">" + tbody + "</tbody></table></div></div>" +
         "<div class=\"col-lg-5 mt-3 mt-lg-0 pl-lg-4\" style=\"border-left:1px solid #dee2e6\" id=\"os_work_panel\">" +
         "<div id=\"os_sel_banner\" class=\"alert alert-light border small mb-2\">Выберите квартиру кнопкой «Выбрать»</div>" +
@@ -433,7 +456,7 @@
         $(".os-flat-main[data-fid=\"" + selectedFlatId + "\"]").addClass("os-flat-sel");
         var fl = flatById(selectedFlatId);
         var label = fl ? ("кв. " + (fl.flat || selectedFlatId)) : String(selectedFlatId);
-        $("#os_sel_banner").html("Выбрана <strong>" + $("<div>").text(label).html() + "</strong> — список ниже, можно добавить жильца.");
+        $("#os_sel_banner").html("Выбрана <strong>" + $("<div>").text(label).html() + "</strong> — список ниже. Владелец в квартире один: при назначении другого прежний снимается автоматически.");
         updEnt();
         loadFlatSubscribers(selectedFlatId);
       }
@@ -480,14 +503,16 @@
       function drawSubTable(fid, list) {
         var flat = flatById(fid);
         var entrances = (flat && flat.entrances) ? flat.entrances : [];
-        var t = "<table class=\"table table-sm\"><thead><tr><th>Телефон</th><th>ФИО</th>";
+        var t = "<table class=\"table table-sm\"><thead><tr><th>Телефон</th><th>ФИО</th><th class=\"text-center\">Владелец</th>";
         if (me.can_manage_entrance_access && entrances.length) {
           t += "<th>Подъезды</th>";
         }
         t += "<th></th></tr></thead><tbody>";
         list.forEach(function (s) {
           var sid = Number(s.subscriberId);
-          t += "<tr><td class=\"text-monospace\">" + $("<div>").text(s.mobile || "").html() + "</td><td>" + $("<div>").text(s.subscriberFull || "").html() + "</td>";
+          var own = !!s.flatOwner;
+          t += "<tr><td class=\"text-monospace\">" + $("<div>").text(s.mobile || "").html() + "</td><td>" + $("<div>").text(s.subscriberFull || "").html() + "</td>" +
+            "<td class=\"text-center\"><label class=\"mb-0 small\"><input type=\"checkbox\" class=\"os_own\" data-fid=\"" + fid + "\" data-sid=\"" + sid + "\" " + (own ? "checked" : "") + "/> владелец</label></td>";
           if (me.can_manage_entrance_access && entrances.length) {
             t += "<td style=\"min-width:9rem\" class=\"os-ent-cell\" data-fid=\"" + fid + "\" data-sid=\"" + sid + "\">";
             var bound = Array.isArray(s.boundEntranceIds) ? s.boundEntranceIds.map(Number) : [];
@@ -507,6 +532,21 @@
         t += "</tbody></table>";
         $("#os_sublist").html(list.length ? t : "<p class=\"text-muted mb-0\">Пусто</p>");
 
+        $(".os_own").on("change", function () {
+          var $cb = $(this);
+          var want = $cb.prop("checked");
+          var ff = Number($cb.data("fid"));
+          var sid = Number($cb.data("sid"));
+          apiFetch("PUT", "/objectSenior/subscriberOwner", { flatId: ff, subscriberId: sid, isOwner: want ? 1 : 0 }).then(function (rj) {
+            if (!rj._httpOk) {
+              $cb.prop("checked", !want);
+              var er = firstErrorPayload(rj) || firstErrorPayload(unwrap200(rj));
+              alert("Не удалось изменить владельца: " + (er || rj._httpStatus));
+              return;
+            }
+            loadSubs();
+          });
+        });
         $(".os_del").on("click", function () {
           var sid = $(this).data("sid");
           var ff = $(this).data("fid");
