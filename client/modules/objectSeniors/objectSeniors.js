@@ -387,8 +387,15 @@ function __osBool01(v) {
                                 title: i18n("objectSeniors.delete"),
                                 icon: "fas fa-trash-alt",
                                 class: "text-danger",
-                                click: function () {
-                                    modules.objectSeniors.deleteSenior(row.seniorId);
+                                click: function (uid) {
+                                    let id = parseInt(String(uid), 10);
+                                    if (!id) {
+                                        id = parseInt(String(row.seniorId), 10);
+                                    }
+                                    if (!id) {
+                                        return;
+                                    }
+                                    modules.objectSeniors.deleteSenior(id);
                                 },
                             },
                         ],

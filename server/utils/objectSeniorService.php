@@ -6,6 +6,25 @@
 
     class ObjectSeniorService {
 
+        /**
+         * PDOExt с опцией singlify возвращает либо одну строку (assoc), либо false.
+         * Не использовать $rows[0] — у assoc нет числового ключа 0.
+         *
+         * @param mixed $rows
+         */
+        private static function singlifyOneRow($rows): ?array {
+            if ($rows === false || $rows === null) {
+                return null;
+            }
+            if (!is_array($rows)) {
+                return null;
+            }
+            if (array_key_exists(0, $rows) && is_array($rows[0])) {
+                return $rows[0];
+            }
+            return $rows;
+        }
+
         public static function rowById($db, int $id): ?array {
             $rows = $db->get(
                 "SELECT s.*, h.house_full AS house_full FROM houses_object_seniors s LEFT JOIN addresses_houses h ON h.address_house_id = s.address_house_id WHERE s.house_object_senior_id = :id",
@@ -13,7 +32,7 @@
                 [],
                 [ "singlify" ]
             );
-            return ($rows && is_array($rows) && count($rows)) ? $rows[0] : null;
+            return self::singlifyOneRow($rows);
         }
 
         public static function rowBySlug($db, string $slug): ?array {
@@ -27,7 +46,7 @@
                 [],
                 [ "singlify" ]
             );
-            return ($rows && is_array($rows) && count($rows)) ? $rows[0] : null;
+            return self::singlifyOneRow($rows);
         }
 
         /**
