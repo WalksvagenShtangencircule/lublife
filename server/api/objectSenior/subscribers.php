@@ -28,6 +28,43 @@ namespace api\objectSenior {
                     return api::ERROR("accessDenied");
                 }
                 $list = $households->getSubscribers("flatId", $flatId);
+                if (is_array($list) && count($list) > 0) {
+                    $bindRows = $db->get(
+                        "SELECT house_subscriber_id, house_entrance_id FROM houses_flats_subscribers_entrances WHERE house_flat_id = :f",
+                        [ "f" => $flatId ],
+                        [],
+                        [ "silent" ]
+                    );
+                    $bySub = [];
+                    if (is_array($bindRows)) {
+                        foreach ($bindRows as $br) {
+                            $sid = (int)($br["house_subscriber_id"] ?? 0);
+                            if ($sid <= 0) {
+                                continue;
+                            }
+                            $eid = (int)($br["house_entrance_id"] ?? 0);
+                            if ($eid <= 0) {
+                                continue;
+                            }
+                            if (!isset($bySub[$sid])) {
+                                $bySub[$sid] = [];
+                            }
+                            $bySub[$sid][] = $eid;
+                        }
+                    }
+                    foreach ($list as &$subOne) {
+                        $sid = (int)($subOne["subscriberId"] ?? 0);
+                        if ($sid > 0 && !empty($bySub[$sid])) {
+                            $subOne["boundEntranceIds"] = array_values(array_unique($bySub[$sid]));
+                            $subOne["entranceAccessAll"] = false;
+                        } else {
+                            $subOne["boundEntranceIds"] = [];
+                            /** Нет строк в houses_flats_subscribers_entrances — доступ со всех подъездов квартиры */
+                            $subOne["entranceAccessAll"] = true;
+                        }
+                    }
+                    unset($subOne);
+                }
             } else {
                 $list = $households->getSubscribers("houseId", $houseId);
                 if ($scoped !== null && is_array($list)) {

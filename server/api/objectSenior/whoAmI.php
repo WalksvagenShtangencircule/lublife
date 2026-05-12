@@ -15,6 +15,7 @@ namespace api\objectSenior {
                 "seniorId" => (int)($om["seniorId"] ?? 0),
                 "houseId" => (int)($om["houseId"] ?? 0),
                 "title" => (string)($om["title"] ?? ""),
+                "login" => (string)($om["login"] ?? ""),
                 "houseFull" => (string)($om["houseFull"] ?? ""),
                 "can_view_events" => (int)($om["can_view_events"] ?? 0),
                 "can_manage_subscribers" => (int)($om["can_manage_subscribers"] ?? 0),

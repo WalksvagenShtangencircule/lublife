@@ -9,6 +9,14 @@
     body { background: #f4f6f9; }
     .ev-row { border-bottom: 1px solid #dee2e6; padding: 8px 0; }
     .ev-prev { max-width: 120px; max-height: 68px; object-fit: cover; border-radius: 4px; }
+    .os-os-head .os-title { font-size: 1.1rem; font-weight: 600; }
+    .os-os-head .os-sub { font-size: 0.85rem; color: #6c757d; }
+    .os-flat-table tbody tr.os-flat-main { cursor: pointer; }
+    .os-flat-table tbody tr.os-flat-main.os-flat-sel { background: #e7f1ff; }
+    .os-flat-table tr.os-flat-detail td { background: #fafbfc; border-top: 0; padding-top: 0.35rem; padding-bottom: 0.75rem; }
+    .os-fio-line { font-size: 0.9rem; padding: 0.15rem 0; border-bottom: 1px solid #eee; }
+    .os-fio-line:last-child { border-bottom: 0; }
+    .os-chev { width: 2rem; text-align: center; user-select: none; }
   </style>
 </head>
 <body>
@@ -109,9 +117,9 @@
     $("#app").html(
       "<h4 class=\"mb-3\">Вход в кабинет старшего</h4>" +
       "<div class=\"card card-body\">" +
-      "<div class=\"form-group\"><label>Объект (slug из ссылки)</label>" +
+      "<div class=\"form-group\"><label>Код ссылки на кабинет (из адресной строки после <code>?t=</code>)</label>" +
       "<input type=\"text\" class=\"form-control\" id=\"os_slug\" value=\"" + $("<div>").text(slug).html() + "\" /></div>" +
-      "<div class=\"form-group\"><label>Логин</label><input type=\"text\" class=\"form-control\" id=\"os_login\" autocomplete=\"username\" /></div>" +
+      "<div class=\"form-group\"><label>Имя учётной записи (логин)</label><input type=\"text\" class=\"form-control\" id=\"os_login\" autocomplete=\"username\" /></div>" +
       "<div class=\"form-group\"><label>Пароль</label><input type=\"password\" class=\"form-control\" id=\"os_pass\" autocomplete=\"current-password\" /></div>" +
       "<button type=\"button\" class=\"btn btn-primary\" id=\"os_btn\">Войти</button>" +
       "</div>"
@@ -163,6 +171,7 @@
         return;
       }
       me = u.objectSenior;
+      if (me.login == null) me.login = "";
       if (typeof me.can_view_events === "string") me.can_view_events = parseInt(me.can_view_events, 10) || 0;
       if (typeof me.can_manage_subscribers === "string") me.can_manage_subscribers = parseInt(me.can_manage_subscribers, 10) || 0;
       if (typeof me.can_manage_entrance_access === "string") me.can_manage_entrance_access = parseInt(me.can_manage_entrance_access, 10) || 0;
@@ -180,7 +189,22 @@
       (me.can_manage_subscribers ? "<li class=\"nav-item\"><a class=\"nav-link\" data-t=\"su\" href=\"#\">Жильцы</a></li>" : "") +
       "<li class=\"nav-item\"><a class=\"nav-link\" data-t=\"pw\" href=\"#\">Пароль</a></li>" +
       "<li class=\"nav-item ml-auto\"><a class=\"nav-link text-danger\" id=\"os_logout\" href=\"#\">Выход</a></li></ul>";
-    $("#app").html("<div class=\"mb-2 small text-muted\">" + $("<div>").text(me.houseFull || "").html() + "</div>" + tabs + "<div id=\"os_body\"></div>");
+    var headLine = "";
+    if (me.title && String(me.title).trim()) {
+      headLine = "<div class=\"os-os-head mb-2\"><div class=\"os-title\">" + $("<div>").text(String(me.title).trim()).html() + "</div>" +
+        "<div class=\"os-sub\">" + $("<div>").text(me.houseFull || "").html();
+      if (me.login) {
+        headLine += " · вход: <span class=\"text-monospace\">" + $("<div>").text(me.login).html() + "</span>";
+      }
+      headLine += "</div></div>";
+    } else {
+      headLine = "<div class=\"os-os-head mb-2\"><div class=\"os-title\">" + $("<div>").text(me.houseFull || "Личный кабинет").html() + "</div>";
+      if (me.login) {
+        headLine += "<div class=\"os-sub\">вход: <span class=\"text-monospace\">" + $("<div>").text(me.login).html() + "</span></div>";
+      }
+      headLine += "</div>";
+    }
+    $("#app").html(headLine + tabs + "<div id=\"os_body\"></div>");
     $("#os_logout").on("click", function () {
       sessionStorage.removeItem("os_token");
       token = "";
@@ -270,73 +294,276 @@
   }
 
   var flatsCache = [];
+  var houseSubscribersCache = [];
+
+  function flatById(fid) {
+    var n = Number(fid);
+    for (var i = 0; i < flatsCache.length; i++) {
+      if (Number(flatsCache[i].flatId) === n) {
+        return flatsCache[i];
+      }
+    }
+    return null;
+  }
+
+  function sortFlatsCopy(arr) {
+    return arr.slice().sort(function (a, b) {
+      var sa = String(a.flat != null ? a.flat : a.flatId);
+      var sb = String(b.flat != null ? b.flat : b.flatId);
+      var na = parseInt(String(sa).replace(/^[^\d]*/, "").split(/\D/)[0], 10);
+      var nb = parseInt(String(sb).replace(/^[^\d]*/, "").split(/\D/)[0], 10);
+      if (!isNaN(na) && !isNaN(nb) && na !== nb) {
+        return na - nb;
+      }
+      return sa.localeCompare(sb, "ru", { sensitivity: "base" });
+    });
+  }
+
+  function subsForFlat(allSubs, flatId) {
+    var nf = Number(flatId);
+    var out = [];
+    (allSubs || []).forEach(function (sub) {
+      (sub.flats || []).forEach(function (fl) {
+        if (Number(fl.flatId) === nf) {
+          out.push(sub);
+        }
+      });
+    });
+    return out;
+  }
+
+  function uniqSubs(list) {
+    var seen = {};
+    var r = [];
+    list.forEach(function (s) {
+      var id = Number(s.subscriberId);
+      if (!seen[id]) {
+        seen[id] = true;
+        r.push(s);
+      }
+    });
+    return r;
+  }
 
   function loadSubs() {
-    $("#os_body").html("<p>Загрузка квартир…</p>");
-    apiFetch("GET", "/objectSenior/flats", undefined).then(function (fj) {
+    $("#os_body").html("<p>Загрузка…</p>");
+    Promise.all([
+      apiFetch("GET", "/objectSenior/flats", undefined),
+      apiFetch("GET", "/objectSenior/subscribers", undefined),
+    ]).then(function (pair) {
+      var fj = pair[0];
+      var sj0 = pair[1];
       if (!fj._httpOk) {
         var er = firstErrorPayload(fj) || firstErrorPayload(unwrap200(fj));
         $("#os_body").html("<p class=\"text-danger\">Квартиры: " + (er || ("HTTP " + fj._httpStatus)) + "</p>");
         return;
       }
-      var fu = unwrap200(fj);
-      flatsCache = (fu && fu.flats) ? fu.flats : [];
-      var opts = "<option value=\"\">— квартира —</option>";
-      for (var i = 0; i < flatsCache.length; i++) {
-        var f = flatsCache[i];
-        opts += "<option value=\"" + f.flatId + "\">" + $("<div>").text("кв. " + (f.flat || f.flatId)).html() + "</option>";
+      if (!sj0._httpOk) {
+        var er2 = firstErrorPayload(sj0) || firstErrorPayload(unwrap200(sj0));
+        $("#os_body").html("<p class=\"text-danger\">Жильцы: " + (er2 || ("HTTP " + sj0._httpStatus)) + "</p>");
+        return;
       }
+      var fu = unwrap200(fj);
+      var su = unwrap200(sj0);
+      flatsCache = (fu && fu.flats) ? fu.flats : [];
+      houseSubscribersCache = (su && su.subscribers) ? su.subscribers : [];
+
+      var sorted = sortFlatsCopy(flatsCache);
+      var tbody = "";
+      sorted.forEach(function (f) {
+        var fid = Number(f.flatId);
+        var subList = uniqSubs(subsForFlat(houseSubscribersCache, fid));
+        var phones = subList.map(function (s) { return String(s.mobile || "").trim(); }).filter(Boolean);
+        var phoneCell = phones.length ? phones.join(", ") : "—";
+        var flatLabel = String(f.flat != null && f.flat !== "" ? f.flat : fid);
+        tbody += "<tr class=\"os-flat-main\" data-fid=\"" + fid + "\" data-open=\"0\">" +
+          "<td class=\"os-chev text-muted\">▸</td>" +
+          "<td><strong>кв. " + $("<div>").text(flatLabel).html() + "</strong></td>" +
+          "<td>" + $("<div>").text(phoneCell).html() + "</td>" +
+          "<td><button type=\"button\" class=\"btn btn-sm btn-outline-primary os-sel-flat\">Выбрать</button></td></tr>";
+        var fioHtml = "";
+        if (!subList.length) {
+          fioHtml = "<div class=\"text-muted small\">Нет привязанных жильцов</div>";
+        } else {
+          subList.forEach(function (s) {
+            fioHtml += "<div class=\"os-fio-line\"><span class=\"text-monospace\">" + $("<div>").text(s.mobile || "").html() +
+              "</span> — " + $("<div>").text(s.subscriberFull || "—").html() + "</div>";
+          });
+        }
+        tbody += "<tr class=\"os-flat-detail d-none\" data-fid=\"" + fid + "\"><td colspan=\"4\">" + fioHtml + "</td></tr>";
+      });
+
+      var entHint = "";
+      if (me.can_manage_entrance_access) {
+        entHint = "<div class=\"small text-muted mb-2\">Подъезды при добавлении: <strong>ничего не отмечено</strong> — доступ со всех подъездов квартиры. Отметьте подъезды, если нужно <em>ограничить</em> вход только с выбранных.</div>" +
+          "<div id=\"os_ent_wrap\" class=\"mb-2 small border rounded p-2 bg-white\">Сначала выберите квартиру кнопкой «Выбрать»</div>";
+      } else {
+        entHint = "<div id=\"os_ent_wrap\" class=\"mb-2 small text-muted\">Ограничение по подъездам для этой учётной записи не включено.</div>";
+      }
+
       $("#os_body").html(
-        "<div class=\"row\"><div class=\"col-md-6\">" +
-        "<label>Квартира</label><select id=\"os_flat\" class=\"form-control\">" + opts + "</select>" +
-        "<button class=\"btn btn-sm btn-primary mt-2\" id=\"os_loadsub\">Список жильцов</button>" +
-        "<div id=\"os_sublist\" class=\"mt-3\"></div></div>" +
-        "<div class=\"col-md-6\"><h6>Добавить жильца</h6>" +
+        "<div class=\"row\">" +
+        "<div class=\"col-lg-7\">" +
+        "<h6 class=\"mb-2\">Квартиры и телефоны</h6>" +
+        "<p class=\"small text-muted mb-2\">Строка: раскрыть ФИО. «Выбрать» — список жильцов и добавление.</p>" +
+        "<div class=\"table-responsive border rounded bg-white\">" +
+        "<table class=\"table table-sm table-hover os-flat-table mb-0\">" +
+        "<thead class=\"thead-light\"><tr><th class=\"os-chev\"></th><th>Квартира</th><th>Телефоны</th><th></th></tr></thead>" +
+        "<tbody id=\"os_flat_tbody\">" + tbody + "</tbody></table></div></div>" +
+        "<div class=\"col-lg-5 mt-3 mt-lg-0 pl-lg-4\" style=\"border-left:1px solid #dee2e6\" id=\"os_work_panel\">" +
+        "<div id=\"os_sel_banner\" class=\"alert alert-light border small mb-2\">Выберите квартиру кнопкой «Выбрать»</div>" +
+        "<input type=\"hidden\" id=\"os_flat\" value=\"\"/>" +
+        "<div id=\"os_sublist\" class=\"mb-3\"></div>" +
+        "<h6>Добавить жильца</h6>" +
         "<input class=\"form-control mb-1\" id=\"os_mob\" placeholder=\"Телефон\"/>" +
         "<input class=\"form-control mb-1\" id=\"os_sn\" placeholder=\"Имя\"/>" +
         "<input class=\"form-control mb-1\" id=\"os_sp\" placeholder=\"Отчество\"/>" +
         "<input class=\"form-control mb-1\" id=\"os_sl\" placeholder=\"Фамилия\"/>" +
-        "<div id=\"os_ent_wrap\" class=\"mb-2 small\">Подъезды: выберите квартиру</div>" +
-        "<button class=\"btn btn-success btn-sm\" id=\"os_addsub\">Добавить</button></div></div>"
+        entHint +
+        "<button class=\"btn btn-success btn-sm\" id=\"os_addsub\">Добавить</button>" +
+        "</div></div>"
       );
-      $("#os_flat").on("change", updEnt);
+
+      var selectedFlatId = 0;
+
+      function setSelectedFlat(fid) {
+        selectedFlatId = Number(fid);
+        $("#os_flat").val(selectedFlatId || "");
+        $(".os-flat-main").removeClass("os-flat-sel");
+        $(".os-flat-main[data-fid=\"" + selectedFlatId + "\"]").addClass("os-flat-sel");
+        var fl = flatById(selectedFlatId);
+        var label = fl ? ("кв. " + (fl.flat || selectedFlatId)) : String(selectedFlatId);
+        $("#os_sel_banner").html("Выбрана <strong>" + $("<div>").text(label).html() + "</strong> — список ниже, можно добавить жильца.");
+        updEnt();
+        loadFlatSubscribers(selectedFlatId);
+      }
+
       function updEnt() {
-        var fid = parseInt($("#os_flat").val(), 10);
+        if (!me.can_manage_entrance_access) {
+          return;
+        }
+        var fid = Number(selectedFlatId);
         var h = "";
-        var flat = flatsCache.find(function (x) { return x.flatId === fid; });
-        if (flat && flat.entrances) {
+        if (!fid) {
+          $("#os_ent_wrap").html("Сначала выберите квартиру кнопкой «Выбрать»");
+          return;
+        }
+        var flat = flatById(fid);
+        if (flat && flat.entrances && flat.entrances.length) {
           flat.entrances.forEach(function (e) {
-            h += "<label class=\"d-block\"><input type=\"checkbox\" class=\"os_ent\" value=\"" + e.entranceId + "\"/> подъезд " + e.entranceId + "</label>";
+            var eid = Number(e.entranceId);
+            var ap = (e.apartment != null && String(e.apartment).trim() !== "") ? String(e.apartment).trim() : "";
+            var lbl = ap ? ("№ в табло: " + ap) : ("подъезд id " + eid);
+            h += "<label class=\"d-block mb-1\"><input type=\"checkbox\" class=\"os_ent\" value=\"" + eid + "\"/> " + $("<div>").text(lbl).html() + "</label>";
           });
         }
-        $("#os_ent_wrap").html(h || "Нет подъездов");
+        $("#os_ent_wrap").html(h || "<span class=\"text-muted\">Для квартиры не заведены подъезды в карточке дома</span>");
       }
-      $("#os_loadsub").on("click", function () {
-        var fid = parseInt($("#os_flat").val(), 10);
-        if (!fid) { alert("Выберите квартиру"); return; }
+
+      function loadFlatSubscribers(fid) {
+        if (!fid) {
+          $("#os_sublist").html("");
+          return;
+        }
+        $("#os_sublist").html("<p class=\"small text-muted\">Загрузка…</p>");
         apiFetch("GET", "/objectSenior/subscribers?flatId=" + fid, undefined).then(function (sj) {
+          if (!sj._httpOk) {
+            $("#os_sublist").html("<p class=\"text-danger small\">Ошибка загрузки</p>");
+            return;
+          }
           var su = unwrap200(sj);
           var list = su && su.subscribers ? su.subscribers : [];
-          var t = "<table class=\"table table-sm\"><thead><tr><th>Телефон</th><th>ФИО</th><th></th></tr></thead><tbody>";
-          list.forEach(function (s) {
-            t += "<tr><td>" + $("<div>").text(s.mobile || "").html() + "</td><td>" + $("<div>").text(s.subscriberFull || "").html() + "</td>" +
-              "<td><button class=\"btn btn-link btn-sm os_del\" data-sid=\"" + s.subscriberId + "\" data-fid=\"" + fid + "\">Удалить</button></td></tr>";
-          });
-          t += "</tbody></table>";
-          $("#os_sublist").html(t || "<p>Пусто</p>");
-          $(".os_del").on("click", function () {
-            var sid = $(this).data("sid");
-            var ff = $(this).data("fid");
-            if (!confirm("Удалить жильца из квартиры?")) return;
-            apiFetch("DELETE", "/objectSenior/subscriber", { flatId: ff, subscriberId: sid }).then(function () {
-              $("#os_loadsub").click();
+          drawSubTable(Number(fid), list);
+        });
+      }
+
+      function drawSubTable(fid, list) {
+        var flat = flatById(fid);
+        var entrances = (flat && flat.entrances) ? flat.entrances : [];
+        var t = "<table class=\"table table-sm\"><thead><tr><th>Телефон</th><th>ФИО</th>";
+        if (me.can_manage_entrance_access && entrances.length) {
+          t += "<th>Подъезды</th>";
+        }
+        t += "<th></th></tr></thead><tbody>";
+        list.forEach(function (s) {
+          var sid = Number(s.subscriberId);
+          t += "<tr><td class=\"text-monospace\">" + $("<div>").text(s.mobile || "").html() + "</td><td>" + $("<div>").text(s.subscriberFull || "").html() + "</td>";
+          if (me.can_manage_entrance_access && entrances.length) {
+            t += "<td style=\"min-width:9rem\" class=\"os-ent-cell\" data-fid=\"" + fid + "\" data-sid=\"" + sid + "\">";
+            var bound = Array.isArray(s.boundEntranceIds) ? s.boundEntranceIds.map(Number) : [];
+            var allMode = !!s.entranceAccessAll;
+            entrances.forEach(function (e) {
+              var eid = Number(e.entranceId);
+              var ap = (e.apartment != null && String(e.apartment).trim() !== "") ? String(e.apartment).trim() : "";
+              var lbl = ap ? ap : String(eid);
+              var checked = allMode ? false : bound.indexOf(eid) !== -1;
+              t += "<label class=\"d-block small mb-0\"><input type=\"checkbox\" class=\"os_ent_row\" data-eid=\"" + eid + "\" " + (checked ? "checked" : "") + "/> " +
+                $("<div>").text(lbl).html() + "</label>";
             });
+            t += "<button type=\"button\" class=\"btn btn-link btn-sm p-0 os_save_ent\" data-fid=\"" + fid + "\" data-sid=\"" + sid + "\">Сохранить</button></td>";
+          }
+          t += "<td><button class=\"btn btn-link btn-sm os_del\" data-sid=\"" + sid + "\" data-fid=\"" + fid + "\">Удалить</button></td></tr>";
+        });
+        t += "</tbody></table>";
+        $("#os_sublist").html(list.length ? t : "<p class=\"text-muted mb-0\">Пусто</p>");
+
+        $(".os_del").on("click", function () {
+          var sid = $(this).data("sid");
+          var ff = $(this).data("fid");
+          if (!confirm("Удалить жильца из квартиры?")) return;
+          apiFetch("DELETE", "/objectSenior/subscriber", { flatId: ff, subscriberId: sid }).then(function () {
+            loadSubs();
           });
         });
+
+        $(".os_save_ent").on("click", function () {
+          var ff = Number($(this).data("fid"));
+          var sid = Number($(this).data("sid"));
+          var cell = $(".os-ent-cell[data-fid=\"" + ff + "\"][data-sid=\"" + sid + "\"]");
+          var eids = [];
+          cell.find(".os_ent_row:checked").each(function () {
+            eids.push(parseInt(String($(this).data("eid")), 10));
+          });
+          apiFetch("PUT", "/objectSenior/subscriberEntrances", { flatId: ff, subscriberId: sid, entranceIds: eids }).then(function (rj) {
+            if (!rj._httpOk) {
+              var er = firstErrorPayload(rj) || firstErrorPayload(unwrap200(rj));
+              alert("Ошибка: " + (er || rj._httpStatus));
+              return;
+            }
+            loadFlatSubscribers(ff);
+          });
+        });
+      }
+
+      $("#os_flat_tbody").on("click", ".os-sel-flat", function (e) {
+        e.stopPropagation();
+        var fid = Number($(this).closest("tr").attr("data-fid"));
+        setSelectedFlat(fid);
       });
+
+      $("#os_flat_tbody").on("click", ".os-flat-main", function (e) {
+        if ($(e.target).closest(".os-sel-flat").length) return;
+        var $tr = $(this);
+        var fid = Number($tr.attr("data-fid"));
+        var open = $tr.attr("data-open") === "1";
+        var det = $(".os-flat-detail[data-fid=\"" + fid + "\"]");
+        if (open) {
+          $tr.attr("data-open", "0");
+          $tr.find(".os-chev").text("▸");
+          det.addClass("d-none");
+        } else {
+          $tr.attr("data-open", "1");
+          $tr.find(".os-chev").text("▾");
+          det.removeClass("d-none");
+        }
+      });
+
       $("#os_addsub").on("click", function () {
-        var fid = parseInt($("#os_flat").val(), 10);
-        if (!fid) { alert("Квартира"); return; }
+        var fid = Number($("#os_flat").val());
+        if (!fid) {
+          alert("Сначала нажмите «Выбрать» у нужной квартиры");
+          return;
+        }
         var body = {
           flatId: fid,
           mobile: $.trim($("#os_mob").val()),
@@ -345,12 +572,23 @@
           subscriberLast: $.trim($("#os_sl").val()),
         };
         var eids = [];
-        $(".os_ent:checked").each(function () { eids.push(parseInt($(this).val(), 10)); });
-        if (eids.length) { body.entranceIds = eids; }
-        apiFetch("POST", "/objectSenior/subscriber", body).then(function () {
-          $("#os_loadsub").click();
+        $(".os_ent:checked").each(function () {
+          eids.push(parseInt(String($(this).val()), 10));
+        });
+        if (eids.length) {
+          body.entranceIds = eids;
+        }
+        apiFetch("POST", "/objectSenior/subscriber", body).then(function (rj) {
+          if (!rj._httpOk) {
+            var er = firstErrorPayload(rj) || firstErrorPayload(unwrap200(rj));
+            alert("Не удалось добавить: " + (er || rj._httpStatus));
+            return;
+          }
+          loadSubs();
         });
       });
+    }).catch(function () {
+      $("#os_body").html("<p class=\"text-danger\">Ошибка сети</p>");
     });
   }
 
