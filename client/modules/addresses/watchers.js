@@ -10,7 +10,7 @@
             QUERY("subscribers", "devices", {
                 by: "flatId",
                 query: params.flatId,
-            }).done(r2 => {
+            }, true).done(r2 => {
                 for (let i in r1.watchers) {
                     for (let j in r2.devices) {
                         if (r1.watchers[i].deviceId == r2.devices[j].deviceId) {

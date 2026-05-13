@@ -37,7 +37,7 @@
         QUERY("subscribers", "subscribers", {
             by: "subscriberId",
             query: device.subscriberId,
-        }).done(r => {
+        }, true).done(r => {
             let voipFlats = [];
 
             if (r && r.subscribers) {
@@ -208,7 +208,7 @@
         QUERY("subscribers", "devices", {
             by: "subscriber",
             query: subscriberId,
-        }).
+        }, true).
         fail(FAILPAGE).
         done(response => {
             cardTable({
