@@ -49,7 +49,18 @@
     $redis = false;
 
     $http_authorization = @$_SERVER['HTTP_AUTHORIZATION'];
-    $refresh = array_key_exists('X-Api-Refresh', apache_request_headers());
+    $refresh = false;
+    try {
+        $arh = function_exists('apache_request_headers') ? (apache_request_headers() ?: []) : [];
+        foreach ($arh as $hdrName => $_hdrVal) {
+            if (strcasecmp((string)$hdrName, 'X-Api-Refresh') === 0) {
+                $refresh = true;
+                break;
+            }
+        }
+    } catch (Throwable $e) {
+        $refresh = false;
+    }
 
     try {
         mb_internal_encoding("UTF-8");
