@@ -85,6 +85,7 @@
     var url = apiRoot() + path;
     var opts = {
       method: method,
+      cache: method === "GET" ? "no-store" : "default",
       headers: {
         "Accept-Language": "ru",
         "Accept": "application/json, text/plain, */*",

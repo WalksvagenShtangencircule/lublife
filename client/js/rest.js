@@ -46,6 +46,7 @@ function QUERY(api, method, query, fresh) {
         if (!query) {
             query = {};
         }
+        query["_refresh"] = 1;
         query["_"] = Math.random();
     }
     return $.ajax({
@@ -87,6 +88,7 @@ function QUERYID(api, method, id, query, fresh, timeoutMs) {
         if (!query) {
             query = {};
         }
+        query["_refresh"] = 1;
         query["_"] = Math.random();
     }
     let ajaxOpts = {
@@ -128,7 +130,7 @@ function GET(api, method, id, fresh) {
     }
     let url = lStore("_server") + "/" + encodeURIComponent(api) + "/" + encodeURIComponent(method) + ((typeof id !== "undefined" && id !== false) ? ("/" + encodeURIComponent(id)) : "");
     if (fresh) {
-        url += "?_=" + Math.random();
+        url += "?" + $.param({ _refresh: 1, _: Math.random() });
     }
     return $.ajax({
         url: url,
@@ -156,7 +158,7 @@ function GET(api, method, id, fresh) {
  * @returns {jqXHR} A jQuery jqXHR object representing the AJAX request.
  */
 
-function AJAX(type, api, method, id, data) {
+function AJAX(type, api, method, id, data, timeoutMs) {
     let l = lStore("_lang");
     if (!l) {
         l = config.defaultLanguage;
@@ -164,7 +166,7 @@ function AJAX(type, api, method, id, data) {
     if (!l) {
         l = "ru";
     }
-    return $.ajax({
+    let ajaxOpts = {
         url: lStore("_server") + "/" + encodeURIComponent(api) + "/" + encodeURIComponent(method) + ((typeof id !== "undefined" && id !== false) ? ("/" + encodeURIComponent(id)) : ""),
         beforeSend: xhr => {
             xhr.setRequestHeader("Authorization", "Bearer " + lStore("_token"));
@@ -175,7 +177,11 @@ function AJAX(type, api, method, id, data) {
         contentType: "application/json; charset=UTF-8",
         processData: false,
         data: data ? JSON.stringify(data) : null,
-    });
+    };
+    if (typeof timeoutMs === "number" && timeoutMs > 0) {
+        ajaxOpts.timeout = timeoutMs;
+    }
+    return $.ajax(ajaxOpts);
 }
 
 /**
@@ -219,6 +225,6 @@ function PUT(api, method, id, data) {
  * @returns {Promise<any>} The result of the AJAX call.
  */
 
-function DELETE(api, method, id, data) {
-    return AJAX("DELETE", api, method, id, data);
+function DELETE(api, method, id, data, timeoutMs) {
+    return AJAX("DELETE", api, method, id, data, timeoutMs);
 }
