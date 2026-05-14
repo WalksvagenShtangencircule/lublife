@@ -4,33 +4,245 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ЛК Старших</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
   <style>
-    body { background: #f4f6f9; }
-    .ev-row { border-bottom: 1px solid #dee2e6; padding: 8px 0; }
-    .ev-prev { max-width: 120px; max-height: 68px; object-fit: cover; border-radius: 4px; }
-    .os-os-head .os-title { font-size: 1.1rem; font-weight: 600; }
-    .os-os-head .os-sub { font-size: 0.85rem; color: #6c757d; }
+    :root {
+      --wp-font: "Nunito", "Segoe UI", system-ui, -apple-system, sans-serif;
+      --wp-bg: #f0f2f5;
+      --wp-surface: #ffffff;
+      --wp-surface-2: #e4e8ef;
+      --wp-text: #1a1d23;
+      --wp-text-muted: #5f6775;
+      --wp-border: rgba(0, 0, 0, 0.1);
+      --wp-accent: #2e3f7c;
+      --wp-accent-hover: #1d2d5e;
+      --wp-accent-soft: rgba(46, 63, 124, 0.1);
+      --wp-navbar-bg: #ffffff;
+      --wp-input-bg: #ffffff;
+      --wp-shadow: 0 12px 36px rgba(46, 63, 124, 0.14);
+      --wp-radius: 18px;
+      --wp-radius-sm: 12px;
+      --wp-btn-p1: #4c6aad;
+      --wp-btn-p2: #3d5a99;
+      --wp-btn-p3: #2e3f7c;
+      --wp-btn-p-border: #1d2d5e;
+      --wp-btn-p-shadow: 0 4px 0 #162247, 0 12px 26px rgba(46, 63, 124, 0.28);
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      font-family: var(--wp-font);
+      color: var(--wp-text);
+      background:
+        radial-gradient(circle at top left, rgba(76, 106, 173, 0.18), transparent 36rem),
+        linear-gradient(135deg, #f8f9fc 0%, var(--wp-bg) 48%, #e9edf7 100%);
+      -webkit-font-smoothing: antialiased;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: linear-gradient(rgba(46, 63, 124, 0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(46, 63, 124, 0.035) 1px, transparent 1px);
+      background-size: 28px 28px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent 70%);
+    }
+    #app {
+      position: relative;
+      max-width: 1120px !important;
+    }
+    .os-premium-shell { padding-top: 0.25rem; }
+    .os-hero,
+    .card,
+    #os_flat_popover,
+    #os_flat_ev_popover {
+      background: rgba(255, 255, 255, 0.94) !important;
+      border: 2px solid var(--wp-border) !important;
+      border-radius: var(--wp-radius) !important;
+      box-shadow: var(--wp-shadow) !important;
+      backdrop-filter: saturate(1.08) blur(10px);
+    }
+    .os-hero {
+      padding: 1rem 1.15rem;
+      margin-bottom: 1rem;
+      overflow: hidden;
+      position: relative;
+    }
+    .os-hero::after {
+      content: "";
+      position: absolute;
+      right: -4rem;
+      top: -5rem;
+      width: 14rem;
+      height: 14rem;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(76,106,173,0.2), rgba(46,63,124,0.05));
+      pointer-events: none;
+    }
+    .os-hero > * { position: relative; z-index: 1; }
+    .os-brand-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--wp-btn-p1), var(--wp-btn-p3));
+      box-shadow: 0 8px 20px rgba(46, 63, 124, 0.25);
+      flex: 0 0 auto;
+    }
+    .os-kicker {
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--wp-accent);
+      margin-bottom: 0.15rem;
+    }
+    .os-os-head .os-title,
+    .os-login-title {
+      font-size: 1.35rem;
+      line-height: 1.15;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      color: var(--wp-text);
+    }
+    .os-os-head .os-sub,
+    .os-login-sub,
+    .text-muted { color: var(--wp-text-muted) !important; }
+    .nav-tabs {
+      gap: 0.35rem;
+      border-bottom: 0;
+      margin-bottom: 1rem !important;
+      align-items: center;
+    }
+    .nav-tabs .nav-link {
+      border: 2px solid transparent;
+      border-radius: 999px;
+      color: var(--wp-text-muted);
+      font-weight: 800;
+      padding: 0.48rem 0.85rem;
+      transition: transform 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+    }
+    .nav-tabs .nav-link:hover {
+      color: var(--wp-accent);
+      background: var(--wp-accent-soft);
+      transform: translateY(-1px);
+    }
+    .nav-tabs .nav-link.active {
+      color: #fff !important;
+      background: linear-gradient(180deg, var(--wp-btn-p1), var(--wp-btn-p3));
+      border-color: var(--wp-btn-p-border);
+      box-shadow: 0 8px 18px rgba(46, 63, 124, 0.25);
+    }
+    .card { overflow: hidden; }
+    .card-body { padding: 1.15rem; }
+    h4, h5, h6 { font-weight: 800; letter-spacing: -0.015em; color: var(--wp-text); }
+    label { font-weight: 700; color: var(--wp-text); }
+    .form-control,
+    .custom-select,
+    select.form-control {
+      background: var(--wp-input-bg) !important;
+      border: 2px solid var(--wp-border) !important;
+      border-radius: var(--wp-radius-sm) !important;
+      color: var(--wp-text) !important;
+      box-shadow: none !important;
+    }
+    .form-control:focus,
+    select.form-control:focus {
+      border-color: rgba(46, 63, 124, 0.55) !important;
+      box-shadow: 0 0 0 0.18rem rgba(46, 63, 124, 0.14) !important;
+    }
+    .btn {
+      border-radius: 999px !important;
+      font-weight: 800 !important;
+      border-width: 2px !important;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease !important;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary,
+    .btn-success {
+      background: linear-gradient(180deg, var(--wp-btn-p1) 0%, var(--wp-btn-p2) 55%, var(--wp-btn-p3) 100%) !important;
+      border-color: var(--wp-btn-p-border) !important;
+      color: #fff !important;
+      box-shadow: var(--wp-btn-p-shadow) !important;
+      text-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
+    }
+    .btn-outline-primary,
+    .btn-outline-secondary,
+    .btn-default {
+      background: #fff !important;
+      border-color: var(--wp-border) !important;
+      color: var(--wp-accent) !important;
+    }
+    .btn-link { color: var(--wp-accent) !important; font-weight: 800 !important; }
+    .table-responsive,
+    .border.rounded.bg-white,
+    .os-acc-scroll {
+      background: var(--wp-surface) !important;
+      border: 2px solid var(--wp-border) !important;
+      border-radius: var(--wp-radius) !important;
+      box-shadow: var(--wp-shadow);
+      overflow: auto;
+    }
+    .table { color: var(--wp-text); margin-bottom: 0; }
+    .table thead th,
+    .thead-light th {
+      background: linear-gradient(180deg, var(--wp-surface-2), var(--wp-surface)) !important;
+      color: var(--wp-text) !important;
+      border-color: var(--wp-border) !important;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .table td,
+    .table th { border-color: var(--wp-border) !important; vertical-align: middle; }
+    .table-hover tbody tr:hover { background: var(--wp-accent-soft) !important; }
+    .ev-row { border-bottom: 1px solid var(--wp-border); padding: 0.7rem 0; }
+    .ev-prev { max-width: 120px; max-height: 68px; object-fit: cover; border-radius: var(--wp-radius-sm); }
     .os-flat-table tbody tr.os-flat-main { cursor: pointer; }
-    .os-flat-table tbody tr.os-flat-main.os-flat-sel { background: #e7f1ff; }
-    .os-flat-table tr.os-flat-detail td { background: #fafbfc; border-top: 0; padding-top: 0.35rem; padding-bottom: 0.75rem; }
-    .os-fio-line { font-size: 0.9rem; padding: 0.15rem 0; border-bottom: 1px solid #eee; }
+    .os-flat-table tbody tr.os-flat-main.os-flat-sel { background: var(--wp-accent-soft) !important; }
+    .os-flat-table tr.os-flat-detail td { background: var(--wp-surface-2); border-top: 0; padding-top: 0.35rem; padding-bottom: 0.75rem; }
+    .os-fio-line { font-size: 0.9rem; padding: 0.15rem 0; border-bottom: 1px solid var(--wp-border); }
     .os-fio-line:last-child { border-bottom: 0; }
     .os-chev { width: 2rem; text-align: center; user-select: none; }
-    .os-flat-num { color: #198754; font-weight: 600; }
-    .os-acc-scroll { max-height: 70vh; overflow: auto; }
-    .os-acc-matrix thead th { position: sticky; top: 0; z-index: 2; background: #e9ecef; box-shadow: 0 1px 0 #dee2e6; }
-    .os-acc-matrix .os-acc-flatname { position: sticky; left: 0; z-index: 1; border-right: 1px solid #dee2e6; }
-    .os-acc-matrix .os-acc-corner { position: sticky; left: 0; top: 0; z-index: 3; background: #e9ecef; box-shadow: 1px 1px 0 #dee2e6; }
-    .os-acc-colhead { max-width: 6.5rem; min-width: 4rem; }
-    .os-acc-head-wrap { display: block; max-height: 7rem; overflow: hidden; word-break: break-word; line-height: 1.15; font-weight: 600; }
+    .os-flat-num { color: var(--wp-accent); font-weight: 800; }
+    .alert-light {
+      background: var(--wp-accent-soft) !important;
+      border: 2px solid rgba(46, 63, 124, 0.12) !important;
+      color: var(--wp-text) !important;
+      border-radius: var(--wp-radius-sm) !important;
+    }
+    .bg-white { background-color: var(--wp-surface) !important; }
+    .bg-light { background-color: var(--wp-surface-2) !important; }
     #os_event_video_modal .modal-body video { background: #000; }
     #os_event_video_modal { z-index: 1080 !important; }
     body.modal-open .modal-backdrop { z-index: 1075 !important; }
-    #os_flat_popover { position: fixed; z-index: 1060; width: min(560px, calc(100vw - 16px)); max-height: min(90vh, 720px); overflow: hidden; display: none; border-radius: 6px; }
+    #os_flat_popover { position: fixed; z-index: 1060; width: min(600px, calc(100vw - 16px)); max-height: min(90vh, 720px); overflow: hidden; display: none; }
     #os_flat_popover .os-work-pop-body { max-height: min(calc(90vh - 52px), 640px); overflow-y: auto; }
-    #os_flat_ev_popover { position: fixed; z-index: 1070; width: min(520px, calc(100vw - 16px)); max-height: min(90vh, 640px); overflow: hidden; display: none; border-radius: 6px; }
+    #os_flat_ev_popover { position: fixed; z-index: 1070; width: min(540px, calc(100vw - 16px)); max-height: min(90vh, 640px); overflow: hidden; display: none; }
     #os_flat_ev_popover .os-flat-ev-body { max-height: min(calc(90vh - 52px), 560px); overflow-y: auto; }
+    #os_flat_popover .border-bottom,
+    #os_flat_ev_popover .border-bottom {
+      border-bottom: 2px solid var(--wp-border) !important;
+      background: linear-gradient(180deg, var(--wp-surface-2), var(--wp-surface)) !important;
+    }
+    .os-acc-scroll { max-height: 70vh; }
+    .os-acc-matrix thead th { position: sticky; top: 0; z-index: 2; background: var(--wp-surface-2) !important; box-shadow: 0 1px 0 var(--wp-border); }
+    .os-acc-matrix .os-acc-flatname { position: sticky; left: 0; z-index: 1; border-right: 1px solid var(--wp-border); }
+    .os-acc-matrix .os-acc-corner { position: sticky; left: 0; top: 0; z-index: 3; background: var(--wp-surface-2) !important; box-shadow: 1px 1px 0 var(--wp-border); }
+    .os-acc-colhead { max-width: 6.5rem; min-width: 4rem; }
+    .os-acc-head-wrap { display: block; max-height: 7rem; overflow: hidden; word-break: break-word; line-height: 1.15; font-weight: 800; }
+    @media (max-width: 575.98px) {
+      #app { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+      .os-hero { padding: 0.9rem; }
+      .nav-tabs .nav-link { padding: 0.42rem 0.68rem; }
+    }
   </style>
 </head>
 <body>
@@ -135,14 +347,20 @@
     $("#os_flat_popover,#os_flat_ev_popover").remove();
     osFlatPopoverFid = 0;
     $("#app").html(
-      "<h4 class=\"mb-3\">Вход в ЛК Старших</h4>" +
+      "<div class=\"os-premium-shell\">" +
+      "<div class=\"os-hero d-flex align-items-center mb-3\">" +
+      "<div class=\"os-brand-mark mr-3\">ЛК</div>" +
+      "<div><div class=\"os-kicker\">CityHome</div><div class=\"os-login-title\">ЛК Старших</div>" +
+      "<div class=\"os-login-sub\">Личный кабинет в стиле основной платформы</div></div></div>" +
+      "<div class=\"row justify-content-center\"><div class=\"col-12 col-md-9 col-lg-7\">" +
       "<div class=\"card card-body\">" +
+      "<h4 class=\"mb-1\">Вход</h4><p class=\"text-muted small mb-3\">Введите код кабинета, логин и пароль.</p>" +
       "<div class=\"form-group\"><label>Код ссылки на кабинет (из адресной строки после <code>?t=</code>)</label>" +
       "<input type=\"text\" class=\"form-control\" id=\"os_slug\" value=\"" + $("<div>").text(slug).html() + "\" /></div>" +
       "<div class=\"form-group\"><label>Имя учётной записи (логин)</label><input type=\"text\" class=\"form-control\" id=\"os_login\" autocomplete=\"username\" /></div>" +
       "<div class=\"form-group\"><label>Пароль</label><input type=\"password\" class=\"form-control\" id=\"os_pass\" autocomplete=\"current-password\" /></div>" +
-      "<button type=\"button\" class=\"btn btn-primary\" id=\"os_btn\">Войти</button>" +
-      "</div>"
+      "<button type=\"button\" class=\"btn btn-primary btn-lg px-4\" id=\"os_btn\">Войти</button>" +
+      "</div></div></div></div>"
     );
     $("#os_btn").on("click", function () {
       var s = $.trim($("#os_slug").val()).replace(/\s+/g, "").toLowerCase();
@@ -233,7 +451,14 @@
       }
       headLine += "</div>";
     }
-    $("#app").html(headLine + tabs + "<div id=\"os_body\"></div>");
+    $("#app").html(
+      "<div class=\"os-premium-shell\">" +
+      "<div class=\"os-hero d-flex align-items-center justify-content-between flex-wrap\">" +
+      "<div class=\"d-flex align-items-center mr-3 mb-2 mb-sm-0\"><div class=\"os-brand-mark mr-3\">ЛК</div>" +
+      headLine + "</div>" +
+      "<div class=\"text-muted small font-weight-bold\">CityHome · премиум-кабинет</div>" +
+      "</div>" + tabs + "<div id=\"os_body\"></div></div>"
+    );
     $("#os_logout").on("click", function () {
       hideOsFlatPopover();
       hideOsFlatEventsPopover();
