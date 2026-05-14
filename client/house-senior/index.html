@@ -835,10 +835,13 @@
       var entHintHtml = "";
       if (me.can_manage_entrance_access) {
         entHintHtml =
-          "<div class=\"small text-muted mb-2\">Подъезды при добавлении: <strong>ничего не отмечено</strong> — доступ со всех подъездов квартиры. Отметьте подъезды, если нужно <em>ограничить</em> вход только с выбранных.</div>" +
-          "<div id=\"os_ent_wrap\" class=\"mb-2 small border rounded p-2 bg-white\"></div>";
+          "<div class=\"small text-muted mb-2\"><strong>Входы квартиры</strong> — отметьте подъезды/входы дома, через которые доступна эта квартира (одинаково для всех жильцов). Должен быть выбран хотя бы один.</div>" +
+          "<div id=\"os_ent_wrap\" class=\"mb-2 small border rounded p-2 bg-white\"></div>" +
+          "<button type=\"button\" class=\"btn btn-sm btn-primary mb-2\" id=\"os_flat_ent_save\">Сохранить входы</button>";
       } else {
-        entHintHtml = "<div id=\"os_ent_wrap\" class=\"mb-2 small text-muted\">Ограничение по подъездам для этой учётной записи не включено.</div>";
+        entHintHtml =
+          "<div class=\"small text-muted mb-2\">Входы, привязанные к квартире (только просмотр).</div>" +
+          "<div id=\"os_ent_wrap\" class=\"mb-2 small border rounded p-2 bg-light\"></div>";
       }
 
       var popInner =
@@ -848,13 +851,13 @@
         "<div class=\"os-work-pop-body p-2 bg-white\">" +
         "<div id=\"os_sel_banner\" class=\"alert alert-light border small mb-2 py-1\">Откройте квартиру строкой в таблице</div>" +
         "<input type=\"hidden\" id=\"os_flat\" value=\"\"/>" +
+        entHintHtml +
         "<div id=\"os_sublist\" class=\"mb-2\"></div>" +
         "<h6 class=\"small font-weight-bold mb-1\">Добавить жильца</h6>" +
         "<input class=\"form-control form-control-sm mb-1\" id=\"os_mob\" placeholder=\"Телефон\"/>" +
         "<input class=\"form-control form-control-sm mb-1\" id=\"os_sn\" placeholder=\"Имя\"/>" +
         "<input class=\"form-control form-control-sm mb-1\" id=\"os_sp\" placeholder=\"Отчество\"/>" +
         "<input class=\"form-control form-control-sm mb-1\" id=\"os_sl\" placeholder=\"Фамилия\"/>" +
-        entHintHtml +
         "<div id=\"os_flat_cars_block\" class=\"mb-2\" style=\"display:none\">" +
         "<label class=\"small font-weight-bold d-block\">Госномера (по одному в строке)</label>" +
         "<textarea class=\"form-control form-control-sm\" id=\"os_flat_cars_ta\" rows=\"4\" placeholder=\"А777AA77\"></textarea>" +
@@ -915,7 +918,7 @@
 
       $("#os_body").html(
         "<h6 class=\"mb-2\">Квартиры</h6>" +
-        "<p class=\"small text-muted mb-2\">Нажмите строку квартиры — откроется панель у курсора: список жильцов, подъезды при добавлении, госномера квартиры. " +
+        "<p class=\"small text-muted mb-2\">Нажмите строку квартиры — откроется панель: входы квартиры (общие для всех жильцов), список жильцов, госномера. " +
         (showEvCol ? "По кнопке «События» — журнал открытий по выбранной квартире." : "") + "</p>" +
         "<div class=\"table-responsive border rounded bg-white\">" +
         "<table class=\"table table-sm table-hover os-flat-table mb-0\">" +
@@ -970,25 +973,63 @@
       }
 
       function updEnt() {
-        if (!me.can_manage_entrance_access) {
-          return;
-        }
         var fid = Number(selectedFlatId);
-        var h = "";
         if (!fid) {
-          $("#os_ent_wrap").html("Сначала откройте квартиру строкой в таблице");
+          $("#os_ent_wrap").html("<span class=\"text-muted\">Сначала откройте квартиру строкой в таблице</span>");
           return;
         }
         var flat = flatById(fid);
-        if (flat && flat.entrances && flat.entrances.length) {
-          flat.entrances.forEach(function (e) {
-            var eid = Number(e.entranceId);
-            var ap = (e.apartment != null && String(e.apartment).trim() !== "") ? String(e.apartment).trim() : "";
-            var lbl = ap ? ("№ в табло: " + ap) : ("подъезд id " + eid);
-            h += "<label class=\"d-block mb-1\"><input type=\"checkbox\" class=\"os_ent\" value=\"" + eid + "\"/> " + $("<div>").text(lbl).html() + "</label>";
+        var entrances = houseEntrancesCache || [];
+        if (me.can_manage_entrance_access) {
+          if (!$("#os_flat_ent_save").length) {
+            return;
+          }
+          if (!entrances.length) {
+            $("#os_ent_wrap").html("<span class=\"text-muted\">В карточке дома нет входов. Добавьте их в админке.</span>");
+            $("#os_flat_ent_save").prop("disabled", true);
+            return;
+          }
+          $("#os_flat_ent_save").prop("disabled", false);
+          var bound = {};
+          (flat && flat.entrances ? flat.entrances : []).forEach(function (x) {
+            var ei = Number(x.entranceId || 0);
+            if (ei > 0) {
+              bound[ei] = true;
+            }
           });
+          var h = "";
+          entrances.forEach(function (ee) {
+            var eid = Number(ee.entranceId || 0);
+            if (!eid) {
+              return;
+            }
+            var lbl = osEntranceChoiceLabel(ee);
+            var on = bound[eid] ? " checked" : "";
+            h += "<label class=\"d-block mb-1\"><input type=\"checkbox\" class=\"os_flat_ent_chk\" data-eid=\"" + eid + "\"" + on + "/> " + $("<div>").text(lbl).html() + "</label>";
+          });
+          $("#os_ent_wrap").html(h || "<span class=\"text-muted\">Нет входов</span>");
+          return;
         }
-        $("#os_ent_wrap").html(h || "<span class=\"text-muted\">Для квартиры не заведены подъезды в карточке дома</span>");
+        var parts = [];
+        (flat && flat.entrances ? flat.entrances : []).forEach(function (e) {
+          var eid = Number(e.entranceId || 0);
+          if (!eid) {
+            return;
+          }
+          var meta = null;
+          for (var ii = 0; ii < entrances.length; ii++) {
+            if (Number(entrances[ii].entranceId) === eid) {
+              meta = entrances[ii];
+              break;
+            }
+          }
+          parts.push(meta ? osEntranceChoiceLabel(meta) : ("вход " + eid));
+        });
+        $("#os_ent_wrap").html(
+          parts.length
+            ? ("<span class=\"text-muted\">Входы:</span> " + $("<div>").text(parts.join("; ")).html())
+            : "<span class=\"text-muted\">К квартире не привязаны входы</span>"
+        );
       }
 
       function loadFlatSubscribers(fid) {
@@ -1009,33 +1050,13 @@
       }
 
       function drawSubTable(fid, list) {
-        var flat = flatById(fid);
-        var entrances = (flat && flat.entrances) ? flat.entrances : [];
-        var t = "<table class=\"table table-sm\"><thead><tr><th>Телефон</th><th>ФИО</th><th class=\"text-center\">Владелец</th>";
-        if (me.can_manage_entrance_access && entrances.length) {
-          t += "<th>Подъезды</th>";
-        }
-        t += "<th></th></tr></thead><tbody>";
+        var t = "<table class=\"table table-sm\"><thead><tr><th>Телефон</th><th>ФИО</th><th class=\"text-center\">Владелец</th><th></th></tr></thead><tbody>";
         list.forEach(function (s) {
           var sid = Number(s.subscriberId);
           var own = !!s.flatOwner;
           t += "<tr><td class=\"text-monospace\">" + $("<div>").text(s.mobile || "").html() + "</td><td>" + $("<div>").text(s.subscriberFull || "").html() + "</td>" +
-            "<td class=\"text-center\"><label class=\"mb-0 small\"><input type=\"checkbox\" class=\"os_own\" data-fid=\"" + fid + "\" data-sid=\"" + sid + "\" " + (own ? "checked" : "") + "/> владелец</label></td>";
-          if (me.can_manage_entrance_access && entrances.length) {
-            t += "<td style=\"min-width:9rem\" class=\"os-ent-cell\" data-fid=\"" + fid + "\" data-sid=\"" + sid + "\">";
-            var bound = Array.isArray(s.boundEntranceIds) ? s.boundEntranceIds.map(Number) : [];
-            var allMode = !!s.entranceAccessAll;
-            entrances.forEach(function (e) {
-              var eid = Number(e.entranceId);
-              var ap = (e.apartment != null && String(e.apartment).trim() !== "") ? String(e.apartment).trim() : "";
-              var lbl = ap ? ap : String(eid);
-              var checked = allMode ? false : bound.indexOf(eid) !== -1;
-              t += "<label class=\"d-block small mb-0\"><input type=\"checkbox\" class=\"os_ent_row\" data-eid=\"" + eid + "\" " + (checked ? "checked" : "") + "/> " +
-                $("<div>").text(lbl).html() + "</label>";
-            });
-            t += "<button type=\"button\" class=\"btn btn-link btn-sm p-0 os_save_ent\" data-fid=\"" + fid + "\" data-sid=\"" + sid + "\">Сохранить</button></td>";
-          }
-          t += "<td><button class=\"btn btn-link btn-sm os_del\" data-sid=\"" + sid + "\" data-fid=\"" + fid + "\">Удалить</button></td></tr>";
+            "<td class=\"text-center\"><label class=\"mb-0 small\"><input type=\"checkbox\" class=\"os_own\" data-fid=\"" + fid + "\" data-sid=\"" + sid + "\" " + (own ? "checked" : "") + "/> владелец</label></td>" +
+            "<td><button class=\"btn btn-link btn-sm os_del\" data-sid=\"" + sid + "\" data-fid=\"" + fid + "\">Удалить</button></td></tr>";
         });
         t += "</tbody></table>";
         $("#os_sublist").html(list.length ? t : "<p class=\"text-muted mb-0\">Пусто</p>");
@@ -1069,23 +1090,6 @@
           });
         });
 
-        $("#os_sublist").off("click", ".os_save_ent").on("click", ".os_save_ent", function () {
-          var ff = Number($(this).data("fid"));
-          var sid = Number($(this).data("sid"));
-          var cell = $(".os-ent-cell[data-fid=\"" + ff + "\"][data-sid=\"" + sid + "\"]");
-          var eids = [];
-          cell.find(".os_ent_row:checked").each(function () {
-            eids.push(parseInt(String($(this).data("eid")), 10));
-          });
-          apiFetch("PUT", "/objectSenior/subscriberEntrances", { flatId: ff, subscriberId: sid, entranceIds: eids }).then(function (rj) {
-            if (!rj._httpOk) {
-              var er = firstErrorPayload(rj) || firstErrorPayload(unwrap200(rj));
-              alert("Ошибка: " + (er || rj._httpStatus));
-              return;
-            }
-            loadFlatSubscribers(ff);
-          });
-        });
       }
 
       $("#os_flat_tbody").on("click", ".os-flat-ev", function (e) {
@@ -1101,6 +1105,48 @@
         var fid = Number($(this).attr("data-fid"));
         openWorkPanelAt(fid, e.clientX, e.clientY);
       });
+
+      if (me.can_manage_entrance_access) {
+        $("#os_flat_ent_save").on("click", function () {
+          var ff = Number(selectedFlatId);
+          if (!ff) {
+            alert("Сначала откройте квартиру в таблице");
+            return;
+          }
+          var ids = [];
+          $("#os_ent_wrap .os_flat_ent_chk:checked").each(function () {
+            ids.push(Number($(this).data("eid")));
+          });
+          if (!ids.length) {
+            alert("Выберите хотя бы один вход для квартиры.");
+            return;
+          }
+          apiFetch("PUT", "/objectSenior/flatEntrances", { flatId: ff, entranceIds: ids }).then(function (rj) {
+            if (!rj._httpOk) {
+              var er = firstErrorPayload(rj) || firstErrorPayload(unwrap200(rj));
+              alert("Не удалось сохранить входы: " + (er || rj._httpStatus));
+              return;
+            }
+            apiFetch("GET", "/objectSenior/flats", undefined).then(function (fj2) {
+              if (!fj2._httpOk) {
+                loadSubs();
+                return;
+              }
+              var fu2 = unwrap200(fj2);
+              if (fu2 && fu2.flats) {
+                flatsCache = fu2.flats;
+              }
+              if (fu2 && fu2.houseEntrances) {
+                houseEntrancesCache = fu2.houseEntrances;
+              }
+              updEnt();
+              alert("Входы квартиры сохранены");
+            }).catch(function () {
+              loadSubs();
+            });
+          });
+        });
+      }
 
       $("#os_flat_cars_save").on("click", function () {
         var fid = Number($("#os_flat").val());
@@ -1142,13 +1188,6 @@
           subscriberPatronymic: $.trim($("#os_sp").val()),
           subscriberLast: $.trim($("#os_sl").val()),
         };
-        var eids = [];
-        $(".os_ent:checked").each(function () {
-          eids.push(parseInt(String($(this).val()), 10));
-        });
-        if (eids.length) {
-          body.entranceIds = eids;
-        }
         apiFetch("POST", "/objectSenior/subscriber", body).then(function (rj) {
           if (!rj._httpOk) {
             var er = firstErrorPayload(rj) || firstErrorPayload(unwrap200(rj));
