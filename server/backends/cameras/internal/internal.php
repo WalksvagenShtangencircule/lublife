@@ -7,6 +7,7 @@
     namespace backends\cameras {
 
         use Exception;
+        use Throwable;
 
         /**
          * internal.db cameras class
@@ -357,10 +358,9 @@
 
                     if ($snapshot === false) {
                         error_log("Error getting snapshot from '$snapshotUrl' using direct URL");
-                        return null;
+                    } else if (snapshotBytesLookLikeImage($snapshot)) {
+                        return $snapshot;
                     }
-
-                    return $snapshot;
                 }
 
                 require_once __DIR__ . '/../../../utils/rtspSnapshot.php';
@@ -385,7 +385,7 @@
                         );
 
                         $shot = $device->getCamshot();
-                    } catch (Exception) {
+                    } catch (Throwable) {
                         error_log("Error getting snapshot from '{$cameraData['url']}' using device method");
                     }
                 }
@@ -416,9 +416,16 @@
                         );
 
                         return $device->getCamshot();
-                    } catch (Exception) {
+                    } catch (Throwable) {
                         error_log("fake camshot stub fallback failed for '{$cameraData['url']}'");
                     }
+                }
+
+                // Унифицированный fallback: чтобы API camshot не отдавал 400 unknown
+                // при временно недоступной/неисправной камере.
+                $fallback = @file_get_contents(__DIR__ . '/../../../hw/ip/camera/fake/img/callcenter.jpg');
+                if (is_string($fallback) && snapshotBytesLookLikeImage($fallback)) {
+                    return $fallback;
                 }
 
                 return null;

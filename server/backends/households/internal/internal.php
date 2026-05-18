@@ -84,6 +84,9 @@
                             house_domophone_id,
                             model,
                             apartment,
+                            houses_entrances.entrance as entrance_label,
+                            houses_entrances.entrance_type as entrance_type_label,
+                            coalesce(houses_domophones.name, '') as domophone_name,
                             houses_entrances.cms as cms_name,
                             houses_entrances_cmses.cms as cms,
                             unit,
@@ -104,7 +107,9 @@
                         "house_domophone_id" => "domophoneId",
                         "model" => "domophoneModel",
                         "matrix" => "matrix",
-                        "model" => "domophoneModel",
+                        "entrance_label" => "entranceTitle",
+                        "entrance_type_label" => "entranceType",
+                        "domophone_name" => "domophoneName",
                         "cms_name" => "cmsName",
                         "cms" => "cms",
                         "unit" => "unit",
@@ -769,16 +774,16 @@
                         $params["code"] = md5(GUIDv4());
                     }
 
-                    if (@$params["openCode"] == "!") {
-                        // TODO add unique check !!!
-                        $params["openCode"] = 11000 + rand(0, 88999);
-                    }
+                    if (array_key_exists("openCode", $params)) {
+                        if ($params["openCode"] == "!") {
+                            // TODO add unique check !!!
+                            $params["openCode"] = 11000 + rand(0, 88999);
+                        }
 
-                    if ($openCode == "00000") {
-                        $openCode = false;
+                        if ($params["openCode"] == "00000") {
+                            $params["openCode"] = false;
+                        }
                     }
-
-                    $params["openCode"] = $params["openCode"] ?: '';
 
                     if (array_key_exists("contract", $params) && !checkStr($params["contract"])) {
                         setLastError("invalidParams");
@@ -1823,7 +1828,16 @@
                     "house_subscriber_id" => $subscriberId,
                 ]);
 
-                return $result;
+                if ($result === false) {
+                    return false;
+                }
+                // rowCount === 0: связи «квартира–абонент» не было — иначе веб-клиент получал 200 и показывал «удалено» без изменений в БД
+                if ((int)$result === 0) {
+                    setLastError("subscriberNotInFlat");
+                    return false;
+                }
+
+                return true;
             }
 
             /**
@@ -1897,6 +1911,12 @@
 
                 if (!$r) {
                     setLastError("cantModifySubscriber");
+                }
+
+                // Иначе смена телефона/ФИО не попадает в tasks_changes — домофоны узнают об изменениях с задержкой или не узнают.
+                $queue = loadBackend("queue");
+                if ($queue) {
+                    $queue->changed("subscriber", $subscriberId);
                 }
 
                 return $r;
@@ -2109,9 +2129,16 @@
              */
 
             public function modifyKey($keyId, $comments) {
-                return $this->db->modify("update houses_rfids set comments = :comments where house_rfid_id = $keyId", [
+                $r = $this->db->modify("update houses_rfids set comments = :comments where house_rfid_id = $keyId", [
                     "comments" => $comments,
                 ]);
+                if ($r !== false) {
+                    $queue = loadBackend("queue");
+                    if ($queue) {
+                        $queue->changed("key", $keyId);
+                    }
+                }
+                return $r;
             }
 
             /**
@@ -3233,26 +3260,47 @@
                 $search = trim(preg_replace('/\s+/', ' ', $search));
                 $text_search_config = $this->config["db"]["text_search_config"] ?? "simple";
 
+                $searchDigits = preg_replace("/[^0-9]/", "", $search);
+                $phoneTail = "";
+                if (strlen($searchDigits) >= 10) {
+                    $phoneTail = (strlen($searchDigits) === 11 && ($searchDigits[0] === "7" || $searchDigits[0] === "8"))
+                        ? substr($searchDigits, 1, 10)
+                        : $searchDigits;
+                }
+                $pgIdCanon = "(case when length(regexp_replace(coalesce(id::text, ''), '[^0-9]', '', 'g')) = 11 and substring(regexp_replace(coalesce(id::text, ''), '[^0-9]', '', 'g'), 1, 1) in ('7','8') then substring(regexp_replace(coalesce(id::text, ''), '[^0-9]', '', 'g'), 2, 10) else regexp_replace(coalesce(id::text, ''), '[^0-9]', '', 'g') end)";
+
                 switch ($this->db->parseDsn()["protocol"]) {
                     case "pgsql":
                         switch (@$this->config["backends"]["addresses"]["text_search_mode"]) {
                             case "trgm":
+                                $phoneOr = (strlen($phoneTail) >= 10) ? " or ($pgIdCanon) = :phone_tail" : "";
                                 $query = "select * from (
-                                    select *, greatest(similarity(subscriber_full, :search), similarity(id, :search)) as similarity from houses_subscribers_mobile where subscriber_full % :search or id = :search
+                                    select *, greatest(similarity(subscriber_full, :search), similarity(id, :search)) as similarity from houses_subscribers_mobile where subscriber_full % :search or id = :search$phoneOr
                                 ) as t1 order by similarity desc, subscriber_full limit 51";
                                 $params = [ "search" => $search ];
+                                if (strlen($phoneTail) >= 10) {
+                                    $params["phone_tail"] = $phoneTail;
+                                }
                                 break;
 
                             case "ftsa":
                                 $search = str_replace(" ", " & ", $search);
 
                             case "fts":
+                                $phoneUnion = (strlen($phoneTail) >= 10)
+                                    ? "
+                                    union
+                                    select *, 1 as similarity from houses_subscribers_mobile where ($pgIdCanon) = :phone_tail"
+                                    : "";
                                 $query = "select * from (
                                     select *, ts_rank_cd(to_tsvector('$text_search_config', subscriber_full), to_tsquery(:search)) as similarity from houses_subscribers_mobile where to_tsvector('$text_search_config', subscriber_full) @@ to_tsquery('$text_search_config', :search)
                                     union
-                                    select *, 1 as similarity from houses_subscribers_mobile where id = :search
+                                    select *, 1 as similarity from houses_subscribers_mobile where id = :search$phoneUnion
                                 ) as t1  order by similarity, subscriber_full desc limit 51";
                                 $params = [ "search" => $search ];
+                                if (strlen($phoneTail) >= 10) {
+                                    $params["phone_tail"] = $phoneTail;
+                                }
                                 break;
 
                             default:
@@ -3264,10 +3312,14 @@
                                     $params["s$i"] = $tokens[$i];
                                 }
                                 $query = implode(" and ", $query);
+                                $phoneOrDef = (strlen($phoneTail) >= 10) ? " or ($pgIdCanon) = :phone_tail" : "";
                                 $query = "select * from (
-                                    select *, least(levenshtein(subscriber_full, :search), levenshtein(id, :search)) as similarity from houses_subscribers_mobile where ($query) or id = :search
+                                    select *, least(levenshtein(subscriber_full, :search), levenshtein(id, :search)) as similarity from houses_subscribers_mobile where ($query) or id = :search$phoneOrDef
                                 ) as t1 order by similarity asc, subscriber_full limit 51";
                                 $params["search"] = $search;
+                                if (strlen($phoneTail) >= 10) {
+                                    $params["phone_tail"] = $phoneTail;
+                                }
                                 break;
                         }
                         break;

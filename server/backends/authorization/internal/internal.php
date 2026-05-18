@@ -224,11 +224,17 @@
                     [ "objectSenior", "eventVideo", "GET" ],
                     [ "objectSenior", "subscribers", "GET" ],
                     [ "objectSenior", "flats", "GET" ],
+                    [ "objectSenior", "flatEntrances", "PUT" ],
+                    [ "objectSenior", "flatCars", "PUT" ],
                     [ "objectSenior", "subscriber", "POST" ],
                     [ "objectSenior", "subscriber", "DELETE" ],
                     [ "objectSenior", "subscriberEntrances", "PUT" ],
                     [ "objectSenior", "subscriberOwner", "PUT" ],
+                    [ "objectSenior", "broadcast", "POST" ],
                     [ "objectSenior", "whoAmI", "GET" ],
+                    [ "objectSenior", "cameras", "GET" ],
+                    [ "objectSenior", "cameraPreview", "GET" ],
+                    [ "objectSenior", "cameraFragment", "GET" ],
                     [ "objectSeniorAuth", "password", "PUT" ],
                 ];
                 foreach ($rules as $r) {

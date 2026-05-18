@@ -13,11 +13,11 @@ namespace api\objectSenior {
                 return api::ERROR("accessDenied");
             }
             $flatId = (int)@$params["flatId"];
-            $mobile = trim((string)@$params["mobile"]);
-            if ($flatId <= 0 || $mobile === "") {
+            require_once __DIR__ . "/../../utils/objectSeniorService.php";
+            $mobile = \ObjectSeniorService::normalizeMobile((string)@$params["mobile"]);
+            if ($flatId <= 0 || $mobile === null) {
                 return api::ERROR("badRequest");
             }
-            require_once __DIR__ . "/../../utils/objectSeniorService.php";
             $scoped = isset($om["flatIds"]) && is_array($om["flatIds"]) ? $om["flatIds"] : null;
             $seniorRow = [ "address_house_id" => (int)($om["houseId"] ?? 0) ];
             if (!\ObjectSeniorService::flatAllowedForSenior($db, $seniorRow, $scoped, $flatId)) {

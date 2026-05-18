@@ -19,17 +19,17 @@
       --wp-border: rgba(0, 0, 0, 0.1);
       --wp-accent: #2e3f7c;
       --wp-accent-hover: #1d2d5e;
-      --wp-accent-soft: rgba(46, 63, 124, 0.1);
+      --wp-accent-soft: rgba(46, 63, 124, 0.075);
       --wp-navbar-bg: #ffffff;
       --wp-input-bg: #ffffff;
-      --wp-shadow: 0 12px 36px rgba(46, 63, 124, 0.14);
+      --wp-shadow: 0 10px 30px rgba(26, 29, 35, 0.10);
       --wp-radius: 18px;
       --wp-radius-sm: 12px;
       --wp-btn-p1: #4c6aad;
       --wp-btn-p2: #3d5a99;
       --wp-btn-p3: #2e3f7c;
       --wp-btn-p-border: #1d2d5e;
-      --wp-btn-p-shadow: 0 4px 0 #162247, 0 12px 26px rgba(46, 63, 124, 0.28);
+      --wp-btn-p-shadow: 0 8px 20px rgba(46, 63, 124, 0.18);
     }
     * { box-sizing: border-box; }
     body {
@@ -80,7 +80,7 @@
       width: 14rem;
       height: 14rem;
       border-radius: 50%;
-      background: linear-gradient(135deg, rgba(76,106,173,0.2), rgba(46,63,124,0.05));
+      background: linear-gradient(135deg, rgba(76,106,173,0.12), rgba(46,63,124,0.03));
       pointer-events: none;
     }
     .os-hero > * { position: relative; z-index: 1; }
@@ -93,8 +93,10 @@
       justify-content: center;
       color: #fff;
       font-weight: 800;
-      background: linear-gradient(135deg, var(--wp-btn-p1), var(--wp-btn-p3));
-      box-shadow: 0 8px 20px rgba(46, 63, 124, 0.25);
+      background: linear-gradient(135deg, #eef2fb, #dfe6f5);
+      color: var(--wp-accent);
+      border: 1px solid rgba(46, 63, 124, 0.14);
+      box-shadow: 0 8px 18px rgba(46, 63, 124, 0.12);
       flex: 0 0 auto;
     }
     .os-kicker {
@@ -126,7 +128,7 @@
       border: 2px solid transparent;
       border-radius: 999px;
       color: var(--wp-text-muted);
-      font-weight: 800;
+      font-weight: 700;
       padding: 0.48rem 0.85rem;
       transition: transform 0.12s ease, background-color 0.12s ease, color 0.12s ease;
     }
@@ -136,10 +138,10 @@
       transform: translateY(-1px);
     }
     .nav-tabs .nav-link.active {
-      color: #fff !important;
-      background: linear-gradient(180deg, var(--wp-btn-p1), var(--wp-btn-p3));
-      border-color: var(--wp-btn-p-border);
-      box-shadow: 0 8px 18px rgba(46, 63, 124, 0.25);
+      color: var(--wp-accent) !important;
+      background: #fff;
+      border-color: rgba(46, 63, 124, 0.22);
+      box-shadow: 0 6px 16px rgba(46, 63, 124, 0.10), inset 0 -2px 0 rgba(46, 63, 124, 0.08);
     }
     .card { overflow: hidden; }
     .card-body { padding: 1.15rem; }
@@ -161,8 +163,8 @@
     }
     .btn {
       border-radius: 999px !important;
-      font-weight: 800 !important;
-      border-width: 2px !important;
+      font-weight: 700 !important;
+      border-width: 1px !important;
       transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease !important;
     }
     .btn:hover { transform: translateY(-1px); }
@@ -172,7 +174,7 @@
       border-color: var(--wp-btn-p-border) !important;
       color: #fff !important;
       box-shadow: var(--wp-btn-p-shadow) !important;
-      text-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
+      text-shadow: none;
     }
     .btn-outline-primary,
     .btn-outline-secondary,
@@ -211,7 +213,14 @@
     .os-fio-line { font-size: 0.9rem; padding: 0.15rem 0; border-bottom: 1px solid var(--wp-border); }
     .os-fio-line:last-child { border-bottom: 0; }
     .os-chev { width: 2rem; text-align: center; user-select: none; }
-    .os-flat-num { color: var(--wp-accent); font-weight: 800; }
+    .os-flat-num { color: #198754; font-weight: 800; }
+    .os-flat-num {
+      display: inline-block;
+      padding: 0.08rem 0.35rem;
+      margin-left: -0.35rem;
+      border-radius: 999px;
+      background: rgba(25, 135, 84, 0.10);
+    }
     .alert-light {
       background: var(--wp-accent-soft) !important;
       border: 2px solid rgba(46, 63, 124, 0.12) !important;
@@ -222,6 +231,14 @@
     .bg-light { background-color: var(--wp-surface-2) !important; }
     #os_event_video_modal .modal-body video { background: #000; }
     #os_event_video_modal { z-index: 1080 !important; }
+    #os_cam_modal .modal-body video { background: #000; max-width: 100%; max-height: 52vh; }
+    #os_cam_modal { z-index: 1080 !important; }
+    .os-cam-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.85rem; }
+    .os-cam-tile { border: 2px solid var(--wp-border); border-radius: var(--wp-radius-sm); overflow: hidden; background: var(--wp-surface); cursor: pointer; box-shadow: var(--wp-shadow); transition: transform 0.12s ease; }
+    .os-cam-tile:hover { transform: translateY(-2px); }
+    .os-cam-tile .os-cam-thumb { height: 120px; background: #111; display: flex; align-items: center; justify-content: center; color: #9aa3b2; font-size: 0.8rem; }
+    .os-cam-tile .os-cam-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .os-cam-meta { padding: 0.55rem 0.65rem; font-size: 0.85rem; font-weight: 700; }
     body.modal-open .modal-backdrop { z-index: 1075 !important; }
     #os_flat_popover { position: fixed; z-index: 1060; width: min(600px, calc(100vw - 16px)); max-height: min(90vh, 720px); overflow: hidden; display: none; }
     #os_flat_popover .os-work-pop-body { max-height: min(calc(90vh - 52px), 640px); overflow-y: auto; }
@@ -249,6 +266,7 @@
   <div id="app" class="container py-3" style="max-width:900px"></div>
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
   <script>
 (function () {
   /**
@@ -307,6 +325,77 @@
     if (a && typeof a === "object" && a.token) return String(a.token);
     if (u.token) return String(u.token);
     return "";
+  }
+
+  var OS_PLATE_RU_LAT = {
+    "\u0410": "A", "\u0412": "B", "\u0415": "E", "\u041a": "K", "\u041c": "M", "\u041d": "H",
+    "\u041e": "O", "\u0420": "P", "\u0421": "C", "\u0422": "T", "\u0423": "Y", "\u0425": "X"
+  };
+  var OS_PLATE_CHARS = "ABCEHKMOPTXY".split("");
+  var OS_PLATE_DIGITS = "0123456789".split("");
+
+  function normalizeOsPhone(raw) {
+    var s = String(raw || "").trim();
+    if (!s) return null;
+    var digits = s.replace(/\D/g, "");
+    if (!digits) return null;
+    if (digits.length === 11 && digits.charAt(0) === "8") {
+      digits = "7" + digits.substring(1);
+    } else if (digits.length === 10) {
+      digits = "7" + digits;
+    }
+    if (digits.length === 11 && digits.charAt(0) === "7") {
+      return digits;
+    }
+    return null;
+  }
+
+  function ruPlateToLatin(line) {
+    var s = String(line || "").trim().toUpperCase();
+    if (!s) return "";
+    var out = "";
+    for (var i = 0; i < s.length; i++) {
+      var ch = s.charAt(i);
+      if (OS_PLATE_RU_LAT[ch]) {
+        out += OS_PLATE_RU_LAT[ch];
+      } else if (/[A-Z0-9]/.test(ch)) {
+        out += ch;
+      }
+    }
+    return out;
+  }
+
+  function isValidOsPlate(number) {
+    if (!number || number.length < 8 || number.length > 9) return false;
+    for (var i = 0; i < number.length; i++) {
+      var c = number.charAt(i);
+      if (i === 0 || i === 4 || i === 5) {
+        if (OS_PLATE_CHARS.indexOf(c) === -1) return false;
+      } else if (OS_PLATE_DIGITS.indexOf(c) === -1) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function normalizeOsCarsText(raw) {
+    var lines = String(raw || "").split("\n");
+    var out = [];
+    var badLine = 0;
+    for (var li = 0; li < lines.length; li++) {
+      var trimmed = String(lines[li] || "").trim();
+      if (!trimmed) continue;
+      var lat = ruPlateToLatin(trimmed);
+      if (!lat || !isValidOsPlate(lat)) {
+        badLine = li + 1;
+        break;
+      }
+      out.push(lat);
+    }
+    if (badLine) {
+      return { ok: false, line: badLine };
+    }
+    return { ok: true, text: out.join("\n") };
   }
 
   function apiFetch(method, path, body) {
@@ -431,6 +520,7 @@
     }
     var tabs = "<ul class=\"nav nav-tabs mb-3\">" +
       (me.can_view_events ? ("<li class=\"nav-item\"><a class=\"" + tabCls(activeEv) + "\" data-t=\"ev\" href=\"#\">События</a></li>") : "") +
+      "<li class=\"nav-item\"><a class=\"nav-link\" data-t=\"ca\" href=\"#\">Видеонаблюдение</a></li>" +
       (me.can_manage_subscribers ? ("<li class=\"nav-item\"><a class=\"" + tabCls(activeSu) + "\" data-t=\"su\" href=\"#\">Квартиры</a></li>") : "") +
       (me.can_manage_subscribers ? ("<li class=\"nav-item\"><a class=\"nav-link\" data-t=\"br\" href=\"#\">Оповещение</a></li>") : "") +
       (me.can_manage_entrance_access ? ("<li class=\"nav-item\"><a class=\"" + tabCls(activeAc) + "\" data-t=\"ac\" href=\"#\">Доступы</a></li>") : "") +
@@ -475,6 +565,7 @@
       $(this).addClass("active");
       var t = $(this).data("t");
       if (t === "ev") { loadEvents(); }
+      else if (t === "ca") { loadCams(); }
       else if (t === "su") { loadSubs(); }
       else if (t === "br") { loadBroadcast(); }
       else if (t === "ac") { loadAccesses(); }
@@ -505,6 +596,220 @@
     $("#os_event_video_modal").modal("show");
     $("#os_event_video_modal").off("hidden.bs.modal.osv").on("hidden.bs.modal.osv", function () {
       $v.removeAttr("src");
+    });
+  }
+
+  var osCamHls = null;
+
+  function hideOsCameraModal() {
+    if ($("#os_cam_modal").length) {
+      $("#os_cam_modal").modal("hide");
+    }
+  }
+
+  function osCamDestroyPlayer() {
+    var v = document.getElementById("os_cam_video");
+    if (osCamHls) {
+      try { osCamHls.destroy(); } catch (e1) {}
+      osCamHls = null;
+    }
+    if (v) {
+      v.removeAttribute("src");
+      try { v.load(); } catch (e2) {}
+    }
+    var vf = document.getElementById("os_cam_frag");
+    if (vf) {
+      vf.removeAttribute("src");
+      try { vf.load(); } catch (e3) {}
+    }
+  }
+
+  function osCamAttachLive(url) {
+    osCamDestroyPlayer();
+    var v = document.getElementById("os_cam_video");
+    if (!v || !url) {
+      return;
+    }
+    var u = String(url);
+    if (u.indexOf(".m3u8") !== -1 && window.Hls && window.Hls.isSupported()) {
+      osCamHls = new window.Hls({ enableWorker: true, lowLatencyMode: true });
+      osCamHls.loadSource(u);
+      osCamHls.attachMedia(v);
+      osCamHls.on(window.Hls.Events.MANIFEST_PARSED, function () {
+        v.play().catch(function () {});
+      });
+    } else {
+      v.src = u;
+      v.play().catch(function () {});
+    }
+  }
+
+  function osMsToDatetimeLocal(ms) {
+    var d = new Date(ms);
+    var pad = function (n) { return n < 10 ? "0" + n : String(n); };
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+
+  function ensureOsCameraModal() {
+    if ($("#os_cam_modal").length) {
+      return;
+    }
+    $("body").append(
+      "<div class=\"modal fade\" id=\"os_cam_modal\" tabindex=\"-1\" role=\"dialog\" aria-hidden=\"true\">" +
+      "<div class=\"modal-dialog modal-xl modal-dialog-centered\" role=\"document\">" +
+      "<div class=\"modal-content\">" +
+      "<div class=\"modal-header py-2\"><h5 class=\"modal-title\" id=\"os_cam_title\">Камера</h5>" +
+      "<button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-label=\"Закрыть\"><span aria-hidden=\"true\">&times;</span></button></div>" +
+      "<div class=\"modal-body p-2\">" +
+      "<div class=\"small text-muted mb-2\">Эфир (DVR-поток). В Chrome для HLS нужен встроенный плеер; при проблемах откройте поток в новой вкладке.</div>" +
+      "<div class=\"bg-dark text-center mb-3\"><video id=\"os_cam_video\" controls playsinline muted style=\"max-width:100%;max-height:52vh\"></video></div>" +
+      "<h6 class=\"small font-weight-bold\">Фрагмент архива</h6>" +
+      "<div class=\"form-row\">" +
+      "<div class=\"col-md-4 mb-2\"><label class=\"d-block small text-muted mb-0\">С</label><input type=\"datetime-local\" class=\"form-control form-control-sm\" id=\"os_cam_from\" step=\"60\"/></div>" +
+      "<div class=\"col-md-4 mb-2\"><label class=\"d-block small text-muted mb-0\">По</label><input type=\"datetime-local\" class=\"form-control form-control-sm\" id=\"os_cam_to\" step=\"60\"/></div>" +
+      "<div class=\"col-md-4 mb-2 d-flex align-items-end\">" +
+      "<button type=\"button\" class=\"btn btn-sm btn-primary mr-2\" id=\"os_cam_load_frag\">Показать</button>" +
+      "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" id=\"os_cam_dl_frag\">Скачать</button></div></div>" +
+      "<div class=\"small text-muted mb-2\">Длительность на сервере ограничена (до 1 часа); очень короткий интервал будет расширен до нескольких секунд.</div>" +
+      "<div class=\"bg-dark text-center\"><video id=\"os_cam_frag\" controls playsinline style=\"max-width:100%;max-height:42vh\"></video></div>" +
+      "<div class=\"mt-2\"><a href=\"#\" class=\"small\" id=\"os_cam_open_tab\" target=\"_blank\" rel=\"noopener\">Открыть эфир в новой вкладке</a></div>" +
+      "</div></div></div></div>"
+    );
+    $("#os_cam_modal").on("hidden.bs.modal", function () {
+      osCamDestroyPlayer();
+    });
+    $("#os_cam_load_frag").on("click", function () {
+      var cid = $("#os_cam_modal").data("cameraId");
+      if (!cid) {
+        return;
+      }
+      var from = osEventsDatetimeLocalToUnix($("#os_cam_from").val());
+      var to = osEventsDatetimeLocalToUnix($("#os_cam_to").val());
+      if (from == null || to == null) {
+        alert("Укажите интервал «С» и «По».");
+        return;
+      }
+      if (to <= from) {
+        alert("«По» должно быть позже «С».");
+        return;
+      }
+      apiFetch("GET", "/objectSenior/cameraFragment/" + encodeURIComponent(cid) + "?from=" + from + "&to=" + to, undefined).then(function (fj) {
+        if (!fj._httpOk) {
+          alert("Фрагмент: " + (firstErrorPayload(fj) || firstErrorPayload(unwrap200(fj)) || fj._httpStatus));
+          return;
+        }
+        var uj = unwrap200(fj);
+        var frag = uj && uj.cameraFragment;
+        var url = frag && frag.url;
+        if (!url) {
+          alert("Ссылка на фрагмент не получена");
+          return;
+        }
+        $("#os_cam_modal").data("lastFragUrl", url);
+        var vf = document.getElementById("os_cam_frag");
+        vf.src = url;
+        vf.play().catch(function () {});
+      });
+    });
+    $("#os_cam_dl_frag").on("click", function () {
+      var url = $("#os_cam_modal").data("lastFragUrl");
+      if (!url) {
+        alert("Сначала нажмите «Показать», чтобы получить фрагмент.");
+        return;
+      }
+      var cid = $("#os_cam_modal").data("cameraId") || "cam";
+      var a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.download = "camera-" + cid + ".mp4";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+  }
+
+  function openOsCameraModal(cam) {
+    ensureOsCameraModal();
+    $("#os_cam_modal").data("cameraId", cam.cameraId);
+    $("#os_cam_modal").data("lastFragUrl", "");
+    $("#os_cam_title").text(cam.name ? String(cam.name) : ("Камера " + cam.cameraId));
+    var now = Date.now();
+    $("#os_cam_from").val(osMsToDatetimeLocal(now - 10 * 60 * 1000));
+    $("#os_cam_to").val(osMsToDatetimeLocal(now));
+    var ds = cam.dvrStream ? String(cam.dvrStream) : "";
+    $("#os_cam_open_tab").attr("href", ds || "#").toggle(!!ds);
+    osCamAttachLive(ds);
+    $("#os_cam_modal").modal("show");
+  }
+
+  function loadCams() {
+    hideOsFlatPopover();
+    hideOsFlatEventsPopover();
+    hideOsCameraModal();
+    if ($("#os_event_video_modal").length) {
+      $("#os_event_video_modal").modal("hide");
+    }
+    $("#os_body").html("<p>Загрузка…</p>");
+    apiFetch("GET", "/objectSenior/cameras", undefined).then(function (j) {
+      if (!j._httpOk) {
+        var er = firstErrorPayload(j) || firstErrorPayload(unwrap200(j));
+        $("#os_body").html("<p class=\"text-danger\">Видеонаблюдение: " + $("<div>").text(er || ("HTTP " + j._httpStatus)).html() + "</p>");
+        return;
+      }
+      var u = unwrap200(j);
+      var list = u && u.cameras ? u.cameras : [];
+      if (!Array.isArray(list) || !list.length) {
+        $("#os_body").html(
+          "<h6 class=\"mb-2\">Видеонаблюдение</h6>" +
+          "<p class=\"small text-muted\">К объекту не привязаны камеры или список пуст. Добавьте камеру в админке (дом → камеры).</p>"
+        );
+        return;
+      }
+      var h = "<h6 class=\"mb-2\">Видеонаблюдение</h6>" +
+        "<p class=\"small text-muted mb-3\">Нажмите на превью — откроется эфир и выбор интервала для фрагмента архива.</p>" +
+        "<div class=\"os-cam-grid\" id=\"os_cam_grid\"></div>";
+      $("#os_body").html(h);
+      list.forEach(function (cam) {
+        var id = Number(cam.cameraId);
+        var title = cam.name ? String(cam.name) : ("Камера " + id);
+        var dis = !cam.enabled ? " <span class=\"badge badge-secondary\">выкл</span>" : "";
+        var bindLbl = "";
+        if (cam.bindings && cam.bindings.length) {
+          var OS_CAM_BIND = { house: "дом", flat: "квартира", subscriber: "абонент", entrance: "вход / панель" };
+          bindLbl = cam.bindings.map(function (x) { return OS_CAM_BIND[x] || x; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(" · ");
+        }
+        var $tile = $(
+          "<div class=\"os-cam-tile\" data-cam-id=\"" + id + "\">" +
+          "<div class=\"os-cam-thumb\"><span class=\"os-cam-ph\">Загрузка…</span></div>" +
+          "<div class=\"os-cam-meta\"><div>" + $("<div>").text(title).html() + dis + "</div>" +
+          (bindLbl ? ("<div class=\"text-muted small font-weight-normal mt-1\">" + $("<div>").text(bindLbl).html() + "</div>") : "") +
+          "</div></div>"
+        );
+        $tile.data("camObj", cam);
+        $("#os_cam_grid").append($tile);
+        apiFetch("GET", "/objectSenior/cameraPreview/" + encodeURIComponent(id), undefined).then(function (pj) {
+          if (!pj._httpOk) {
+            $tile.find(".os-cam-ph").text("Нет превью");
+            return;
+          }
+          var pu = unwrap200(pj);
+          var pr = pu && pu.cameraPreview;
+          if (pr && pr.preview && pr.preview.base64) {
+            $tile.find(".os-cam-thumb").html(
+              "<img alt=\"\" src=\"data:" + pr.preview.contentType + ";base64," + pr.preview.base64 + "\"/>"
+            );
+          } else {
+            $tile.find(".os-cam-ph").text("Нет изображения");
+          }
+        });
+      });
+      $("#os_cam_grid").on("click", ".os-cam-tile", function () {
+        var c = $(this).data("camObj");
+        if (c) {
+          openOsCameraModal(c);
+        }
+      });
     });
   }
 
@@ -685,6 +990,7 @@
   }
 
   function loadEvents() {
+    hideOsCameraModal();
     hideOsFlatPopover();
     hideOsFlatEventsPopover();
     if ($("#os_event_video_modal").length) { $("#os_event_video_modal").modal("hide"); }
@@ -890,6 +1196,7 @@
   }
 
   function loadAccesses() {
+    hideOsCameraModal();
     hideOsFlatPopover();
     hideOsFlatEventsPopover();
     if ($("#os_event_video_modal").length) { $("#os_event_video_modal").modal("hide"); }
@@ -982,12 +1289,12 @@
   }
 
   function loadBroadcast() {
+    hideOsCameraModal();
     hideOsFlatPopover();
     hideOsFlatEventsPopover();
     if ($("#os_event_video_modal").length) { $("#os_event_video_modal").modal("hide"); }
     $("#os_body").html(
       "<h6 class=\"mb-2\">Оповещение жильцам (мобильное приложение)</h6>" +
-      "<p class=\"small text-muted mb-3\">Сообщение уходит в приложение у абонентов дома (с учётом ограничения кабинета по квартирам, если задано).</p>" +
       "<div class=\"card card-body mb-3\" style=\"max-width:640px\">" +
       "<div class=\"form-group mb-2\"><label for=\"os_bc_title\">Заголовок</label>" +
       "<input type=\"text\" class=\"form-control form-control-sm\" id=\"os_bc_title\" maxlength=\"512\"/></div>" +
@@ -995,7 +1302,7 @@
       "<textarea class=\"form-control form-control-sm\" id=\"os_bc_body\" rows=\"6\" maxlength=\"32000\"></textarea></div>" +
       "<div class=\"form-group mb-3\"><label for=\"os_bc_action\">Действие</label>" +
       "<select class=\"form-control form-control-sm\" id=\"os_bc_action\">" +
-      "<option value=\"inbox\">Входящие</option><option value=\"money\">Оплата</option></select></div>" +
+      "<option value=\"inbox\">Входящие</option><option value=\"money\">Беззвучное</option></select></div>" +
       "<button type=\"button\" class=\"btn btn-primary btn-sm\" id=\"os_bc_send\">Отправить</button>" +
       "<p class=\"small text-muted mt-2 mb-0\" id=\"os_bc_hint\"></p></div>"
     );
@@ -1029,6 +1336,7 @@
   }
 
   function loadSubs() {
+    hideOsCameraModal();
     hideOsFlatEventsPopover();
     if ($("#os_event_video_modal").length) { $("#os_event_video_modal").modal("hide"); }
     hideOsFlatPopover();
@@ -1077,17 +1385,18 @@
         "<div id=\"os_sel_banner\" class=\"alert alert-light border small mb-2 py-1\">Откройте квартиру строкой в таблице</div>" +
         "<input type=\"hidden\" id=\"os_flat\" value=\"\"/>" +
         entHintHtml +
+        "<h6 class=\"small font-weight-bold mb-1 mt-2\">Подключенные жильцы</h6>" +
         "<div id=\"os_sublist\" class=\"mb-2\"></div>" +
         "<h6 class=\"small font-weight-bold mb-1\">Добавить жильца</h6>" +
         "<input class=\"form-control form-control-sm mb-1\" id=\"os_mob\" placeholder=\"Телефон\"/>" +
         "<input class=\"form-control form-control-sm mb-1\" id=\"os_sn\" placeholder=\"Имя\"/>" +
         "<input class=\"form-control form-control-sm mb-1\" id=\"os_sp\" placeholder=\"Отчество\"/>" +
         "<input class=\"form-control form-control-sm mb-1\" id=\"os_sl\" placeholder=\"Фамилия\"/>" +
+        "<button class=\"btn btn-success btn-sm mb-2\" id=\"os_addsub\">Добавить</button>" +
         "<div id=\"os_flat_cars_block\" class=\"mb-2\" style=\"display:none\">" +
         "<label class=\"small font-weight-bold d-block\">Госномера (по одному в строке)</label>" +
         "<textarea class=\"form-control form-control-sm\" id=\"os_flat_cars_ta\" rows=\"4\" placeholder=\"А777AA77\"></textarea>" +
         "<button type=\"button\" class=\"btn btn-sm btn-primary mt-1\" id=\"os_flat_cars_save\">Сохранить номера</button></div>" +
-        "<button class=\"btn btn-success btn-sm\" id=\"os_addsub\">Добавить</button>" +
         "</div>";
 
       $("body").append("<div id=\"os_flat_popover\" class=\"shadow-lg border-0\">" + popInner + "</div>");
@@ -1095,6 +1404,13 @@
 
       $("#os_flat_popover_x").on("click", function () {
         hideOsFlatPopover();
+      });
+
+      $("#os_flat_popover").on("blur", "#os_mob", function () {
+        var v = $.trim($(this).val());
+        if (!v) return;
+        var n = normalizeOsPhone(v);
+        if (n) $(this).val(n);
       });
 
       var sorted = sortFlatsCopy(flatsCache);
@@ -1380,7 +1696,13 @@
           return;
         }
         var raw = $("#os_flat_cars_ta").val();
-        apiFetch("PUT", "/objectSenior/flatCars", { flatId: fid, cars: raw != null ? String(raw) : "" }).then(function (rj) {
+        var carsNorm = normalizeOsCarsText(raw != null ? String(raw) : "");
+        if (!carsNorm.ok) {
+          alert("Некорректный госномер в строке " + carsNorm.line + ". Используйте латинские буквы и цифры (например A777AA77).");
+          return;
+        }
+        $("#os_flat_cars_ta").val(carsNorm.text);
+        apiFetch("PUT", "/objectSenior/flatCars", { flatId: fid, cars: carsNorm.text }).then(function (rj) {
           if (!rj._httpOk) {
             var er = firstErrorPayload(rj) || firstErrorPayload(unwrap200(rj));
             alert("Не удалось сохранить номера: " + (er || rj._httpStatus));
@@ -1406,9 +1728,15 @@
           alert("Сначала откройте квартиру строкой в таблице");
           return;
         }
+        var mob = normalizeOsPhone($("#os_mob").val());
+        if (!mob) {
+          alert("Укажите корректный номер телефона (11 цифр, формат 7XXXXXXXXXX).");
+          return;
+        }
+        $("#os_mob").val(mob);
         var body = {
           flatId: fid,
-          mobile: $.trim($("#os_mob").val()),
+          mobile: mob,
           subscriberName: $.trim($("#os_sn").val()),
           subscriberPatronymic: $.trim($("#os_sp").val()),
           subscriberLast: $.trim($("#os_sl").val()),
@@ -1428,6 +1756,7 @@
   }
 
   function loadPw() {
+    hideOsCameraModal();
     hideOsFlatPopover();
     hideOsFlatEventsPopover();
     if ($("#os_event_video_modal").length) { $("#os_event_video_modal").modal("hide"); }

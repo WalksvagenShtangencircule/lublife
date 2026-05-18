@@ -72,7 +72,7 @@
 
     doDeleteCamera: function (cameraId) {
         loadingStart();
-        DELETE("cameras", "camera", cameraId).
+        DELETE("cameras", "camera", cameraId, null, 15000).
         fail(FAIL).
         done(() => {
             message(i18n("addresses.cameraWasDeleted"))
@@ -1285,20 +1285,41 @@
     },
 
     refreshCameraListThumbs: function () {
+        let jobs = [];
         $("#rbt-cameras-list-table .rbt-entrance-cam-thumb[data-camera-id]").each(function () {
             let $img = $(this);
             let id = $img.attr("data-camera-id");
             if (!id) {
                 return;
             }
-            GET("cameras", "camshot", id, true).
+            jobs.push({
+                id,
+                $img,
+            });
+        });
+
+        let cursor = 0;
+        let concurrency = 4;
+
+        let runNext = () => {
+            if (cursor >= jobs.length) {
+                return;
+            }
+            let job = jobs[cursor++];
+            QUERYID("cameras", "camshot", job.id, false, true, 5000).
                 done(r => {
                     if (r && r.shot) {
-                        $img.attr("src", "data:image/jpeg;base64," + r.shot);
+                        job.$img.attr("src", "data:image/jpeg;base64," + r.shot);
                     }
                 }).
-                fail(() => {});
-        });
+                fail(() => {}).
+                always(runNext);
+        };
+
+        let workers = Math.min(concurrency, jobs.length);
+        for (let i = 0; i < workers; i++) {
+            runNext();
+        }
     },
 
     openCameraListViewer: function (cameraId) {

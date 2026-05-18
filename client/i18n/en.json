@@ -1,7 +1,7 @@
 {
     "_code": "en",
-    "windowTitle": "SmartAccess — single sign-on and access control",
-    "windowTitleShort": "SmartAccess",
+    "windowTitle": "CityHome — single sign-on and access control",
+    "windowTitleShort": "CityHome",
     "appTagline": "Single sign-on, permission management, and secure access to your infrastructure.",
     "moduleAddresses": "Addresses",
     "moduleTools": "Tools",
@@ -154,8 +154,8 @@
         "maintenance": "maintenance_en.jpg"
     },
     "objectSeniors": {
-        "objectSeniors": "Building representatives",
-        "menuTitle": "Building representatives",
+        "objectSeniors": "Senior portal",
+        "menuTitle": "Senior portal",
         "listTitle": "Senior dashboards",
         "add": "Add dashboard",
         "addTitle": "New dashboard",
