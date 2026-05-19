@@ -16,9 +16,13 @@ namespace api\objectSenior {
             if (!$a) {
                 return api::ERROR("notFound");
             }
+            $search = trim((string)@$params["search"]);
+            if ($search === "") {
+                $search = trim((string)@$params["phone"]);
+            }
             $opts = [
                 "houseId" => (int)($om["houseId"] ?? 0),
-                "phone" => trim((string)@$params["phone"]),
+                "search" => $search,
                 "limit" => isset($params["limit"]) ? (int)$params["limit"] : 100,
             ];
             if (isset($params["since"])) {

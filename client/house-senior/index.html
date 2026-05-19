@@ -267,6 +267,22 @@
       border-bottom: 2px solid var(--wp-border) !important;
       background: linear-gradient(180deg, var(--wp-surface-2), var(--wp-surface)) !important;
     }
+    .os-popover-drag-handle {
+      cursor: move;
+      user-select: none;
+      touch-action: none;
+    }
+    .os-popover-drag-handle .close,
+    .os-popover-drag-handle button,
+    .os-popover-drag-handle a,
+    .os-popover-drag-handle input,
+    .os-popover-drag-handle select,
+    .os-popover-drag-handle textarea,
+    .os-popover-drag-handle label {
+      cursor: auto;
+      touch-action: auto;
+    }
+    .os-popover-drag-handle.os-popover-dragging { cursor: grabbing; }
     .os-acc-scroll { max-height: 70vh; }
     .os-acc-matrix thead th { position: sticky; top: 0; z-index: 2; background: var(--wp-surface-2) !important; box-shadow: 0 1px 0 var(--wp-border); }
     .os-acc-matrix .os-acc-flatname { position: sticky; left: 0; z-index: 1; border-right: 1px solid var(--wp-border); }
@@ -1015,8 +1031,8 @@
     var tsTo = osEventsDatetimeLocalToUnix($("#os_ev_to").val());
     if (tsFrom != null) qs += "&since=" + tsFrom;
     if (tsTo != null) qs += "&until=" + tsTo;
-    var phone = $.trim($("#os_phone").val());
-    if (phone) qs += "&phone=" + encodeURIComponent(phone);
+    var search = $.trim($("#os_ev_search").val());
+    if (search) qs += "&search=" + encodeURIComponent(search);
     return qs;
   }
   function osEventsEventsShellHtml() {
@@ -1027,8 +1043,11 @@
       "<input type=\"datetime-local\" class=\"form-control form-control-sm\" id=\"os_ev_from\" step=\"60\"/></div>" +
       "<div class=\"col-md-4 mb-2 mb-md-0\"><label class=\"d-block mb-0 text-muted\">По</label>" +
       "<input type=\"datetime-local\" class=\"form-control form-control-sm\" id=\"os_ev_to\" step=\"60\"/></div>" +
-      "<div class=\"col-md-4 mb-2 mb-md-0\"><label class=\"d-block mb-0 text-muted\">Телефон (необязательно)</label>" +
-      "<input type=\"text\" class=\"form-control form-control-sm\" id=\"os_phone\" placeholder=\"Фильтр\"/></div></div>" +
+      "<div class=\"col-md-4 mb-2 mb-md-0\"><label class=\"d-block mb-0 text-muted\">Поиск</label>" +
+      "<div class=\"input-group input-group-sm\">" +
+      "<input type=\"text\" class=\"form-control\" id=\"os_ev_search\" autocomplete=\"off\"/>" +
+      "<div class=\"input-group-append\"><button type=\"button\" class=\"btn btn-primary\" id=\"os_ev_search_btn\">Поиск</button></div>" +
+      "</div></div></div>" +
       "<div class=\"d-flex flex-wrap align-items-center mt-1\">" +
       "<button type=\"button\" class=\"btn btn-sm btn-primary mr-2\" id=\"os_ev_apply\">Показать</button>" +
       "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary mr-2\" id=\"os_ev_prev\" disabled>Назад</button>" +
@@ -1155,6 +1174,23 @@
       });
     });
   }
+  function osEventsApplyFilter() {
+    osEventsOffset = 0;
+    osEventsReload();
+  }
+
+  function bindOsEventsFormHandlers() {
+    $("#os_ev_apply, #os_ev_search_btn").off("click.osEvFilter").on("click.osEvFilter", function () {
+      osEventsApplyFilter();
+    });
+    $("#os_ev_search").off("keydown.osEvFilter").on("keydown.osEvFilter", function (e) {
+      if (e.key === "Enter" || e.keyCode === 13) {
+        e.preventDefault();
+        osEventsApplyFilter();
+      }
+    });
+  }
+
   function osEventsReload() {
     if (!$("#os_evlist").length) return;
     $("#os_evlist").html("<p class=\"small text-muted mb-0\">Загрузка…</p>");
@@ -1199,7 +1235,7 @@
         return;
       }
       $("#os_body").html(osEventsEventsShellHtml());
-      $("#os_ev_apply").on("click", function () { osEventsOffset = 0; osEventsReload(); });
+      bindOsEventsFormHandlers();
       $("#os_ev_prev").on("click", function () {
         osEventsOffset = Math.max(0, osEventsOffset - OS_EVENTS_PAGE_LIMIT);
         osEventsReload();
@@ -1350,32 +1386,83 @@
     $("#os_flat_ev_popover").hide();
   }
 
-  function positionOsFixedPopover($el, clientX, clientY) {
-    $el.css({ left: 0, top: 0, visibility: "hidden", display: "block" });
+  function centerOsFixedPopover($el) {
+    $el.css({ left: 0, top: 0, visibility: "hidden", display: "block", position: "fixed" });
     var w = $el.outerWidth();
     var h = $el.outerHeight();
     var pad = 8;
     var ww = $(window).width();
     var wh = $(window).height();
-    var sx = typeof clientX === "number" ? clientX : ww / 2;
-    var sy = typeof clientY === "number" ? clientY : wh / 2;
-    var x = sx + pad;
-    var y = sy + pad;
-    if (x + w > ww - pad) {
-      x = Math.max(pad, ww - w - pad);
-    }
-    if (y + h > wh - pad) {
-      y = Math.max(pad, wh - h - pad);
-    }
-    $el.css({ left: x, top: y, visibility: "visible", position: "fixed" });
+    var x = Math.max(pad, (ww - w) / 2);
+    var y = Math.max(pad, (wh - h) / 2);
+    $el.css({ left: x, top: y, visibility: "visible" });
   }
 
-  function positionOsFlatPopover(clientX, clientY) {
-    positionOsFixedPopover($("#os_flat_popover"), clientX, clientY);
+  function positionOsFlatPopover() {
+    centerOsFixedPopover($("#os_flat_popover"));
   }
 
-  function positionOsFlatEvPopover(clientX, clientY) {
-    positionOsFixedPopover($("#os_flat_ev_popover"), clientX, clientY);
+  function positionOsFlatEvPopover() {
+    centerOsFixedPopover($("#os_flat_ev_popover"));
+  }
+
+  /** Перетаскивание всплывающей панели за заголовок (мышь и touch). */
+  function initOsDraggablePopover($popover, $handle) {
+    var id = $popover.attr("id") || "os_pop";
+    var ns = ".osPopDrag." + id;
+    $handle.off(ns);
+
+    function onDragStart(clientX, clientY, e) {
+      if ($(e.target).closest(".close, button, a, input, select, textarea, label").length) {
+        return;
+      }
+      e.preventDefault();
+      var rect = $popover[0].getBoundingClientRect();
+      var offL = clientX - rect.left;
+      var offT = clientY - rect.top;
+      $popover.data("osDragged", true);
+      $handle.addClass("os-popover-dragging");
+
+      function onMove(mx, my) {
+        var ww = $(window).width();
+        var wh = $(window).height();
+        var w = $popover.outerWidth();
+        var h = $popover.outerHeight();
+        var pad = 8;
+        var x = mx - offL;
+        var y = my - offT;
+        x = Math.min(Math.max(pad, x), Math.max(pad, ww - w - pad));
+        y = Math.min(Math.max(pad, y), Math.max(pad, wh - h - pad));
+        $popover.css({ left: x, top: y, position: "fixed" });
+      }
+
+      function onEnd() {
+        $handle.removeClass("os-popover-dragging");
+        $(document).off("mousemove" + ns).off("mouseup" + ns);
+        $(document).off("touchmove" + ns).off("touchend" + ns + " touchcancel" + ns);
+      }
+
+      $(document).on("mousemove" + ns, function (ev) {
+        onMove(ev.clientX, ev.clientY);
+      });
+      $(document).on("mouseup" + ns, onEnd);
+      $(document).on("touchmove" + ns, function (ev) {
+        if (ev.touches && ev.touches[0]) {
+          onMove(ev.touches[0].clientX, ev.touches[0].clientY);
+        }
+        ev.preventDefault();
+      });
+      $(document).on("touchend" + ns + " touchcancel" + ns, onEnd);
+    }
+
+    $handle.on("mousedown" + ns, function (e) {
+      onDragStart(e.clientX, e.clientY, e);
+    });
+    $handle.on("touchstart" + ns, function (e) {
+      if (e.touches && e.touches[0]) {
+        onDragStart(e.touches[0].clientX, e.touches[0].clientY, e);
+      }
+    });
   }
 
   function ensureOsFlatEvPopover() {
@@ -1384,7 +1471,7 @@
     }
     $("body").append(
       "<div id=\"os_flat_ev_popover\" class=\"card shadow-lg border-0 bg-white\">" +
-      "<div class=\"d-flex align-items-center border-bottom px-2 py-1\">" +
+      "<div class=\"d-flex align-items-center border-bottom px-2 py-1 os-popover-drag-handle\">" +
       "<strong id=\"os_flat_ev_title\" class=\"flex-grow-1 small\">События</strong>" +
       "<button type=\"button\" class=\"close ml-2\" id=\"os_flat_ev_x\" aria-label=\"Закрыть\"><span aria-hidden=\"true\">&times;</span></button></div>" +
       "<div class=\"os-flat-ev-body p-2\"><div id=\"os_flat_ev_list\"></div></div></div>"
@@ -1392,9 +1479,10 @@
     $("#os_flat_ev_x").on("click", function () {
       hideOsFlatEventsPopover();
     });
+    initOsDraggablePopover($("#os_flat_ev_popover"), $("#os_flat_ev_popover > .os-popover-drag-handle"));
   }
 
-  function openOsFlatEventsPopover(fid, clientX, clientY) {
+  function openOsFlatEventsPopover(fid) {
     if (!me.can_view_events) {
       return;
     }
@@ -1405,21 +1493,30 @@
     var flab = fl && fl.flat != null && String(fl.flat).trim() !== "" ? String(fl.flat).trim() : String(nf);
     $("#os_flat_ev_title").text("События · кв. " + flab);
     $("#os_flat_ev_list").html("<p class=\"small text-muted mb-0\">Загрузка…</p>");
-    $("#os_flat_ev_popover").show();
-    positionOsFlatEvPopover(clientX, clientY);
+    $("#os_flat_ev_popover").data("osDragged", false).show();
+    positionOsFlatEvPopover();
     apiFetch("GET", "/objectSenior/events?flatId=" + nf + "&limit=" + OS_EVENTS_PAGE_LIMIT + "&offset=0", undefined).then(function (j2) {
       if (!j2._httpOk) {
         var er = firstErrorPayload(j2) || firstErrorPayload(unwrap200(j2));
         $("#os_flat_ev_list").html("<p class=\"text-danger small\">" + $("<div>").text(er || ("HTTP " + j2._httpStatus)).html() + "</p>");
+        if (!$("#os_flat_ev_popover").data("osDragged")) {
+          positionOsFlatEvPopover();
+        }
         return;
       }
       var u2 = unwrap200(j2);
       var p2 = u2 && u2.events ? u2.events : null;
       if (!p2 || !Array.isArray(p2.events)) {
         $("#os_flat_ev_list").html("<p class=\"small text-muted mb-0\">Нет данных.</p>");
+        if (!$("#os_flat_ev_popover").data("osDragged")) {
+          positionOsFlatEvPopover();
+        }
         return;
       }
       renderOsEventsInto($("#os_flat_ev_list"), p2);
+      if (!$("#os_flat_ev_popover").data("osDragged")) {
+        positionOsFlatEvPopover();
+      }
     });
   }
 
@@ -1630,7 +1727,7 @@
       }
 
       var popInner =
-        "<div class=\"d-flex align-items-center border-bottom px-2 py-1 bg-white\">" +
+        "<div class=\"d-flex align-items-center border-bottom px-2 py-1 bg-white os-popover-drag-handle\">" +
         "<strong id=\"os-work-pop-title\" class=\"flex-grow-1 small\">Квартира</strong>" +
         "<button type=\"button\" class=\"close ml-2\" id=\"os_flat_popover_x\" aria-label=\"Закрыть\"><span aria-hidden=\"true\">&times;</span></button></div>" +
         "<div class=\"os-work-pop-body p-2 bg-white\">" +
@@ -1657,6 +1754,7 @@
       $("#os_flat_popover_x").on("click", function () {
         hideOsFlatPopover();
       });
+      initOsDraggablePopover($("#os_flat_popover"), $("#os_flat_popover > .os-popover-drag-handle"));
 
       $("#os_flat_popover").on("blur", "#os_mob", function () {
         var v = $.trim($(this).val());
@@ -1761,7 +1859,7 @@
         renderFlatCarsPanel(selectedFlatId);
       }
 
-      function openWorkPanelAt(fid, clientX, clientY) {
+      function openWorkPanelAt(fid) {
         hideOsFlatEventsPopover();
         var n = Number(fid);
         if (osFlatPopoverFid === n && $("#os_flat_popover").is(":visible")) {
@@ -1769,7 +1867,7 @@
           return;
         }
         osFlatPopoverFid = n;
-        $("#os_flat_popover").show();
+        $("#os_flat_popover").data("osDragged", false).show();
         var fl = flatById(n);
         var flab = fl && fl.flat != null && String(fl.flat).trim() !== "" ? String(fl.flat).trim() : String(n);
         $("#os-work-pop-title").text("Кв. " + flab);
@@ -1777,7 +1875,7 @@
         var $tr = $("#os_flat_tbody tr.os-flat-main[data-fid=\"" + n + "\"]");
         $tr.addClass("os-flat-sel").find(".os-chev").text("▾");
         setSelectedFlat(n);
-        positionOsFlatPopover(clientX, clientY);
+        positionOsFlatPopover();
       }
 
       function updEnt() {
@@ -1868,6 +1966,9 @@
         });
         t += "</tbody></table>";
         $("#os_sublist").html(list.length ? t : "<p class=\"text-muted mb-0\">Пусто</p>");
+        if ($("#os_flat_popover").is(":visible") && !$("#os_flat_popover").data("osDragged")) {
+          positionOsFlatPopover();
+        }
 
         $("#os_sublist").off("change", ".os_own").on("change", ".os_own", function () {
           var $cb = $(this);
@@ -1903,7 +2004,7 @@
       $("#os_flat_tbody").on("click", ".os-flat-ev", function (e) {
         e.stopPropagation();
         var fid = Number($(this).closest("tr").attr("data-fid"));
-        openOsFlatEventsPopover(fid, e.clientX, e.clientY);
+        openOsFlatEventsPopover(fid);
       });
 
       $("#os_flat_tbody").on("click", ".os-flat-block", function (e) {
@@ -1943,7 +2044,7 @@
           return;
         }
         var fid = Number($(this).attr("data-fid"));
-        openWorkPanelAt(fid, e.clientX, e.clientY);
+        openWorkPanelAt(fid);
       });
 
       if (me.can_manage_entrance_access) {
