@@ -26,6 +26,23 @@
     }
 
     $keys = $households->getKeys("flatId", $flatId);
+    $watchers = $households->watchers($device["deviceId"], $flatId) ?: [];
+    $flat = $households->getFlat($flatId);
+
+    $watchIndex = [];
+    foreach ($watchers as $watcher) {
+        $eventType = (int) @$watcher["eventType"];
+        $eventDetail = trim((string) (@$watcher["eventDetail"] ?: ""));
+        if ($eventDetail === "") {
+            continue;
+        }
+
+        if (!isset($watchIndex[$eventType])) {
+            $watchIndex[$eventType] = [];
+        }
+        $watchIndex[$eventType][$eventDetail] = (int) @$watcher["houseWatcherId"];
+    }
+
     $out = [];
 
     if ($keys) {
@@ -33,12 +50,32 @@
             if ((int) $k['accessType'] !== 2) {
                 continue;
             }
+            $rfId = (string) $k['rfId'];
+            $watcherId = (int) (@$watchIndex[3][$rfId] ?: 0);
+
             $out[] = [
                 "keyId" => (int) $k['keyId'],
-                "rfId" => $k['rfId'],
+                "rfId" => $rfId,
                 "comments" => (string) (@$k['comments'] ?: ''),
+                "watched" => $watcherId > 0,
+                "watcherId" => $watcherId ?: null,
             ];
         }
     }
 
-    response(200, $out);
+    $doorCode = trim((string) (@$flat["openCode"] ?: ""));
+    if ($doorCode === "00000") {
+        $doorCode = "";
+    }
+
+    $codeWatcherId = 0;
+    if ($doorCode !== "") {
+        $codeWatcherId = (int) (@$watchIndex[6][$doorCode] ?: 0);
+    }
+
+    response(200, [
+        "keys" => $out,
+        "doorCode" => $doorCode ?: null,
+        "codeWatched" => ($doorCode !== "") ? ($codeWatcherId > 0) : false,
+        "codeWatcherId" => $codeWatcherId ?: null,
+    ]);

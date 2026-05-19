@@ -298,7 +298,7 @@
 
                 $query = "insert into plog_door_open (date, ip, sub_id, event, door, detail, expire) values (:date, :ip, :sub_id, :event, :door, :detail, :expire)";
 
-                return $this->db->insert($query, [
+                $plogDoorOpenId = $this->db->insert($query, [
                     ":date" => $date,
                     ":ip" => $ip,
                     ":sub_id" => $sub_id,
@@ -307,6 +307,32 @@
                     ":detail" => $detail,
                     ":expire" => $expire,
                 ]);
+
+                if ($plogDoorOpenId && in_array((int)$event_type, [ self::EVENT_OPENED_BY_KEY, self::EVENT_OPENED_BY_CODE ], true)) {
+                    $now = time();
+                    $this->db->insert(
+                        "insert into houses_watch_notifications
+                            (plog_door_open_id, event_date, ip, sub_id, door, event_type, event_detail, status, attempt_count, available_at, created_at, updated_at)
+                         values
+                            (:plog_door_open_id, :event_date, :ip, :sub_id, :door, :event_type, :event_detail, 'pending', 0, :available_at, :created_at, :updated_at)
+                         on conflict (plog_door_open_id) do nothing",
+                        [
+                            ":plog_door_open_id" => (int)$plogDoorOpenId,
+                            ":event_date" => (int)$date,
+                            ":ip" => $ip,
+                            ":sub_id" => $sub_id,
+                            ":door" => (int)$door,
+                            ":event_type" => (int)$event_type,
+                            ":event_detail" => (string)$detail,
+                            ":available_at" => $now,
+                            ":created_at" => $now,
+                            ":updated_at" => $now,
+                        ],
+                        [ "silent" ]
+                    );
+                }
+
+                return $plogDoorOpenId;
             }
 
             /**

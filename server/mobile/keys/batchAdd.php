@@ -39,14 +39,14 @@
             continue;
         }
 
-        $rfid = keys_normalize_rfid(@$row['rfId']);
+        $rfid = keys_join_flat_normalize_rfid(@$row['rfId']);
         $comments = trim((string) @$row['comments']);
         if (strlen($comments) > 128) {
             $results[] = [ "rfId" => $rfid, "ok" => false, "error" => "comments_too_long" ];
             continue;
         }
 
-        if (strlen($rfid) < 6 || strlen($rfid) > 32) {
+        if ($rfid === false) {
             $results[] = [ "rfId" => $rfid, "ok" => false, "error" => "invalid_rfid" ];
             continue;
         }

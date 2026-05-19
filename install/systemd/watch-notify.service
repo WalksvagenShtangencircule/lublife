@@ -1,0 +1,21 @@
+[Unit]
+Description=SmartYard watch notifications worker
+Documentation=https://github.com/rosteleset/SmartYard-Server/tree/main/install
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/rbt/server
+ExecStart=/usr/bin/php /opt/rbt/server/cli.php households --watch-notify-worker --poll=2 --batch=50
+RestartSec=5
+Restart=always
+User=rbt
+Group=rbt
+LimitCORE=infinity
+KillMode=process
+StandardOutput=append:/var/log/watch_notify/watch_notify.log
+StandardError=append:/var/log/watch_notify/watch_notify.error.log
+SyslogIdentifier=watch_notify_worker
+
+[Install]
+WantedBy=multi-user.target

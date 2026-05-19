@@ -301,5 +301,11 @@
     ],
     "95": [
         "v95_object_senior.sql"
+    ],
+    "96": [
+        "v96_watch_notifications.sql"
+    ],
+    "97": [
+        "v97_watch_notifications_inbox.sql"
     ]
 }
