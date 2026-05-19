@@ -6,9 +6,11 @@
         "en": "English"
     },
     // См. также config.example.json (строгий JSON с теми же ключами бренда и адресов)
+    // Порядок сайдбара: см. client/config/config.example.json (тот же список без комментариев)
     "modules": [
-        "asterisk",
+        "assistant",
         "addresses",
+        "virtualDomophones",
         "analytics",
         "mediaserver",
         "queues",
@@ -16,10 +18,24 @@
         "groups",
         "permissions",
         "tt",
+        "diagnostics",
+        "tools",
+        "vendorKeys",
+        "asterisk",
         "cs",
         "darkmode",
         "custom",
         // "about" — страница RoBoT / о системе; при отключении выставьте defaultRoute не на #about
+        "about",
+        "companies",
+        "providers",
+        "geocoder",
+        "mqtt",
+        "contacts",
+        "mkb",
+        "notes",
+        "notifications",
+        "map",
     ],
     "asterisk": {
         // websocket endpoint (ws or wss)

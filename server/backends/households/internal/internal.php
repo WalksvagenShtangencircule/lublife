@@ -84,6 +84,9 @@
                             house_domophone_id,
                             model,
                             apartment,
+                            houses_entrances.entrance as entrance_label,
+                            houses_entrances.entrance_type as entrance_type_label,
+                            coalesce(houses_domophones.name, '') as domophone_name,
                             houses_entrances.cms as cms_name,
                             houses_entrances_cmses.cms as cms,
                             unit,
@@ -104,7 +107,9 @@
                         "house_domophone_id" => "domophoneId",
                         "model" => "domophoneModel",
                         "matrix" => "matrix",
-                        "model" => "domophoneModel",
+                        "entrance_label" => "entranceTitle",
+                        "entrance_type_label" => "entranceType",
+                        "domophone_name" => "domophoneName",
                         "cms_name" => "cmsName",
                         "cms" => "cms",
                         "unit" => "unit",
@@ -769,16 +774,16 @@
                         $params["code"] = md5(GUIDv4());
                     }
 
-                    if (@$params["openCode"] == "!") {
-                        // TODO add unique check !!!
-                        $params["openCode"] = 11000 + rand(0, 88999);
-                    }
+                    if (array_key_exists("openCode", $params)) {
+                        if ($params["openCode"] == "!") {
+                            // TODO add unique check !!!
+                            $params["openCode"] = 11000 + rand(0, 88999);
+                        }
 
-                    if ($openCode == "00000") {
-                        $openCode = false;
+                        if ($params["openCode"] == "00000") {
+                            $params["openCode"] = false;
+                        }
                     }
-
-                    $params["openCode"] = $params["openCode"] ?: '';
 
                     if (array_key_exists("contract", $params) && !checkStr($params["contract"])) {
                         setLastError("invalidParams");
@@ -1823,7 +1828,16 @@
                     "house_subscriber_id" => $subscriberId,
                 ]);
 
-                return $result;
+                if ($result === false) {
+                    return false;
+                }
+                // rowCount === 0: связи «квартира–абонент» не было — иначе веб-клиент получал 200 и показывал «удалено» без изменений в БД
+                if ((int)$result === 0) {
+                    setLastError("subscriberNotInFlat");
+                    return false;
+                }
+
+                return true;
             }
 
             /**
@@ -1897,6 +1911,12 @@
 
                 if (!$r) {
                     setLastError("cantModifySubscriber");
+                }
+
+                // Иначе смена телефона/ФИО не попадает в tasks_changes — домофоны узнают об изменениях с задержкой или не узнают.
+                $queue = loadBackend("queue");
+                if ($queue) {
+                    $queue->changed("subscriber", $subscriberId);
                 }
 
                 return $r;
@@ -2109,9 +2129,16 @@
              */
 
             public function modifyKey($keyId, $comments) {
-                return $this->db->modify("update houses_rfids set comments = :comments where house_rfid_id = $keyId", [
+                $r = $this->db->modify("update houses_rfids set comments = :comments where house_rfid_id = $keyId", [
                     "comments" => $comments,
                 ]);
+                if ($r !== false) {
+                    $queue = loadBackend("queue");
+                    if ($queue) {
+                        $queue->changed("key", $keyId);
+                    }
+                }
+                return $r;
             }
 
             /**
@@ -2801,6 +2828,31 @@
                     ],
                 ];
 
+                if (!@$usage["watch-notify"]) {
+                    $usage["watch-notify"] = [];
+                }
+
+                $usage["watch-notify"]["watch-notify-worker"] = [
+                    "description" => "Process watch notifications queue in near-realtime mode",
+                    "params" => [
+                        [
+                            "poll" => [
+                                "value" => "integer",
+                                "placeholder" => "seconds",
+                                "optional" => true,
+                            ],
+                            "batch" => [
+                                "value" => "integer",
+                                "placeholder" => "size",
+                                "optional" => true,
+                            ],
+                            "once" => [
+                                "optional" => true,
+                            ],
+                        ]
+                    ],
+                ];
+
                 return $usage;
             }
 
@@ -2865,7 +2917,409 @@
                     exit(0);
                 }
 
+                if (array_key_exists("--watch-notify-worker", $args)) {
+                    $pollSeconds = (int) ($args["--poll"] ?? 2);
+                    if ($pollSeconds < 1) {
+                        $pollSeconds = 1;
+                    }
+
+                    $batchSize = (int) ($args["--batch"] ?? 50);
+                    if ($batchSize < 1) {
+                        $batchSize = 1;
+                    }
+                    if ($batchSize > 200) {
+                        $batchSize = 200;
+                    }
+
+                    $runOnce = array_key_exists("--once", $args);
+                    $idleCycles = 0;
+
+                    while (true) {
+                        $processed = $this->processWatchNotifications($batchSize);
+                        if ($processed === false) {
+                            usleep($pollSeconds * 1000000);
+                            continue;
+                        }
+
+                        if ($processed > 0) {
+                            $idleCycles = 0;
+                        } else {
+                            $idleCycles++;
+                            usleep($pollSeconds * 1000000);
+                        }
+
+                        if ($runOnce && $idleCycles >= 1) {
+                            break;
+                        }
+                    }
+
+                    exit(0);
+                }
+
                 parent::cli($args);
+            }
+
+            private function processWatchNotifications($batchSize = 50) {
+                $now = time();
+                $keyLabelCache = [];
+                $metrics = [
+                    "processed" => 0,
+                    "sent" => 0,
+                    "failed" => 0,
+                    "retried" => 0,
+                    "queue" => 0,
+                    "latency_sum_ms" => 0,
+                ];
+
+                $rows = $this->db->get(
+                    "select *
+                     from houses_watch_notifications
+                     where status in ('pending', 'retry') and available_at <= :now
+                     order by available_at asc, watch_notification_id asc
+                     limit " . (int)$batchSize,
+                    [
+                        "now" => $now,
+                    ],
+                    [
+                        "watch_notification_id" => "watchNotificationId",
+                        "plog_door_open_id" => "plogDoorOpenId",
+                        "event_date" => "eventDate",
+                        "ip" => "ip",
+                        "sub_id" => "subId",
+                        "door" => "door",
+                        "event_type" => "eventType",
+                        "event_detail" => "eventDetail",
+                        "status" => "status",
+                        "attempt_count" => "attemptCount",
+                        "available_at" => "availableAt",
+                        "processing_started_at" => "processingStartedAt",
+                        "sent_at" => "sentAt",
+                        "created_at" => "createdAt",
+                        "updated_at" => "updatedAt",
+                        "last_error" => "lastError",
+                    ]
+                ) ?: [];
+
+                if (!count($rows)) {
+                    $this->emitWatchNotifyMetrics($metrics);
+                    return 0;
+                }
+
+                $addresses = loadBackend("addresses");
+                $isdn = loadBackend("isdn");
+                $inbox = loadBackend("inbox");
+                if (!$addresses || !$isdn || !$inbox) {
+                    error_log("watch-notify: addresses/isdn/inbox backend unavailable");
+                    $this->emitWatchNotifyMetrics($metrics);
+                    return false;
+                }
+
+                foreach ($rows as $row) {
+                    $watchNotificationId = (int)$row["watchNotificationId"];
+                    $claimed = $this->db->modify(
+                        "update houses_watch_notifications
+                         set status = 'processing', processing_started_at = :processing_started_at, updated_at = :updated_at
+                         where watch_notification_id = :watch_notification_id and status in ('pending', 'retry') and available_at <= :now",
+                        [
+                            "processing_started_at" => $now,
+                            "updated_at" => $now,
+                            "watch_notification_id" => $watchNotificationId,
+                            "now" => $now,
+                        ],
+                        [ "silent" ]
+                    );
+
+                    if (!$claimed) {
+                        continue;
+                    }
+
+                    $metrics["processed"]++;
+                    $eventType = (int)$row["eventType"];
+                    $eventDetail = trim((string)($row["eventDetail"] ?? ""));
+                    $attemptCount = (int)$row["attemptCount"];
+
+                    if (!in_array($eventType, [3, 6], true) || $eventDetail === "") {
+                        $this->markWatchNotificationDone($watchNotificationId);
+                        continue;
+                    }
+
+                    $entrances = $this->getEntrances("domophone", [
+                        "ip" => $row["ip"],
+                        "subId" => $row["subId"],
+                        "output" => (int)$row["door"],
+                    ]);
+                    if (!$entrances) {
+                        $this->scheduleWatchNotificationRetry($watchNotificationId, $attemptCount, "entrance not found");
+                        $metrics["retried"]++;
+                        continue;
+                    }
+
+                    $entrance = $entrances[0];
+                    $watchers = $this->db->get(
+                        "select
+                            w.house_watcher_id,
+                            w.subscriber_device_id,
+                            w.house_flat_id,
+                            w.comments,
+                            f.address_house_id,
+                            d.house_subscriber_id,
+                            d.platform,
+                            d.push_token,
+                            d.push_token_type,
+                            d.ua
+                         from houses_watchers w
+                         left join houses_flats f on f.house_flat_id = w.house_flat_id
+                         left join houses_subscribers_devices d on d.subscriber_device_id = w.subscriber_device_id
+                         where
+                            w.event_type = :event_type and
+                            w.event_detail = :event_detail and
+                            w.house_flat_id in (
+                                select house_flat_id from houses_entrances_flats where house_entrance_id = :house_entrance_id
+                            ) and
+                            coalesce(d.push_disable, 0) = 0 and
+                            coalesce(d.push_token, '') <> ''",
+                        [
+                            "event_type" => (string)$eventType,
+                            "event_detail" => $eventDetail,
+                            "house_entrance_id" => (int)$entrance["entranceId"],
+                        ],
+                        [
+                            "house_watcher_id" => "watcherId",
+                            "subscriber_device_id" => "deviceId",
+                            "house_flat_id" => "flatId",
+                            "comments" => "comments",
+                            "address_house_id" => "houseId",
+                            "house_subscriber_id" => "subscriberId",
+                            "platform" => "platform",
+                            "push_token" => "pushToken",
+                            "push_token_type" => "tokenType",
+                            "ua" => "ua",
+                        ]
+                    ) ?: [];
+
+                    if (!count($watchers)) {
+                        $this->markWatchNotificationDone($watchNotificationId);
+                        continue;
+                    }
+
+                    $uniqueByDevice = [];
+                    foreach ($watchers as $watcher) {
+                        $deviceId = (int)$watcher["deviceId"];
+                        if (!$deviceId || isset($uniqueByDevice[$deviceId])) {
+                            continue;
+                        }
+                        $uniqueByDevice[$deviceId] = $watcher;
+                    }
+
+                    foreach ($uniqueByDevice as $deviceId => $watcher) {
+                        $alreadySent = (int)$this->db->get(
+                            "select count(*) from houses_watch_notifications_deliveries where watch_notification_id = :watch_notification_id and subscriber_device_id = :subscriber_device_id",
+                            [
+                                "watch_notification_id" => $watchNotificationId,
+                                "subscriber_device_id" => $deviceId,
+                            ],
+                            [],
+                            [ "fieldlify", "silent" ]
+                        );
+                        if ($alreadySent) {
+                            continue;
+                        }
+
+                        $house = $addresses->getHouse($watcher["houseId"]);
+                        $ua = (string)($watcher["ua"] ?? "");
+                        $lang = false;
+                        $uaParts = explode(",", $ua);
+                        if ($uaParts && count($uaParts) > 1) {
+                            $lang = $uaParts[0];
+                        }
+
+                        $label = $eventDetail;
+                        if ($eventType === 3) {
+                            $flatId = (int)($watcher["flatId"] ?? 0);
+                            $cacheKey = $flatId . "|" . $eventDetail;
+                            if (!array_key_exists($cacheKey, $keyLabelCache)) {
+                                $keyComments = $this->db->get(
+                                    "select comments
+                                     from houses_rfids
+                                     where access_type = 2 and access_to = :flat_id and rfid = :rfid
+                                     order by house_rfid_id desc
+                                     limit 1",
+                                    [
+                                        "flat_id" => $flatId,
+                                        "rfid" => $eventDetail,
+                                    ],
+                                    [
+                                        "comments" => "comments",
+                                    ],
+                                    [ "singlify", "silent" ]
+                                );
+                                $keyLabelCache[$cacheKey] = trim((string)(@$keyComments["comments"] ?: ""));
+                            }
+                            $label = $keyLabelCache[$cacheKey] !== "" ? $keyLabelCache[$cacheKey] : $eventDetail;
+                        }
+                        $title = ($eventType === 3)
+                            ? i18nL($lang, "mobile.paranoidTitleRf")
+                            : i18nL($lang, "mobile.paranoidTitleCode");
+                        $msg = ($eventType === 3)
+                            ? i18nL($lang, "mobile.paranoidMsgRf", $house["houseFull"], $entrance["callerId"], $label)
+                            : i18nL($lang, "mobile.paranoidMsgCode", $house["houseFull"], $entrance["callerId"], $label);
+
+                        $subscriberId = (int)($watcher["subscriberId"] ?? 0);
+                        if ($subscriberId > 0) {
+                            $inboxExists = (int)$this->db->get(
+                                "select count(*) from houses_watch_notifications_inbox where watch_notification_id = :watch_notification_id and house_subscriber_id = :house_subscriber_id",
+                                [
+                                    "watch_notification_id" => $watchNotificationId,
+                                    "house_subscriber_id" => $subscriberId,
+                                ],
+                                [],
+                                [ "fieldlify", "silent" ]
+                            );
+
+                            if (!$inboxExists) {
+                                $inbox->sendMessage($subscriberId, $title, $msg, "inbox");
+                                $this->db->insert(
+                                    "insert into houses_watch_notifications_inbox (watch_notification_id, house_subscriber_id, created_at)
+                                     values (:watch_notification_id, :house_subscriber_id, :created_at)
+                                     on conflict do nothing",
+                                    [
+                                        "watch_notification_id" => $watchNotificationId,
+                                        "house_subscriber_id" => $subscriberId,
+                                        "created_at" => time(),
+                                    ],
+                                    [ "silent" ]
+                                );
+                            }
+                        }
+
+                        $sent = $isdn->push([
+                            "token" => $watcher["pushToken"],
+                            "type" => ((int)$watcher["platform"] === 1) ? 0 : $watcher["tokenType"],
+                            "timestamp" => time(),
+                            "ttl" => 90,
+                            "platform" => [ "android", "ios", "web" ][(int)$watcher["platform"]],
+                            "title" => $title,
+                            "msg" => $msg,
+                            "houseId" => $watcher["houseId"],
+                            "sound" => "default",
+                            "pushAction" => @$this->config["backends"]["households"]["event_push_action"] ?: "paranoid",
+                        ]);
+
+                        if (!$sent) {
+                            $retryState = $this->scheduleWatchNotificationRetry($watchNotificationId, $attemptCount, "push send failed");
+                            if ($retryState === "failed") {
+                                $metrics["failed"]++;
+                            } else {
+                                $metrics["retried"]++;
+                            }
+                            continue 2;
+                        }
+
+                        $this->db->insert(
+                            "insert into houses_watch_notifications_deliveries (watch_notification_id, subscriber_device_id, sent_at)
+                             values (:watch_notification_id, :subscriber_device_id, :sent_at)
+                             on conflict do nothing",
+                            [
+                                "watch_notification_id" => $watchNotificationId,
+                                "subscriber_device_id" => $deviceId,
+                                "sent_at" => time(),
+                            ],
+                            [ "silent" ]
+                        );
+
+                        $metrics["sent"]++;
+                    }
+
+                    $latencyMs = max(0, ($now - (int)$row["eventDate"]) * 1000);
+                    $metrics["latency_sum_ms"] += $latencyMs;
+                    $this->markWatchNotificationDone($watchNotificationId);
+                }
+
+                $metrics["queue"] = (int)$this->db->get(
+                    "select count(*) from houses_watch_notifications where status in ('pending', 'retry')",
+                    [],
+                    [],
+                    [ "fieldlify", "silent" ]
+                );
+
+                $this->emitWatchNotifyMetrics($metrics);
+                return $metrics["processed"];
+            }
+
+            private function markWatchNotificationDone($watchNotificationId) {
+                $now = time();
+                return $this->db->modify(
+                    "update houses_watch_notifications
+                     set status = 'sent', sent_at = :sent_at, updated_at = :updated_at
+                     where watch_notification_id = :watch_notification_id",
+                    [
+                        "sent_at" => $now,
+                        "updated_at" => $now,
+                        "watch_notification_id" => (int)$watchNotificationId,
+                    ],
+                    [ "silent" ]
+                );
+            }
+
+            private function scheduleWatchNotificationRetry($watchNotificationId, $attemptCount, $errorMessage) {
+                $attempt = (int)$attemptCount + 1;
+                if ($attempt < 1) {
+                    $attempt = 1;
+                }
+                $maxAttempts = 5;
+                $now = time();
+                if ($attempt >= $maxAttempts) {
+                    $this->db->modify(
+                        "update houses_watch_notifications
+                         set status = 'failed', attempt_count = :attempt_count, last_error = :last_error, updated_at = :updated_at
+                         where watch_notification_id = :watch_notification_id",
+                        [
+                            "attempt_count" => $attempt,
+                            "last_error" => mb_substr((string)$errorMessage, 0, 1000),
+                            "updated_at" => $now,
+                            "watch_notification_id" => (int)$watchNotificationId,
+                        ],
+                        [ "silent" ]
+                    );
+                    return "failed";
+                }
+
+                $retryDelay = min(30, (int)pow(2, $attempt));
+                $this->db->modify(
+                    "update houses_watch_notifications
+                     set status = 'retry', attempt_count = :attempt_count, available_at = :available_at, last_error = :last_error, updated_at = :updated_at
+                     where watch_notification_id = :watch_notification_id",
+                    [
+                        "attempt_count" => $attempt,
+                        "available_at" => $now + $retryDelay,
+                        "last_error" => mb_substr((string)$errorMessage, 0, 1000),
+                        "updated_at" => $now,
+                        "watch_notification_id" => (int)$watchNotificationId,
+                    ],
+                    [ "silent" ]
+                );
+                return "retry";
+            }
+
+            private function emitWatchNotifyMetrics(array $metrics) {
+                $processed = (int)($metrics["processed"] ?? 0);
+                $sent = (int)($metrics["sent"] ?? 0);
+                $failed = (int)($metrics["failed"] ?? 0);
+                $retried = (int)($metrics["retried"] ?? 0);
+                $queue = (int)($metrics["queue"] ?? 0);
+                $latencyAvg = 0;
+                if ($processed > 0) {
+                    $latencyAvg = (int)round(((int)$metrics["latency_sum_ms"]) / $processed);
+                }
+
+                $this->redis->setex("WATCH_NOTIFY:METRICS:QUEUE", 120, (string)$queue);
+                $this->redis->setex("WATCH_NOTIFY:METRICS:PROCESSED", 120, (string)$processed);
+                $this->redis->setex("WATCH_NOTIFY:METRICS:SENT", 120, (string)$sent);
+                $this->redis->setex("WATCH_NOTIFY:METRICS:FAILED", 120, (string)$failed);
+                $this->redis->setex("WATCH_NOTIFY:METRICS:RETRIED", 120, (string)$retried);
+                $this->redis->setex("WATCH_NOTIFY:METRICS:LATENCY_MS_AVG", 120, (string)$latencyAvg);
+
+                error_log("watch-notify metrics: queue=$queue processed=$processed sent=$sent failed=$failed retried=$retried latency_ms_avg=$latencyAvg");
             }
 
             /**
@@ -3233,26 +3687,47 @@
                 $search = trim(preg_replace('/\s+/', ' ', $search));
                 $text_search_config = $this->config["db"]["text_search_config"] ?? "simple";
 
+                $searchDigits = preg_replace("/[^0-9]/", "", $search);
+                $phoneTail = "";
+                if (strlen($searchDigits) >= 10) {
+                    $phoneTail = (strlen($searchDigits) === 11 && ($searchDigits[0] === "7" || $searchDigits[0] === "8"))
+                        ? substr($searchDigits, 1, 10)
+                        : $searchDigits;
+                }
+                $pgIdCanon = "(case when length(regexp_replace(coalesce(id::text, ''), '[^0-9]', '', 'g')) = 11 and substring(regexp_replace(coalesce(id::text, ''), '[^0-9]', '', 'g'), 1, 1) in ('7','8') then substring(regexp_replace(coalesce(id::text, ''), '[^0-9]', '', 'g'), 2, 10) else regexp_replace(coalesce(id::text, ''), '[^0-9]', '', 'g') end)";
+
                 switch ($this->db->parseDsn()["protocol"]) {
                     case "pgsql":
                         switch (@$this->config["backends"]["addresses"]["text_search_mode"]) {
                             case "trgm":
+                                $phoneOr = (strlen($phoneTail) >= 10) ? " or ($pgIdCanon) = :phone_tail" : "";
                                 $query = "select * from (
-                                    select *, greatest(similarity(subscriber_full, :search), similarity(id, :search)) as similarity from houses_subscribers_mobile where subscriber_full % :search or id = :search
+                                    select *, greatest(similarity(subscriber_full, :search), similarity(id, :search)) as similarity from houses_subscribers_mobile where subscriber_full % :search or id = :search$phoneOr
                                 ) as t1 order by similarity desc, subscriber_full limit 51";
                                 $params = [ "search" => $search ];
+                                if (strlen($phoneTail) >= 10) {
+                                    $params["phone_tail"] = $phoneTail;
+                                }
                                 break;
 
                             case "ftsa":
                                 $search = str_replace(" ", " & ", $search);
 
                             case "fts":
+                                $phoneUnion = (strlen($phoneTail) >= 10)
+                                    ? "
+                                    union
+                                    select *, 1 as similarity from houses_subscribers_mobile where ($pgIdCanon) = :phone_tail"
+                                    : "";
                                 $query = "select * from (
                                     select *, ts_rank_cd(to_tsvector('$text_search_config', subscriber_full), to_tsquery(:search)) as similarity from houses_subscribers_mobile where to_tsvector('$text_search_config', subscriber_full) @@ to_tsquery('$text_search_config', :search)
                                     union
-                                    select *, 1 as similarity from houses_subscribers_mobile where id = :search
+                                    select *, 1 as similarity from houses_subscribers_mobile where id = :search$phoneUnion
                                 ) as t1  order by similarity, subscriber_full desc limit 51";
                                 $params = [ "search" => $search ];
+                                if (strlen($phoneTail) >= 10) {
+                                    $params["phone_tail"] = $phoneTail;
+                                }
                                 break;
 
                             default:
@@ -3264,10 +3739,14 @@
                                     $params["s$i"] = $tokens[$i];
                                 }
                                 $query = implode(" and ", $query);
+                                $phoneOrDef = (strlen($phoneTail) >= 10) ? " or ($pgIdCanon) = :phone_tail" : "";
                                 $query = "select * from (
-                                    select *, least(levenshtein(subscriber_full, :search), levenshtein(id, :search)) as similarity from houses_subscribers_mobile where ($query) or id = :search
+                                    select *, least(levenshtein(subscriber_full, :search), levenshtein(id, :search)) as similarity from houses_subscribers_mobile where ($query) or id = :search$phoneOrDef
                                 ) as t1 order by similarity asc, subscriber_full limit 51";
                                 $params["search"] = $search;
+                                if (strlen($phoneTail) >= 10) {
+                                    $params["phone_tail"] = $phoneTail;
+                                }
                                 break;
                         }
                         break;

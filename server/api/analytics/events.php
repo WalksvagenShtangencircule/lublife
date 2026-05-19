@@ -15,9 +15,13 @@
                 if (!$a) {
                     return api::ANSWER(false, "notFound");
                 }
+                $search = trim((string)@$params["search"]);
+                if ($search === "") {
+                    $search = trim((string)@$params["phone"]);
+                }
                 $opts = [
                     "houseId" => @$params["houseId"],
-                    "phone" => @$params["phone"],
+                    "search" => $search,
                     "limit" => isset($params["limit"]) ? (int)$params["limit"] : 100,
                 ];
                 if (isset($params["since"])) {

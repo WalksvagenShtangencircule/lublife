@@ -1,8 +1,8 @@
 /* Встроенные подписи: сервис-воркер и браузерный кэш могут отдавать старый i18n/ru.json без блока objectSeniors. */
 var __OS_FALL = {
     ru: {
-        objectSeniors: "Старшие по объектам",
-        menuTitle: "Старшие по объектам",
+        objectSeniors: "ЛК Старших",
+        menuTitle: "ЛК Старших",
         listTitle: "Личные кабинеты старших",
         add: "Добавить кабинет",
         addTitle: "Новый личный кабинет",
@@ -33,8 +33,8 @@ var __OS_FALL = {
         rotateSlug: "Новая ссылка (slug)",
     },
     en: {
-        objectSeniors: "Building representatives",
-        menuTitle: "Building representatives",
+        objectSeniors: "Senior portal",
+        menuTitle: "Senior portal",
         listTitle: "Senior dashboards",
         add: "Add dashboard",
         addTitle: "New dashboard",

@@ -636,7 +636,7 @@ function initAll() {
 
     if (config.logo) {
         if (!config.brandLogoUrl && !config.brandGithubUser) {
-            let sideSrc = config.sidebarAvatar ? config.sidebarAvatar : ("img/" + config.logo + ".png");
+            let sideSrc = config.sidebarAvatar ? config.sidebarAvatar : "img/cityhome-logo.png?v=1";
             $("#leftSideToggler").attr("src", sideSrc).attr("alt", i18n("windowTitleShort"));
         }
         let loginBrandEl;

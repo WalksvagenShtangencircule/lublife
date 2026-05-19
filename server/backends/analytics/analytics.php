@@ -28,6 +28,13 @@
              * @return array{preview: ?array{contentType: string, base64: string}, previewSource: string, hasVideo: bool}|null null — событие не найдено / нет доступа
              */
             abstract public function getEventMediaPreview(int $houseId, string $eventUuid);
+
+            /**
+             * Превью камеры объекта (живой снимок или кадр DVR на момент at).
+             *
+             * @return array{preview: ?array{contentType: string, base64: string}, previewSource: string}|false false — нет доступа
+             */
+            abstract public function getHouseCameraMediaPreview(int $houseId, int $cameraId, ?int $at = null);
         }
     }
 

@@ -550,14 +550,17 @@
                     },
                     {
                         data: (() => {
-                            let hlsCopy = (s.dvrStreamUrl && String(s.dvrStreamUrl).trim()) ? String(s.dvrStreamUrl).trim() : s.hlsUrl;
+                            let hlsCopy = (s.dvrStreamUrl && String(s.dvrStreamUrl).trim()) ? String(s.dvrStreamUrl).trim() : String(s.hlsUrl || "").trim();
                             return "<button type=\"button\" class=\"btn btn-sm btn-outline-primary rbt-ms-copy-hls\" data-url=\"" + encodeURIComponent(hlsCopy) + "\">" + i18n("mediaserver.copyHls") + "</button>";
                         })(),
                         nowrap: true,
                     },
                     {
                         data: (() => {
-                            let emb = (s.embedUrlStored && String(s.embedUrlStored).trim()) ? String(s.embedUrlStored).trim() : s.embedUrl;
+                            let emb = (s.embedUrlStored && String(s.embedUrlStored).trim()) ? String(s.embedUrlStored).trim() : String(s.embedUrl || "").trim();
+                            if (!emb) {
+                                return "<span class=\"text-muted small\">—</span>";
+                            }
                             return "<a class=\"btn btn-sm btn-outline-secondary\" href=\"" + emb.replace(/"/g, "&quot;") + "\" target=\"_blank\" rel=\"noopener noreferrer\">" + i18n("mediaserver.openEmbed") + "</a>";
                         })(),
                         nowrap: true,

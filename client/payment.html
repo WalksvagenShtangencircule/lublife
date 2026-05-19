@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Оплата услуг</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+            margin: 0;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .loader {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .error {
+            color: red;
+            text-align: center;
+            padding: 20px;
+            background: #ffeaea;
+            border-radius: 5px;
+        }
+        .contract-item {
+            background: #f9f9f9;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #007cba;
+            cursor: pointer;
+        }
+        .contract-item:hover {
+            background: #f0f0f0;
+        }
+        .no-contracts {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Оплата услуг</h2>
+        <div id="loader" class="loader">Загрузка...</div>
+        <div id="error" class="error" style="display: none;"></div>
+        <div id="content" style="display: none;"></div>
+    </div>
+
+    <script>
+        var isAndroid = window.navigator.userAgent.toLowerCase().includes("android");
+
+        postLoadingStarted = function() {
+            if (isAndroid) {
+                Android.postLoadingStarted();
+            } else {
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.loadingStartedHandler) {
+                    window.webkit.messageHandlers.loadingStartedHandler.postMessage({
+                        "loading": "started"
+                    });
+                }
+            }
+        };
+
+        postLoadingFinished = function() {
+            if (isAndroid) {
+                Android.postLoadingFinished();
+            } else {
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.loadingFinishedHandler) {
+                    window.webkit.messageHandlers.loadingFinishedHandler.postMessage({
+                        "loading": "finished"
+                    });
+                }
+            }
+        };
+
+        if (isAndroid) {
+            bearerToken = function() {
+                return Android.bearerToken();
+            };
+        }
+
+        async function main() {
+            postLoadingStarted();
+
+            try {
+                document.getElementById('loader').textContent = "Получение токена...";
+
+                const token = bearerToken();
+
+                if (!token) {
+                    throw new Error('Токен авторизации не получен');
+                }
+
+                document.getElementById('loader').textContent = "Получение списка квартир...";
+
+                const flats = await getFlats(token);
+
+                if (flats.length === 0) {
+                    showError('У вас нет доступных квартир');
+                    return;
+                }
+
+                document.getElementById('loader').textContent = "Поиск договоров...";
+
+                const contracts = await getContractsForFlats(token, flats);
+
+                if (contracts.length === 0) {
+                    showNoContracts();
+                    return;
+                }
+
+                if (contracts.length === 1) {
+                    await processPayment(contracts[0]);
+                } else {
+                    showContractsList(contracts);
+                }
+
+            } catch (error) {
+                showError('Ошибка: ' + error.message);
+            } finally {
+                postLoadingFinished();
+            }
+        }
+
+        async function getFlats(token) {
+            const response = await fetch('/mobile/address/getSettingsList', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Ошибка при получении списка квартир: ' + response.status);
+            }
+
+            const data = await response.json();
+
+            if (data.code !== 200) {
+                throw new Error('Ошибка сервера: ' + (data.message || data.name));
+            }
+
+            return data.data || [];
+        }
+
+        async function getContractsForFlats(token, flats) {
+            const contracts = [];
+
+            for (const flat of flats) {
+                try {
+                    const contract = await getContractForFlat(token, flat.flatId);
+
+                    if (contract && contract !== 'error: Договор не найден') {
+                        contracts.push({
+                            flatId: flat.flatId,
+                            contractName: contract,
+                            address: flat.address,
+                            flatNumber: flat.flatNumber
+                        });
+                    }
+                } catch (error) {
+                    console.log('Ошибка для flatId ' + flat.flatId + ': ' + error.message);
+                }
+            }
+
+            return contracts;
+        }
+
+        async function getContractForFlat(token, flatId) {
+            const response = await fetch('/api/contract/getContract?flatId=' + flatId, {
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Ошибка API: ' + response.status);
+            }
+
+            return await response.text();
+        }
+
+        /**
+         * Город Телеком: JSON { "error": false, "sbplink": "..." }
+         */
+        async function processPayment(contract) {
+            try {
+                document.getElementById('loader').textContent = "Подготовка оплаты...";
+                console.log("Начало подготовки оплаты для договора:", contract.contractName);
+
+                var paysumm = 150;
+                var directUrl = 'https://lk.gorod-telecom.ru/website.jsp?action=sbplinkgorodyk&account=' +
+                    encodeURIComponent(contract.contractName) + '&paysumm=' + encodeURIComponent(String(paysumm));
+
+                console.log("Прямой URL:", directUrl);
+
+                document.getElementById('loader').textContent = "Получение платежной ссылки...";
+
+                var response = await fetch(directUrl);
+                console.log("Статус ответа:", response.status);
+
+                if (!response.ok) {
+                    throw new Error('Платежная система недоступна: ' + response.status);
+                }
+
+                var paymentData = await response.json();
+                console.log("Ответ платежной системы:", paymentData);
+
+                if (paymentData.error === true || paymentData.error === 'true') {
+                    throw new Error(paymentData.message || 'Платёжная система вернула ошибку');
+                }
+
+                if (!paymentData.sbplink) {
+                    throw new Error('Платежная система не вернула ссылку для оплаты');
+                }
+
+                var paymentLink = paymentData.sbplink;
+                console.log("Платежная ссылка:", paymentLink);
+
+                document.getElementById('loader').textContent = "Перенаправление на оплату...";
+
+                setTimeout(function() {
+                    window.location.href = paymentLink;
+                }, 1000);
+
+            } catch (error) {
+                console.error("Ошибка в processPayment:", error);
+                showError('Ошибка при создании платежной ссылки: ' + error.message);
+            }
+        }
+
+        function showContractsList(contracts) {
+            var content = document.getElementById('content');
+            var loader = document.getElementById('loader');
+
+            loader.style.display = 'none';
+            content.style.display = 'block';
+
+            content.innerHTML = '<h3>Выберите договор для оплаты:</h3>';
+
+            contracts.forEach(function(contract) {
+                var contractElement = document.createElement('div');
+                contractElement.className = 'contract-item';
+                contractElement.innerHTML =
+                    '<strong>Договор: ' + escapeHtml(contract.contractName) + '</strong><br>' +
+                    '<small>Адрес: ' + escapeHtml(contract.address) + '</small>';
+
+                contractElement.addEventListener('click', function() {
+                    content.innerHTML = '<div class="loader">Подготовка оплаты...</div>';
+                    processPayment(contract);
+                });
+
+                content.appendChild(contractElement);
+            });
+        }
+
+        function escapeHtml(s) {
+            if (s === undefined || s === null) return '';
+            var d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        function showNoContracts() {
+            var content = document.getElementById('content');
+            var loader = document.getElementById('loader');
+
+            loader.style.display = 'none';
+            content.style.display = 'block';
+
+            content.innerHTML =
+                '<div class="no-contracts">' +
+                '<h3>Договоры не найдены</h3>' +
+                '<p>Для ваших квартир не найдено активных договоров.</p>' +
+                '<p>Обратитесь в техническую поддержку.</p>' +
+                '</div>';
+        }
+
+        function showError(message) {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('error').textContent = message;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(main, 100);
+        });
+    </script>
+</body>
+</html>

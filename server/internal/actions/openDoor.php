@@ -74,17 +74,11 @@
             // Add door open data
             $plogDoorOpen = $plog->addDoorOpenData($date, $ip, $subId, $event, $door, $detail);
 
-            // paranoidEvent (pushes)
-            $households->paranoidEvent($ip, $subId, $door, "rfId", $detail);
-
             response(201, ["id" => $plogDoorOpen]);
 
         case $events['OPEN_BY_CODE']:
             // Add door open data
             $plogDoorOpen = $plog->addDoorOpenData($date, $ip, $subId, $event, $door, $detail);
-
-            // TODO: paranoidEvent (pushes)
-            // $households->paranoidEvent($entranceId, "code", $details);
 
             response(201, ["id" => $plogDoorOpen]);
 

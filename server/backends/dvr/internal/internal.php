@@ -618,10 +618,16 @@
 
                     $request_url = "$scheme$user$pass$host$port/archivefragments$query&fromtime=".urlencode("01.01.2022 00:00:00")."&totime=".urlencode("01.01.2222 23:59:59")."&responsetype=json";
 
-                    $fragments = json_decode(file_get_contents($request_url), true)["Fragments"];
+                    $decoded = json_decode(@file_get_contents($request_url), true);
+                    $fragments = (is_array($decoded) && isset($decoded["Fragments"]) && is_array($decoded["Fragments"]))
+                        ? $decoded["Fragments"]
+                        : [];
                     $ranges = [];
 
                     foreach ($fragments as $frag) {
+                        if (!is_array($frag) || !isset($frag["FromTime"]) || !isset($frag["ToTime"])) {
+                            continue;
+                        }
                         $from = date_create_from_format("Y-m-d\TH:i:s.u?P", $frag["FromTime"]);
                         if (!$from) {
                             $from = date_create_from_format("Y-m-d\TH:i:s.uP", $frag["FromTime"]);
@@ -629,6 +635,9 @@
                         $to = date_create_from_format("Y-m-d\TH:i:s.u?P", $frag["ToTime"]);
                         if (!$to) {
                             $to = date_create_from_format("Y-m-d\TH:i:s.uP", $frag["ToTime"]);
+                        }
+                        if (!$from || !$to) {
+                            continue;
                         }
 
                         $from = $from->getTimestamp();

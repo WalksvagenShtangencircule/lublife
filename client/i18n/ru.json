@@ -1,7 +1,7 @@
 {
     "_code": "ru",
-    "windowTitle": "SmartAccess — единая точка входа и контроль доступа",
-    "windowTitleShort": "SmartAccess",
+    "windowTitle": "CityHome — единая точка входа и контроль доступа",
+    "windowTitleShort": "CityHome",
     "appTagline": "Единая точка входа, учёт прав и безопасный доступ к инфраструктуре.",
     "moduleAddresses": "Справочник",
     "moduleTools": "Инструменты",
@@ -155,8 +155,8 @@
         "maintenance": "maintenance_ru.jpg"
     },
     "objectSeniors": {
-        "objectSeniors": "Старшие по объектам",
-        "menuTitle": "Старшие по объектам",
+        "objectSeniors": "ЛК Старших",
+        "menuTitle": "ЛК Старших",
         "listTitle": "Личные кабинеты старших",
         "add": "Добавить кабинет",
         "addTitle": "Новый личный кабинет",

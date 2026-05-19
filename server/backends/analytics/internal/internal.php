@@ -221,6 +221,185 @@
                 return "flat_id in (" . implode(",", $flatIds) . ")";
             }
 
+            private function ruMobileCanonicalTail(string $digitsOnly): string {
+                $d = preg_replace("/[^0-9]/", "", $digitsOnly);
+                if ($d === "") {
+                    return "";
+                }
+                if (strlen($d) === 11 && ($d[0] === "7" || $d[0] === "8")) {
+                    return substr($d, 1);
+                }
+                return $d;
+            }
+
+            /** @var array<string, string> */
+            private const PLATE_RU_LAT = [
+                "А" => "A", "В" => "B", "Е" => "E", "К" => "K", "М" => "M", "Н" => "H",
+                "О" => "O", "Р" => "P", "С" => "C", "Т" => "T", "У" => "Y", "Х" => "X",
+            ];
+
+            private function normalizePlateSearchToken(string $search): string {
+                $s = mb_strtoupper(trim($search));
+                if ($s === "") {
+                    return "";
+                }
+                $out = "";
+                $len = mb_strlen($s);
+                for ($i = 0; $i < $len; $i++) {
+                    $ch = mb_substr($s, $i, 1);
+                    if (isset(self::PLATE_RU_LAT[$ch])) {
+                        $out .= self::PLATE_RU_LAT[$ch];
+                    } elseif (preg_match('/^[A-Z0-9]$/u', $ch)) {
+                        $out .= $ch;
+                    }
+                }
+                return $out;
+            }
+
+            private function flatIdsForHouseAndRfid(int $houseId, string $rfidHex): array {
+                if ($houseId <= 0 || strlen($rfidHex) < 4) {
+                    return [];
+                }
+                $like = "%" . $rfidHex . "%";
+                $rows = $this->db->get(
+                    "select distinct hf.house_flat_id as house_flat_id
+                     from houses_rfids r
+                     inner join houses_flats hf on hf.house_flat_id = r.access_to and r.access_type = 2
+                     where hf.address_house_id = :h and upper(replace(r.rfid, ' ', '')) like :q
+                     union
+                     select distinct hf.house_flat_id as house_flat_id
+                     from houses_rfids r
+                     inner join houses_flats_subscribers hfs on hfs.house_subscriber_id = r.access_to and r.access_type = 1
+                     inner join houses_flats hf on hf.house_flat_id = hfs.house_flat_id
+                     where hf.address_house_id = :h and upper(replace(r.rfid, ' ', '')) like :q",
+                    ["h" => $houseId, "q" => $like],
+                    [],
+                    ["silent"]
+                );
+                if ($rows === false) {
+                    return [];
+                }
+                return array_map("intval", array_column($rows, "house_flat_id"));
+            }
+
+            private function flatIdsForHouseAndCarPlate(int $houseId, string $plateLatin): array {
+                if ($houseId <= 0 || strlen($plateLatin) < 4) {
+                    return [];
+                }
+                $like = "%" . $plateLatin . "%";
+                $rows = $this->db->get(
+                    "select house_flat_id as house_flat_id
+                     from houses_flats
+                     where address_house_id = :h
+                     and upper(replace(replace(coalesce(cars, ''), E'\\n', ' '), ' ', '')) like :q",
+                    ["h" => $houseId, "q" => $like],
+                    [],
+                    ["silent"]
+                );
+                if ($rows === false) {
+                    return [];
+                }
+                return array_map("intval", array_column($rows, "house_flat_id"));
+            }
+
+            private function flatIdsForHouseAndSubscriberName(int $houseId, string $search): array {
+                if ($houseId <= 0 || mb_strlen(trim($search)) < 2) {
+                    return [];
+                }
+                $households = loadBackend("households");
+                if (!$households) {
+                    return [];
+                }
+                $subs = $households->searchSubscriber($search);
+                if ($subs === false || !is_array($subs)) {
+                    return [];
+                }
+                $ids = [];
+                foreach ($subs as $sub) {
+                    if (empty($sub["flats"]) || !is_array($sub["flats"])) {
+                        continue;
+                    }
+                    foreach ($sub["flats"] as $flat) {
+                        if ((int)($flat["houseId"] ?? 0) === $houseId && !empty($flat["flatId"])) {
+                            $ids[] = (int)$flat["flatId"];
+                        }
+                    }
+                }
+                return array_values(array_unique($ids));
+            }
+
+            /**
+             * Квартиры дома, связанные со строкой поиска (абонент, ключ, авто, телефон).
+             *
+             * @param int[] $scopedFlatIds уже ограниченный список квартир (ЛК старшего и т.п.)
+             * @return int[]
+             */
+            private function flatIdsForHouseEventSearch(int $houseId, string $search, array $scopedFlatIds): array {
+                $search = trim($search);
+                if ($search === "" || $houseId <= 0) {
+                    return [];
+                }
+                $ids = [];
+                $digits = preg_replace("/\D+/", "", $search);
+                if (strlen($digits) >= 6) {
+                    $ids = array_merge($ids, $this->flatIdsForHouseAndPhone($houseId, $search));
+                }
+                $rfidHex = strtoupper(preg_replace("/[^0-9A-F]/i", "", $search));
+                if (strlen($rfidHex) >= 4) {
+                    $ids = array_merge($ids, $this->flatIdsForHouseAndRfid($houseId, $rfidHex));
+                }
+                $plate = $this->normalizePlateSearchToken($search);
+                if (strlen($plate) >= 4) {
+                    $ids = array_merge($ids, $this->flatIdsForHouseAndCarPlate($houseId, $plate));
+                }
+                if (preg_match("/[a-zA-Zа-яА-ЯёЁ]/u", $search) && mb_strlen($search) >= 2) {
+                    $ids = array_merge($ids, $this->flatIdsForHouseAndSubscriberName($houseId, $search));
+                }
+                $ids = array_values(array_unique(array_filter(array_map("intval", $ids))));
+                if (count($scopedFlatIds)) {
+                    $scoped = array_flip($scopedFlatIds);
+                    $ids = array_values(array_filter($ids, function ($id) use ($scoped) {
+                        return isset($scoped[$id]);
+                    }));
+                }
+                return $ids;
+            }
+
+            /**
+             * Условия по полям plog (телефон в JSON, RFID, госномер в vehicle).
+             */
+            private function buildPlogEventSearchSql(string $search): ?string {
+                $search = trim($search);
+                if ($search === "") {
+                    return null;
+                }
+                $parts = [];
+                $digits = preg_replace("/\D+/", "", $search);
+                if (strlen($digits) >= 10) {
+                    $tail = $this->ruMobileCanonicalTail($digits);
+                    if (strlen($tail) >= 10) {
+                        $tailEsc = str_replace("'", "''", $tail);
+                        $chDigits = "replaceRegexpAll(trim(JSONExtractString(toJSONString(phones), 'user_phone')), '[^0-9]', '')";
+                        $chCanon = "if(length($chDigits) = 11 AND substring($chDigits, 1, 1) IN ('7','8'), substring($chDigits, 2), $chDigits)";
+                        $parts[] = "$chCanon = '" . $tailEsc . "'";
+                    }
+                }
+                $rfidHex = strtoupper(preg_replace("/[^0-9A-F]/i", "", $search));
+                if (strlen($rfidHex) >= 4) {
+                    $rfidEsc = str_replace("'", "''", $rfidHex);
+                    $parts[] = "positionCaseInsensitive(replaceRegexpAll(coalesce(rfid, ''), '[^0-9A-F]', ''), '" . $rfidEsc . "') > 0";
+                }
+                $plate = $this->normalizePlateSearchToken($search);
+                if (strlen($plate) >= 4) {
+                    $plateEsc = str_replace("'", "''", $plate);
+                    $parts[] = "positionCaseInsensitive(coalesce(toJSONString(vehicle), ''), '" . $plateEsc . "') > 0";
+                }
+                if (!count($parts)) {
+                    return null;
+                }
+                return implode(" OR ", $parts);
+            }
+
             /**
              * Уникальные абоненты (house_subscriber_id), у которых хотя бы одно устройство
              * отметилось last_seen в [since, until]. Близко к MAU Firebase / активности приложения на API.
@@ -358,13 +537,21 @@
 
             public function getEvents(array $opts) {
                 $houseId = isset($opts["houseId"]) ? (int)$opts["houseId"] : 0;
+                $search = isset($opts["search"]) ? trim((string)$opts["search"]) : "";
                 $phone = isset($opts["phone"]) ? trim((string)$opts["phone"]) : "";
+                if ($search === "" && $phone !== "") {
+                    $search = $phone;
+                }
                 $limit = isset($opts["limit"]) ? (int)$opts["limit"] : 100;
                 if ($limit < 1) {
                     $limit = 1;
                 }
                 if ($limit > 500) {
                     $limit = 500;
+                }
+                $offset = isset($opts["offset"]) ? (int)$opts["offset"] : 0;
+                if ($offset < 0) {
+                    $offset = 0;
                 }
                 $until = isset($opts["until"]) ? (int)$opts["until"] : time();
                 $sinceDefault = $until - 62 * 86400;
@@ -381,13 +568,54 @@
                         "since" => $since,
                         "until" => $until,
                         "limit" => $limit,
+                        "offset" => $offset,
                     ];
                 }
 
-                $flatIds = ($phone !== "")
-                    ? $this->flatIdsForHouseAndPhone($houseId, $phone)
-                    : $this->flatIdsForHouse($houseId);
+                $flatIds = $this->flatIdsForHouse($houseId);
+                if (!empty($opts["flatIds"]) && is_array($opts["flatIds"])) {
+                    $allowed = array_values(array_unique(array_filter(array_map("intval", $opts["flatIds"]))));
+                    $flatIds = array_values(array_intersect($flatIds, $allowed));
+                }
+                if (!empty($opts["onlyFlatId"])) {
+                    $only = (int)$opts["onlyFlatId"];
+                    if ($only > 0) {
+                        $flatIds = in_array($only, $flatIds, true) ? [$only] : [];
+                    }
+                }
                 $flatFilter = $this->flatFilterSql($flatIds);
+
+                $searchFilter = "1=1";
+                if ($search !== "") {
+                    if (mb_strlen($search) < 2 && strlen(preg_replace("/[^0-9A-F]/i", "", $search)) < 4) {
+                        return [
+                            "events" => [],
+                            "since" => $since,
+                            "until" => $until,
+                            "limit" => $limit,
+                            "offset" => $offset,
+                        ];
+                    }
+                    $searchFlatIds = $this->flatIdsForHouseEventSearch($houseId, $search, $flatIds);
+                    $plogSearch = $this->buildPlogEventSearchSql($search);
+                    $matchParts = [];
+                    if (count($searchFlatIds)) {
+                        $matchParts[] = $this->flatFilterSql($searchFlatIds);
+                    }
+                    if ($plogSearch !== null && $plogSearch !== "") {
+                        $matchParts[] = "(" . $plogSearch . ")";
+                    }
+                    if (!count($matchParts)) {
+                        return [
+                            "events" => [],
+                            "since" => $since,
+                            "until" => $until,
+                            "limit" => $limit,
+                            "offset" => $offset,
+                        ];
+                    }
+                    $searchFilter = "(" . implode(" OR ", $matchParts) . ")";
+                }
 
                 $q = "
                     select
@@ -401,16 +629,20 @@
                         toJSONString(domophone) as domophone,
                         toJSONString(phones) as phones,
                         rfid,
-                        code
+                        code,
+                        vehicle
                     from plog
                     where
                         not hidden
                         and date >= " . (int)$since . "
                         and date <= " . (int)$until . "
                         and (" . $flatFilter . ")
+                        and (" . $searchFilter . ")
                     order by date desc
                     limit " . (int)$limit . "
+                    offset " . (int)$offset . "
                 ";
+
                 $rows = $this->chSelect($q);
                 if ($rows === null) {
                     return false;
@@ -464,6 +696,7 @@
                     "since" => $since,
                     "until" => $until,
                     "limit" => $limit,
+                    "offset" => $offset,
                 ];
             }
 
@@ -842,6 +1075,60 @@
                     "preview" => $preview,
                     "previewSource" => $previewSource,
                     "hasVideo" => $hasVideo,
+                ];
+            }
+
+            /**
+             * @inheritDoc
+             */
+            public function getHouseCameraMediaPreview(int $houseId, int $cameraId, ?int $at = null) {
+                global $db;
+                require_once __DIR__ . "/../../../utils/objectSeniorService.php";
+                if ($houseId <= 0 || $cameraId <= 0) {
+                    return false;
+                }
+                if (!\ObjectSeniorService::objectHouseContainsCameraId($db, $houseId, $cameraId)) {
+                    return false;
+                }
+
+                $preview = null;
+                $previewSource = "none";
+                $cam = \ObjectSeniorService::resolveSeniorViewCameraRow($db, $houseId, $cameraId);
+
+                if ($at !== null && $at > 0 && is_array($cam) && !empty($cam["dvrStream"])) {
+                    $dvr = loadBackend("dvr");
+                    if ($dvr) {
+                        $shotUrl = $dvr->getUrlOfScreenshot($cam, $at);
+                        if ($shotUrl && is_string($shotUrl)) {
+                            $bin = $this->fetchBinaryFromUrl($shotUrl, 10 * 1024 * 1024);
+                            if ($bin && $this->isRasterImagePayload($bin["data"], $bin["contentType"])) {
+                                $preview = [
+                                    "contentType" => $this->normalizePreviewContentType($bin["contentType"]),
+                                    "base64" => base64_encode($bin["data"]),
+                                ];
+                                $previewSource = "dvr";
+                            }
+                        }
+                    }
+                }
+
+                if ($preview === null) {
+                    $cameras = loadBackend("cameras");
+                    if ($cameras) {
+                        $bin = $cameras->getSnapshot($cameraId);
+                        if (is_string($bin) && $bin !== "" && $this->isRasterImagePayload($bin, "")) {
+                            $preview = [
+                                "contentType" => "image/jpeg",
+                                "base64" => base64_encode($bin),
+                            ];
+                            $previewSource = "live";
+                        }
+                    }
+                }
+
+                return [
+                    "preview" => $preview,
+                    "previewSource" => $previewSource,
                 ];
             }
         }

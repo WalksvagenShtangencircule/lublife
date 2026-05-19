@@ -28,6 +28,12 @@
         .cmt { margin-top: 4px; color: #444; }
         .edit-row { margin-top: 8px; display: none; }
         .edit-row.open { display: block; }
+        .watch-row { margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+        .watch-row input[type="checkbox"] { width: 16px; height: 16px; }
+        .watch-label { font-size: 0.82rem; color: #555; margin: 0; display: inline; }
+        .code-watch { margin-top: 10px; padding: 10px; border: 1px solid #e6ebef; border-radius: 10px; background: #fafbfd; }
+        .code-watch-title { margin: 0; font-size: 0.9rem; font-weight: 600; }
+        .code-watch-value { margin-top: 4px; font-size: 0.82rem; color: #666; word-break: break-all; }
     </style>
 </head>
 <body>
@@ -47,6 +53,7 @@
 
         <div class="card">
             <h2 style="margin-top:0;">В квартире</h2>
+            <div id="codeWatchWrap"></div>
             <ul class="keys" id="keyList"></ul>
             <p id="listErr" class="err"></p>
         </div>
@@ -74,6 +81,11 @@
     <script>
         (function () {
             var flats = [];
+            var uiState = {
+                doorCode: null,
+                codeWatched: false,
+                codeWatcherId: null
+            };
 
             function errLabel(code) {
                 var m = {
@@ -120,9 +132,101 @@
                 return parseInt(document.getElementById("flatSel").value, 10);
             }
 
+            function setWatch(checked, payload) {
+                if (checked) {
+                    return keysApiFetch("/mobile/address/watch", payload).then(function (r) {
+                        var j = r.json || {};
+                        if (j.code && j.code !== 200) {
+                            throw new Error(j.message || "Не удалось включить уведомление");
+                        }
+                        return j.data || {};
+                    });
+                }
+                if (!payload.watcherId) {
+                    return Promise.resolve({});
+                }
+                return keysApiFetch("/mobile/address/unwatch", { watcherId: payload.watcherId }).then(function (r) {
+                    var j = r.json || {};
+                    if (j.code && j.code !== 200) {
+                        throw new Error(j.message || "Не удалось выключить уведомление");
+                    }
+                    return {};
+                });
+            }
+
+            function renderCodeWatch() {
+                var wrap = document.getElementById("codeWatchWrap");
+                wrap.innerHTML = "";
+                if (!uiState.doorCode) {
+                    return;
+                }
+
+                var box = document.createElement("div");
+                box.className = "code-watch";
+
+                var title = document.createElement("p");
+                title.className = "code-watch-title";
+                title.textContent = "Код двери";
+                box.appendChild(title);
+
+                var code = document.createElement("p");
+                code.className = "code-watch-value";
+                code.textContent = uiState.doorCode;
+                box.appendChild(code);
+
+                var row = document.createElement("div");
+                row.className = "watch-row";
+                var checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.checked = !!uiState.codeWatched;
+                row.appendChild(checkbox);
+                var label = document.createElement("label");
+                label.className = "watch-label";
+                label.textContent = "Уведомлять о проходе по коду";
+                row.appendChild(label);
+                box.appendChild(row);
+
+                var err = document.createElement("p");
+                err.className = "err";
+                box.appendChild(err);
+
+                checkbox.addEventListener("change", function () {
+                    var next = checkbox.checked;
+                    var prev = !next;
+                    checkbox.disabled = true;
+                    err.textContent = "";
+
+                    postLoadingStarted();
+                    setWatch(next, {
+                        flatId: currentFlatId(),
+                        eventType: 6,
+                        eventDetail: uiState.doorCode,
+                        comments: "Код двери",
+                        watcherId: uiState.codeWatcherId
+                    }).then(function (data) {
+                        uiState.codeWatched = next;
+                        if (next && data.watcherId) {
+                            uiState.codeWatcherId = parseInt(data.watcherId, 10) || uiState.codeWatcherId;
+                        }
+                        if (!next) {
+                            uiState.codeWatcherId = null;
+                        }
+                    }).catch(function (e) {
+                        checkbox.checked = prev;
+                        err.textContent = e.message || "Ошибка";
+                    }).finally(function () {
+                        checkbox.disabled = false;
+                        postLoadingFinished();
+                    });
+                });
+
+                wrap.appendChild(box);
+            }
+
             function renderKeyRow(k) {
                 var li = document.createElement("li");
                 li.setAttribute("data-key-id", String(k.keyId));
+                li.setAttribute("data-watcher-id", k.watcherId ? String(k.watcherId) : "");
                 var c0 = (k.comments || "").trim();
 
                 var rf = document.createElement("div");
@@ -134,6 +238,22 @@
                 cdiv.className = "cmt muted";
                 cdiv.textContent = c0 || "—";
                 li.appendChild(cdiv);
+
+                var watchRow = document.createElement("div");
+                watchRow.className = "watch-row";
+                var watchCb = document.createElement("input");
+                watchCb.type = "checkbox";
+                watchCb.checked = !!k.watched;
+                watchRow.appendChild(watchCb);
+                var watchLbl = document.createElement("label");
+                watchLbl.className = "watch-label";
+                watchLbl.textContent = "Уведомлять о проходе";
+                watchRow.appendChild(watchLbl);
+                li.appendChild(watchRow);
+
+                var watchErr = document.createElement("p");
+                watchErr.className = "err";
+                li.appendChild(watchErr);
 
                 var tb = document.createElement("div");
                 tb.style.marginTop = "6px";
@@ -193,6 +313,36 @@
                         postLoadingFinished();
                     });
                 });
+
+                watchCb.addEventListener("change", function () {
+                    var next = watchCb.checked;
+                    var prev = !next;
+                    var watcherId = parseInt(li.getAttribute("data-watcher-id"), 10) || null;
+                    watchCb.disabled = true;
+                    watchErr.textContent = "";
+
+                    postLoadingStarted();
+                    setWatch(next, {
+                        flatId: currentFlatId(),
+                        eventType: 3,
+                        eventDetail: k.rfId,
+                        comments: c0 || k.rfId,
+                        watcherId: watcherId
+                    }).then(function (data) {
+                        if (next && data.watcherId) {
+                            li.setAttribute("data-watcher-id", String(data.watcherId));
+                        }
+                        if (!next) {
+                            li.setAttribute("data-watcher-id", "");
+                        }
+                    }).catch(function (e) {
+                        watchCb.checked = prev;
+                        watchErr.textContent = e.message || "Ошибка";
+                    }).finally(function () {
+                        watchCb.disabled = false;
+                        postLoadingFinished();
+                    });
+                });
                 return li;
             }
 
@@ -211,7 +361,12 @@
                         errEl.textContent = j.message || "Ошибка";
                         return;
                     }
-                    var keys = j.data || [];
+                    var data = j.data || {};
+                    var keys = Array.isArray(data.keys) ? data.keys : [];
+                    uiState.doorCode = data.doorCode || null;
+                    uiState.codeWatched = !!data.codeWatched;
+                    uiState.codeWatcherId = data.codeWatcherId || null;
+                    renderCodeWatch();
                     if (!keys.length) {
                         listEl.innerHTML = "<li class=\"muted\">Пусто</li>";
                     } else {
@@ -235,10 +390,10 @@
                 var errEl = document.getElementById("addErr");
                 errEl.textContent = "";
                 var flatId = currentFlatId();
-                var rf = (document.getElementById("rfidIn").value || "").trim();
+                var rf = normalizeRfidJoinFlat((document.getElementById("rfidIn").value || "").trim());
                 var com = (document.getElementById("commentIn").value || "").trim();
                 if (!rf) {
-                    errEl.textContent = "Укажите RFID";
+                    errEl.textContent = "Укажите корректный RFID (1-14 HEX, недостающие нули будут добавлены)";
                     return;
                 }
                 postLoadingStarted();

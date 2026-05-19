@@ -3,27 +3,304 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Личный кабинет старшего</title>
+  <title>ЛК Старших</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
   <style>
-    body { background: #f4f6f9; }
-    .ev-row { border-bottom: 1px solid #dee2e6; padding: 8px 0; }
-    .ev-prev { max-width: 120px; max-height: 68px; object-fit: cover; border-radius: 4px; }
-    .os-os-head .os-title { font-size: 1.1rem; font-weight: 600; }
-    .os-os-head .os-sub { font-size: 0.85rem; color: #6c757d; }
+    :root {
+      --wp-font: "Nunito", "Segoe UI", system-ui, -apple-system, sans-serif;
+      --wp-bg: #f0f2f5;
+      --wp-surface: #ffffff;
+      --wp-surface-2: #e4e8ef;
+      --wp-text: #1a1d23;
+      --wp-text-muted: #5f6775;
+      --wp-border: rgba(0, 0, 0, 0.1);
+      --wp-accent: #2e3f7c;
+      --wp-accent-hover: #1d2d5e;
+      --wp-accent-soft: rgba(46, 63, 124, 0.075);
+      --wp-navbar-bg: #ffffff;
+      --wp-input-bg: #ffffff;
+      --wp-shadow: 0 10px 30px rgba(26, 29, 35, 0.10);
+      --wp-radius: 18px;
+      --wp-radius-sm: 12px;
+      --wp-btn-p1: #4c6aad;
+      --wp-btn-p2: #3d5a99;
+      --wp-btn-p3: #2e3f7c;
+      --wp-btn-p-border: #1d2d5e;
+      --wp-btn-p-shadow: 0 8px 20px rgba(46, 63, 124, 0.18);
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      font-family: var(--wp-font);
+      color: var(--wp-text);
+      background:
+        radial-gradient(circle at top left, rgba(76, 106, 173, 0.18), transparent 36rem),
+        linear-gradient(135deg, #f8f9fc 0%, var(--wp-bg) 48%, #e9edf7 100%);
+      -webkit-font-smoothing: antialiased;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: linear-gradient(rgba(46, 63, 124, 0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(46, 63, 124, 0.035) 1px, transparent 1px);
+      background-size: 28px 28px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent 70%);
+    }
+    #app {
+      position: relative;
+      max-width: 1120px !important;
+    }
+    .os-premium-shell { padding-top: 0.25rem; }
+    .os-hero,
+    .card,
+    #os_flat_popover,
+    #os_flat_ev_popover {
+      background: rgba(255, 255, 255, 0.94) !important;
+      border: 2px solid var(--wp-border) !important;
+      border-radius: var(--wp-radius) !important;
+      box-shadow: var(--wp-shadow) !important;
+      backdrop-filter: saturate(1.08) blur(10px);
+    }
+    .os-hero {
+      padding: 1rem 1.15rem;
+      margin-bottom: 1rem;
+      overflow: hidden;
+      position: relative;
+    }
+    .os-hero::after {
+      content: "";
+      position: absolute;
+      right: -4rem;
+      top: -5rem;
+      width: 14rem;
+      height: 14rem;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(76,106,173,0.12), rgba(46,63,124,0.03));
+      pointer-events: none;
+    }
+    .os-hero > * { position: relative; z-index: 1; }
+    .os-brand-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 800;
+      background: linear-gradient(135deg, #eef2fb, #dfe6f5);
+      color: var(--wp-accent);
+      border: 1px solid rgba(46, 63, 124, 0.14);
+      box-shadow: 0 8px 18px rgba(46, 63, 124, 0.12);
+      flex: 0 0 auto;
+    }
+    .os-kicker {
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--wp-accent);
+      margin-bottom: 0.15rem;
+    }
+    .os-os-head .os-title,
+    .os-login-title {
+      font-size: 1.35rem;
+      line-height: 1.15;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      color: var(--wp-text);
+    }
+    .os-os-head .os-sub,
+    .os-login-sub,
+    .text-muted { color: var(--wp-text-muted) !important; }
+    .nav-tabs {
+      gap: 0.35rem;
+      border-bottom: 0;
+      margin-bottom: 1rem !important;
+      align-items: center;
+    }
+    .nav-tabs .nav-link {
+      border: 2px solid transparent;
+      border-radius: 999px;
+      color: var(--wp-text-muted);
+      font-weight: 700;
+      padding: 0.48rem 0.85rem;
+      transition: transform 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+    }
+    .nav-tabs .nav-link:hover {
+      color: var(--wp-accent);
+      background: var(--wp-accent-soft);
+      transform: translateY(-1px);
+    }
+    .nav-tabs .nav-link.active {
+      color: var(--wp-accent) !important;
+      background: #fff;
+      border-color: rgba(46, 63, 124, 0.22);
+      box-shadow: 0 6px 16px rgba(46, 63, 124, 0.10), inset 0 -2px 0 rgba(46, 63, 124, 0.08);
+    }
+    .card { overflow: hidden; }
+    .card-body { padding: 1.15rem; }
+    h4, h5, h6 { font-weight: 800; letter-spacing: -0.015em; color: var(--wp-text); }
+    label { font-weight: 700; color: var(--wp-text); }
+    .form-control,
+    .custom-select,
+    select.form-control {
+      background: var(--wp-input-bg) !important;
+      border: 2px solid var(--wp-border) !important;
+      border-radius: var(--wp-radius-sm) !important;
+      color: var(--wp-text) !important;
+      box-shadow: none !important;
+    }
+    .form-control:focus,
+    select.form-control:focus {
+      border-color: rgba(46, 63, 124, 0.55) !important;
+      box-shadow: 0 0 0 0.18rem rgba(46, 63, 124, 0.14) !important;
+    }
+    .btn {
+      border-radius: 999px !important;
+      font-weight: 700 !important;
+      border-width: 1px !important;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease !important;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary,
+    .btn-success {
+      background: linear-gradient(180deg, var(--wp-btn-p1) 0%, var(--wp-btn-p2) 55%, var(--wp-btn-p3) 100%) !important;
+      border-color: var(--wp-btn-p-border) !important;
+      color: #fff !important;
+      box-shadow: var(--wp-btn-p-shadow) !important;
+      text-shadow: none;
+    }
+    .btn-outline-primary,
+    .btn-outline-secondary,
+    .btn-default {
+      background: #fff !important;
+      border-color: var(--wp-border) !important;
+      color: var(--wp-accent) !important;
+    }
+    .btn-link { color: var(--wp-accent) !important; font-weight: 800 !important; }
+    .table-responsive,
+    .border.rounded.bg-white,
+    .os-acc-scroll {
+      background: var(--wp-surface) !important;
+      border: 2px solid var(--wp-border) !important;
+      border-radius: var(--wp-radius) !important;
+      box-shadow: var(--wp-shadow);
+      overflow: auto;
+    }
+    .table { color: var(--wp-text); margin-bottom: 0; }
+    .table thead th,
+    .thead-light th {
+      background: linear-gradient(180deg, var(--wp-surface-2), var(--wp-surface)) !important;
+      color: var(--wp-text) !important;
+      border-color: var(--wp-border) !important;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .table td,
+    .table th { border-color: var(--wp-border) !important; vertical-align: middle; }
+    .table-hover tbody tr:hover { background: var(--wp-accent-soft) !important; }
+    .ev-row { border-bottom: 1px solid var(--wp-border); padding: 0.7rem 0; }
+    .ev-prev { max-width: 120px; max-height: 68px; object-fit: cover; border-radius: var(--wp-radius-sm); }
     .os-flat-table tbody tr.os-flat-main { cursor: pointer; }
-    .os-flat-table tbody tr.os-flat-main.os-flat-sel { background: #e7f1ff; }
-    .os-flat-table tr.os-flat-detail td { background: #fafbfc; border-top: 0; padding-top: 0.35rem; padding-bottom: 0.75rem; }
-    .os-fio-line { font-size: 0.9rem; padding: 0.15rem 0; border-bottom: 1px solid #eee; }
+    .os-flat-table tbody tr.os-flat-main.os-flat-sel { background: var(--wp-accent-soft) !important; }
+    .os-flat-table tr.os-flat-detail td { background: var(--wp-surface-2); border-top: 0; padding-top: 0.35rem; padding-bottom: 0.75rem; }
+    .os-fio-line { font-size: 0.9rem; padding: 0.15rem 0; border-bottom: 1px solid var(--wp-border); }
     .os-fio-line:last-child { border-bottom: 0; }
     .os-chev { width: 2rem; text-align: center; user-select: none; }
-    .os-flat-num { color: #198754; font-weight: 600; }
+    .os-flat-num { color: #198754; font-weight: 800; }
+    .os-flat-num {
+      display: inline-block;
+      padding: 0.08rem 0.35rem;
+      margin-left: -0.35rem;
+      border-radius: 999px;
+      background: rgba(25, 135, 84, 0.10);
+    }
+    .os-flat-blocked { color: #dc3545; font-weight: 800; }
+    .os-flat-blocked {
+      display: inline-block;
+      padding: 0.08rem 0.35rem;
+      margin-left: -0.35rem;
+      border-radius: 999px;
+      background: rgba(220, 53, 69, 0.10);
+    }
+    .os-flat-actions { white-space: nowrap; }
+    .os-flat-actions .btn + .btn { margin-left: 0.25rem; }
+    .alert-light {
+      background: var(--wp-accent-soft) !important;
+      border: 2px solid rgba(46, 63, 124, 0.12) !important;
+      color: var(--wp-text) !important;
+      border-radius: var(--wp-radius-sm) !important;
+    }
+    .bg-white { background-color: var(--wp-surface) !important; }
+    .bg-light { background-color: var(--wp-surface-2) !important; }
+    #os_event_video_modal .modal-body video { background: #000; }
+    #os_event_video_modal { z-index: 1080 !important; }
+    #os_cam_modal .modal-body video { background: #000; max-width: 100%; max-height: 52vh; }
+    #os_cam_modal { z-index: 1080 !important; }
+    .os-cam-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.85rem; }
+    .os-cam-tile { border: 2px solid var(--wp-border); border-radius: var(--wp-radius-sm); overflow: hidden; background: var(--wp-surface); cursor: pointer; box-shadow: var(--wp-shadow); transition: transform 0.12s ease; }
+    .os-cam-tile:hover { transform: translateY(-2px); }
+    .os-cam-tile .os-cam-thumb { height: 120px; background: #111; display: flex; align-items: center; justify-content: center; color: #9aa3b2; font-size: 0.8rem; }
+    .os-cam-tile .os-cam-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .os-cam-meta { padding: 0.55rem 0.65rem; font-size: 0.85rem; font-weight: 700; }
+    .os-ent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.85rem; }
+    .os-ent-tile { border: 2px solid var(--wp-border); border-radius: var(--wp-radius-sm); overflow: hidden; background: var(--wp-surface); box-shadow: var(--wp-shadow); display: flex; flex-direction: column; }
+    .os-ent-tile .os-ent-thumb { height: 120px; background: #111; display: flex; align-items: center; justify-content: center; color: #9aa3b2; font-size: 0.8rem; flex-shrink: 0; }
+    .os-ent-tile .os-ent-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .os-ent-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.55rem 0.65rem; }
+    .os-ent-title { font-size: 0.85rem; font-weight: 700; flex: 1; min-width: 0; word-break: break-word; }
+    .os-eq-fault-list { margin: 0; padding-left: 1.25rem; }
+    .os-eq-fault-list li { margin-bottom: 0.35rem; }
+    body.modal-open .modal-backdrop { z-index: 1075 !important; }
+    #os_flat_popover { position: fixed; z-index: 1060; width: min(600px, calc(100vw - 16px)); max-height: min(90vh, 720px); overflow: hidden; display: none; }
+    #os_flat_popover .os-work-pop-body { max-height: min(calc(90vh - 52px), 640px); overflow-y: auto; }
+    #os_flat_ev_popover { position: fixed; z-index: 1070; width: min(540px, calc(100vw - 16px)); max-height: min(90vh, 640px); overflow: hidden; display: none; }
+    #os_flat_ev_popover .os-flat-ev-body { max-height: min(calc(90vh - 52px), 560px); overflow-y: auto; }
+    #os_flat_popover .border-bottom,
+    #os_flat_ev_popover .border-bottom {
+      border-bottom: 2px solid var(--wp-border) !important;
+      background: linear-gradient(180deg, var(--wp-surface-2), var(--wp-surface)) !important;
+    }
+    .os-popover-drag-handle {
+      cursor: move;
+      user-select: none;
+      touch-action: none;
+    }
+    .os-popover-drag-handle .close,
+    .os-popover-drag-handle button,
+    .os-popover-drag-handle a,
+    .os-popover-drag-handle input,
+    .os-popover-drag-handle select,
+    .os-popover-drag-handle textarea,
+    .os-popover-drag-handle label {
+      cursor: auto;
+      touch-action: auto;
+    }
+    .os-popover-drag-handle.os-popover-dragging { cursor: grabbing; }
+    .os-acc-scroll { max-height: 70vh; }
+    .os-acc-matrix thead th { position: sticky; top: 0; z-index: 2; background: var(--wp-surface-2) !important; box-shadow: 0 1px 0 var(--wp-border); }
+    .os-acc-matrix .os-acc-flatname { position: sticky; left: 0; z-index: 1; border-right: 1px solid var(--wp-border); }
+    .os-acc-matrix .os-acc-corner { position: sticky; left: 0; top: 0; z-index: 3; background: var(--wp-surface-2) !important; box-shadow: 1px 1px 0 var(--wp-border); }
+    .os-acc-colhead { max-width: 6.5rem; min-width: 4rem; }
+    .os-acc-head-wrap { display: block; max-height: 7rem; overflow: hidden; word-break: break-word; line-height: 1.15; font-weight: 800; }
+    @media (max-width: 575.98px) {
+      #app { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+      .os-hero { padding: 0.9rem; }
+      .nav-tabs .nav-link { padding: 0.42rem 0.68rem; }
+    }
   </style>
 </head>
 <body>
   <div id="app" class="container py-3" style="max-width:900px"></div>
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
   <script>
 (function () {
   /**
@@ -53,6 +330,9 @@
   var token = sessionStorage.getItem("os_token") || "";
   var me = null;
 
+  var OS_EVENTS_PAGE_LIMIT = 50;
+  var osEventsOffset = 0;
+
   /** API отдаёт плоский JSON; иногда обёртка { "200": { … } } или ошибка { "403": { "error": "…" } }. */
   function unwrap200(j) {
     if (!j || typeof j !== "object") return null;
@@ -79,6 +359,77 @@
     if (a && typeof a === "object" && a.token) return String(a.token);
     if (u.token) return String(u.token);
     return "";
+  }
+
+  var OS_PLATE_RU_LAT = {
+    "\u0410": "A", "\u0412": "B", "\u0415": "E", "\u041a": "K", "\u041c": "M", "\u041d": "H",
+    "\u041e": "O", "\u0420": "P", "\u0421": "C", "\u0422": "T", "\u0423": "Y", "\u0425": "X"
+  };
+  var OS_PLATE_CHARS = "ABCEHKMOPTXY".split("");
+  var OS_PLATE_DIGITS = "0123456789".split("");
+
+  function normalizeOsPhone(raw) {
+    var s = String(raw || "").trim();
+    if (!s) return null;
+    var digits = s.replace(/\D/g, "");
+    if (!digits) return null;
+    if (digits.length === 11 && digits.charAt(0) === "8") {
+      digits = "7" + digits.substring(1);
+    } else if (digits.length === 10) {
+      digits = "7" + digits;
+    }
+    if (digits.length === 11 && digits.charAt(0) === "7") {
+      return digits;
+    }
+    return null;
+  }
+
+  function ruPlateToLatin(line) {
+    var s = String(line || "").trim().toUpperCase();
+    if (!s) return "";
+    var out = "";
+    for (var i = 0; i < s.length; i++) {
+      var ch = s.charAt(i);
+      if (OS_PLATE_RU_LAT[ch]) {
+        out += OS_PLATE_RU_LAT[ch];
+      } else if (/[A-Z0-9]/.test(ch)) {
+        out += ch;
+      }
+    }
+    return out;
+  }
+
+  function isValidOsPlate(number) {
+    if (!number || number.length < 8 || number.length > 9) return false;
+    for (var i = 0; i < number.length; i++) {
+      var c = number.charAt(i);
+      if (i === 0 || i === 4 || i === 5) {
+        if (OS_PLATE_CHARS.indexOf(c) === -1) return false;
+      } else if (OS_PLATE_DIGITS.indexOf(c) === -1) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function normalizeOsCarsText(raw) {
+    var lines = String(raw || "").split("\n");
+    var out = [];
+    var badLine = 0;
+    for (var li = 0; li < lines.length; li++) {
+      var trimmed = String(lines[li] || "").trim();
+      if (!trimmed) continue;
+      var lat = ruPlateToLatin(trimmed);
+      if (!lat || !isValidOsPlate(lat)) {
+        badLine = li + 1;
+        break;
+      }
+      out.push(lat);
+    }
+    if (badLine) {
+      return { ok: false, line: badLine };
+    }
+    return { ok: true, text: out.join("\n") };
   }
 
   function apiFetch(method, path, body) {
@@ -116,15 +467,23 @@
   }
 
   function renderLogin() {
+    $("#os_flat_popover,#os_flat_ev_popover").remove();
+    osFlatPopoverFid = 0;
     $("#app").html(
-      "<h4 class=\"mb-3\">Вход в кабинет старшего</h4>" +
+      "<div class=\"os-premium-shell\">" +
+      "<div class=\"os-hero d-flex align-items-center mb-3\">" +
+      "<div class=\"os-brand-mark mr-3\">ЛК</div>" +
+      "<div><div class=\"os-kicker\">CityHome</div><div class=\"os-login-title\">ЛК Старших</div>" +
+      "<div class=\"os-login-sub\">Личный кабинет в стиле основной платформы</div></div></div>" +
+      "<div class=\"row justify-content-center\"><div class=\"col-12 col-md-9 col-lg-7\">" +
       "<div class=\"card card-body\">" +
+      "<h4 class=\"mb-1\">Вход</h4><p class=\"text-muted small mb-3\">Введите код кабинета, логин и пароль.</p>" +
       "<div class=\"form-group\"><label>Код ссылки на кабинет (из адресной строки после <code>?t=</code>)</label>" +
       "<input type=\"text\" class=\"form-control\" id=\"os_slug\" value=\"" + $("<div>").text(slug).html() + "\" /></div>" +
       "<div class=\"form-group\"><label>Имя учётной записи (логин)</label><input type=\"text\" class=\"form-control\" id=\"os_login\" autocomplete=\"username\" /></div>" +
       "<div class=\"form-group\"><label>Пароль</label><input type=\"password\" class=\"form-control\" id=\"os_pass\" autocomplete=\"current-password\" /></div>" +
-      "<button type=\"button\" class=\"btn btn-primary\" id=\"os_btn\">Войти</button>" +
-      "</div>"
+      "<button type=\"button\" class=\"btn btn-primary btn-lg px-4\" id=\"os_btn\">Войти</button>" +
+      "</div></div></div></div>"
     );
     $("#os_btn").on("click", function () {
       var s = $.trim($("#os_slug").val()).replace(/\s+/g, "").toLowerCase();
@@ -186,10 +545,22 @@
   }
 
   function renderApp() {
+    var activeEv = !!me.can_view_events;
+    var activeSu = !activeEv && !!me.can_manage_subscribers;
+    var activeAc = !activeEv && !activeSu && !!me.can_manage_entrance_access;
+    var activePw = !activeEv && !activeSu && !activeAc;
+    function tabCls(on) {
+      return on ? "nav-link active" : "nav-link";
+    }
     var tabs = "<ul class=\"nav nav-tabs mb-3\">" +
-      (me.can_view_events ? "<li class=\"nav-item\"><a class=\"nav-link active\" data-t=\"ev\" href=\"#\">События</a></li>" : "") +
-      (me.can_manage_subscribers ? "<li class=\"nav-item\"><a class=\"nav-link\" data-t=\"su\" href=\"#\">Жильцы</a></li>" : "") +
-      "<li class=\"nav-item\"><a class=\"nav-link\" data-t=\"pw\" href=\"#\">Пароль</a></li>" +
+      (me.can_view_events ? ("<li class=\"nav-item\"><a class=\"" + tabCls(activeEv) + "\" data-t=\"ev\" href=\"#\">События</a></li>") : "") +
+      "<li class=\"nav-item\"><a class=\"nav-link\" data-t=\"ca\" href=\"#\">Камеры</a></li>" +
+      "<li class=\"nav-item\"><a class=\"nav-link\" data-t=\"en\" href=\"#\">Входы</a></li>" +
+      "<li class=\"nav-item\"><a class=\"nav-link\" data-t=\"eq\" href=\"#\">Оборудование</a></li>" +
+      (me.can_manage_subscribers ? ("<li class=\"nav-item\"><a class=\"" + tabCls(activeSu) + "\" data-t=\"su\" href=\"#\">Квартиры</a></li>") : "") +
+      (me.can_manage_subscribers ? ("<li class=\"nav-item\"><a class=\"nav-link\" data-t=\"br\" href=\"#\">Оповещение</a></li>") : "") +
+      (me.can_manage_entrance_access ? ("<li class=\"nav-item\"><a class=\"" + tabCls(activeAc) + "\" data-t=\"ac\" href=\"#\">Доступы</a></li>") : "") +
+      ("<li class=\"nav-item\"><a class=\"" + tabCls(activePw) + "\" data-t=\"pw\" href=\"#\">Пароль</a></li>") +
       "<li class=\"nav-item ml-auto\"><a class=\"nav-link text-danger\" id=\"os_logout\" href=\"#\">Выход</a></li></ul>";
     var headLine = "";
     if (me.title && String(me.title).trim()) {
@@ -200,14 +571,25 @@
       }
       headLine += "</div></div>";
     } else {
-      headLine = "<div class=\"os-os-head mb-2\"><div class=\"os-title\">" + $("<div>").text(me.houseFull || "Личный кабинет").html() + "</div>";
+      headLine = "<div class=\"os-os-head mb-2\"><div class=\"os-title\">" + $("<div>").text(me.houseFull || "ЛК Старших").html() + "</div>";
       if (me.login) {
         headLine += "<div class=\"os-sub\">вход: <span class=\"text-monospace\">" + $("<div>").text(me.login).html() + "</span></div>";
       }
       headLine += "</div>";
     }
-    $("#app").html(headLine + tabs + "<div id=\"os_body\"></div>");
+    $("#app").html(
+      "<div class=\"os-premium-shell\">" +
+      "<div class=\"os-hero d-flex align-items-center justify-content-between flex-wrap\">" +
+      "<div class=\"d-flex align-items-center mr-3 mb-2 mb-sm-0\"><div class=\"os-brand-mark mr-3\">ЛК</div>" +
+      headLine + "</div>" +
+      "<div class=\"text-muted small font-weight-bold\">CityHome · премиум-кабинет</div>" +
+      "</div>" + tabs + "<div id=\"os_body\"></div></div>"
+    );
     $("#os_logout").on("click", function () {
+      hideOsFlatPopover();
+      hideOsFlatEventsPopover();
+      $("#os_flat_popover,#os_flat_ev_popover").remove();
+      osFlatPopoverFid = 0;
       sessionStorage.removeItem("os_token");
       token = "";
       me = null;
@@ -219,18 +601,628 @@
       $(this).addClass("active");
       var t = $(this).data("t");
       if (t === "ev") { loadEvents(); }
+      else if (t === "ca") { loadCams(); }
+      else if (t === "en") { loadEntrances(); }
+      else if (t === "eq") { loadEquipment(); }
       else if (t === "su") { loadSubs(); }
+      else if (t === "br") { loadBroadcast(); }
+      else if (t === "ac") { loadAccesses(); }
       else if (t === "pw") { loadPw(); }
     });
     if (me.can_view_events) { loadEvents(); }
     else if (me.can_manage_subscribers) { loadSubs(); }
+    else if (me.can_manage_entrance_access) { loadAccesses(); }
     else { loadPw(); }
   }
 
-  function loadEvents() {
+  function ensureOsEventVideoModal() {
+    if ($("#os_event_video_modal").length) return;
+    $("body").append(
+      "<div class=\"modal fade\" id=\"os_event_video_modal\" tabindex=\"-1\" role=\"dialog\" aria-hidden=\"true\">" +
+      "<div class=\"modal-dialog modal-lg modal-dialog-centered\" role=\"document\">" +
+      "<div class=\"modal-content\">" +
+      "<div class=\"modal-header py-2\"><h5 class=\"modal-title\">Видео события</h5>" +
+      "<button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-label=\"Закрыть\"><span aria-hidden=\"true\">&times;</span></button></div>" +
+      "<div class=\"modal-body p-0 bg-dark text-center\">" +
+      "<video controls playsinline style=\"max-width:100%;max-height:75vh\"></video></div></div></div></div>"
+    );
+  }
+  function openOsEventVideoModalFromUrl(url) {
+    ensureOsEventVideoModal();
+    var $v = $("#os_event_video_modal video");
+    $v.attr("src", url);
+    $("#os_event_video_modal").modal("show");
+    $("#os_event_video_modal").off("hidden.bs.modal.osv").on("hidden.bs.modal.osv", function () {
+      $v.removeAttr("src");
+    });
+  }
+
+  var osCamHls = null;
+
+  function hideOsCameraModal() {
+    if ($("#os_cam_modal").length) {
+      $("#os_cam_modal").modal("hide");
+    }
+  }
+
+  function osCamDestroyPlayer() {
+    var v = document.getElementById("os_cam_video");
+    if (osCamHls) {
+      try { osCamHls.destroy(); } catch (e1) {}
+      osCamHls = null;
+    }
+    if (v) {
+      v.removeAttribute("src");
+      try { v.load(); } catch (e2) {}
+    }
+    var vf = document.getElementById("os_cam_frag");
+    if (vf) {
+      vf.removeAttribute("src");
+      try { vf.load(); } catch (e3) {}
+    }
+  }
+
+  function osCamAttachLive(url) {
+    osCamDestroyPlayer();
+    var v = document.getElementById("os_cam_video");
+    if (!v || !url) {
+      return;
+    }
+    var u = String(url);
+    if (u.indexOf(".m3u8") !== -1 && window.Hls && window.Hls.isSupported()) {
+      osCamHls = new window.Hls({ enableWorker: true, lowLatencyMode: true });
+      osCamHls.loadSource(u);
+      osCamHls.attachMedia(v);
+      osCamHls.on(window.Hls.Events.MANIFEST_PARSED, function () {
+        v.play().catch(function () {});
+      });
+    } else {
+      v.src = u;
+      v.play().catch(function () {});
+    }
+  }
+
+  function osMsToDatetimeLocal(ms) {
+    var d = new Date(ms);
+    var pad = function (n) { return n < 10 ? "0" + n : String(n); };
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+
+  function ensureOsCameraModal() {
+    if ($("#os_cam_modal").length) {
+      return;
+    }
+    $("body").append(
+      "<div class=\"modal fade\" id=\"os_cam_modal\" tabindex=\"-1\" role=\"dialog\" aria-hidden=\"true\">" +
+      "<div class=\"modal-dialog modal-xl modal-dialog-centered\" role=\"document\">" +
+      "<div class=\"modal-content\">" +
+      "<div class=\"modal-header py-2\"><h5 class=\"modal-title\" id=\"os_cam_title\">Камера</h5>" +
+      "<button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-label=\"Закрыть\"><span aria-hidden=\"true\">&times;</span></button></div>" +
+      "<div class=\"modal-body p-2\">" +
+      "<div class=\"small text-muted mb-2\">Эфир (DVR-поток). В Chrome для HLS нужен встроенный плеер; при проблемах откройте поток в новой вкладке.</div>" +
+      "<div class=\"bg-dark text-center mb-3\"><video id=\"os_cam_video\" controls playsinline muted style=\"max-width:100%;max-height:52vh\"></video></div>" +
+      "<h6 class=\"small font-weight-bold\">Фрагмент архива</h6>" +
+      "<div class=\"form-row\">" +
+      "<div class=\"col-md-4 mb-2\"><label class=\"d-block small text-muted mb-0\">С</label><input type=\"datetime-local\" class=\"form-control form-control-sm\" id=\"os_cam_from\" step=\"60\"/></div>" +
+      "<div class=\"col-md-4 mb-2\"><label class=\"d-block small text-muted mb-0\">По</label><input type=\"datetime-local\" class=\"form-control form-control-sm\" id=\"os_cam_to\" step=\"60\"/></div>" +
+      "<div class=\"col-md-4 mb-2 d-flex align-items-end\">" +
+      "<button type=\"button\" class=\"btn btn-sm btn-primary mr-2\" id=\"os_cam_load_frag\">Показать</button>" +
+      "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" id=\"os_cam_dl_frag\">Скачать</button></div></div>" +
+      "<div class=\"small text-muted mb-2\">Длительность на сервере ограничена (до 1 часа); очень короткий интервал будет расширен до нескольких секунд.</div>" +
+      "<div class=\"bg-dark text-center\"><video id=\"os_cam_frag\" controls playsinline style=\"max-width:100%;max-height:42vh\"></video></div>" +
+      "<div class=\"mt-2\"><a href=\"#\" class=\"small\" id=\"os_cam_open_tab\" target=\"_blank\" rel=\"noopener\">Открыть эфир в новой вкладке</a></div>" +
+      "</div></div></div></div>"
+    );
+    $("#os_cam_modal").on("hidden.bs.modal", function () {
+      osCamDestroyPlayer();
+    });
+    $("#os_cam_load_frag").on("click", function () {
+      var cid = $("#os_cam_modal").data("cameraId");
+      if (!cid) {
+        return;
+      }
+      var from = osEventsDatetimeLocalToUnix($("#os_cam_from").val());
+      var to = osEventsDatetimeLocalToUnix($("#os_cam_to").val());
+      if (from == null || to == null) {
+        alert("Укажите интервал «С» и «По».");
+        return;
+      }
+      if (to <= from) {
+        alert("«По» должно быть позже «С».");
+        return;
+      }
+      apiFetch("GET", "/objectSenior/cameraFragment/" + encodeURIComponent(cid) + "?from=" + from + "&to=" + to, undefined).then(function (fj) {
+        if (!fj._httpOk) {
+          alert("Фрагмент: " + (firstErrorPayload(fj) || firstErrorPayload(unwrap200(fj)) || fj._httpStatus));
+          return;
+        }
+        var uj = unwrap200(fj);
+        var frag = uj && uj.cameraFragment;
+        var url = frag && frag.url;
+        if (!url) {
+          alert("Ссылка на фрагмент не получена");
+          return;
+        }
+        $("#os_cam_modal").data("lastFragUrl", url);
+        var vf = document.getElementById("os_cam_frag");
+        vf.src = url;
+        vf.play().catch(function () {});
+      });
+    });
+    $("#os_cam_dl_frag").on("click", function () {
+      var url = $("#os_cam_modal").data("lastFragUrl");
+      if (!url) {
+        alert("Сначала нажмите «Показать», чтобы получить фрагмент.");
+        return;
+      }
+      var cid = $("#os_cam_modal").data("cameraId") || "cam";
+      var a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.download = "camera-" + cid + ".mp4";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+  }
+
+  function openOsCameraModal(cam) {
+    ensureOsCameraModal();
+    $("#os_cam_modal").data("cameraId", cam.cameraId);
+    $("#os_cam_modal").data("lastFragUrl", "");
+    $("#os_cam_title").text(cam.name ? String(cam.name) : ("Камера " + cam.cameraId));
+    var now = Date.now();
+    $("#os_cam_from").val(osMsToDatetimeLocal(now - 10 * 60 * 1000));
+    $("#os_cam_to").val(osMsToDatetimeLocal(now));
+    var ds = cam.dvrStream ? String(cam.dvrStream) : "";
+    $("#os_cam_open_tab").attr("href", ds || "#").toggle(!!ds);
+    osCamAttachLive(ds);
+    $("#os_cam_modal").modal("show");
+  }
+
+  function loadCams() {
+    hideOsFlatPopover();
+    hideOsFlatEventsPopover();
+    hideOsCameraModal();
+    if ($("#os_event_video_modal").length) {
+      $("#os_event_video_modal").modal("hide");
+    }
     $("#os_body").html("<p>Загрузка…</p>");
-    var phone = "";
-    apiFetch("GET", "/objectSenior/events?limit=80", undefined).then(function (j) {
+    apiFetch("GET", "/objectSenior/cameras", undefined).then(function (j) {
+      if (!j._httpOk) {
+        var er = firstErrorPayload(j) || firstErrorPayload(unwrap200(j));
+        $("#os_body").html("<p class=\"text-danger\">Камеры: " + $("<div>").text(er || ("HTTP " + j._httpStatus)).html() + "</p>");
+        return;
+      }
+      var u = unwrap200(j);
+      var list = u && u.cameras ? u.cameras : [];
+      if (!Array.isArray(list) || !list.length) {
+        $("#os_body").html(
+          "<h6 class=\"mb-2\">Камеры</h6>" +
+          "<p class=\"small text-muted\">К объекту не привязаны камеры или список пуст. Добавьте камеру в админке (дом → камеры).</p>"
+        );
+        return;
+      }
+      var h = "<h6 class=\"mb-2\">Камеры</h6>" +
+        "<p class=\"small text-muted mb-3\">Нажмите на превью — откроется эфир и выбор интервала для фрагмента архива.</p>" +
+        "<div class=\"os-cam-grid\" id=\"os_cam_grid\"></div>";
+      $("#os_body").html(h);
+      list.forEach(function (cam) {
+        var id = Number(cam.cameraId);
+        var title = cam.name ? String(cam.name) : ("Камера " + id);
+        var dis = !cam.enabled ? " <span class=\"badge badge-secondary\">выкл</span>" : "";
+        var bindLbl = "";
+        if (cam.bindings && cam.bindings.length) {
+          var OS_CAM_BIND = { house: "дом", flat: "квартира", subscriber: "абонент", entrance: "вход / панель" };
+          bindLbl = cam.bindings.map(function (x) { return OS_CAM_BIND[x] || x; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(" · ");
+        }
+        var $tile = $(
+          "<div class=\"os-cam-tile\" data-cam-id=\"" + id + "\">" +
+          "<div class=\"os-cam-thumb\"><span class=\"os-cam-ph\">Загрузка…</span></div>" +
+          "<div class=\"os-cam-meta\"><div>" + $("<div>").text(title).html() + dis + "</div>" +
+          (bindLbl ? ("<div class=\"text-muted small font-weight-normal mt-1\">" + $("<div>").text(bindLbl).html() + "</div>") : "") +
+          "</div></div>"
+        );
+        $tile.data("camObj", cam);
+        $("#os_cam_grid").append($tile);
+        apiFetch("GET", "/objectSenior/cameraPreview/" + encodeURIComponent(id), undefined).then(function (pj) {
+          if (!pj._httpOk) {
+            $tile.find(".os-cam-ph").text("Нет превью");
+            return;
+          }
+          var pu = unwrap200(pj);
+          var pr = pu && pu.cameraPreview;
+          if (pr && pr.preview && pr.preview.base64) {
+            $tile.find(".os-cam-thumb").html(
+              "<img alt=\"\" src=\"data:" + pr.preview.contentType + ";base64," + pr.preview.base64 + "\"/>"
+            );
+          } else {
+            $tile.find(".os-cam-ph").text("Нет изображения");
+          }
+        });
+      });
+      $("#os_cam_grid").on("click", ".os-cam-tile", function () {
+        var c = $(this).data("camObj");
+        if (c) {
+          openOsCameraModal(c);
+        }
+      });
+    });
+  }
+
+  function osEntranceOpenErrorText(er, httpStatus) {
+    if (er === "domophoneUnavailable") return "Домофон недоступен";
+    if (er === "notFound" || er === "badRequest") return "Вход не найден";
+    if (er === "accessDenied") return "Нет доступа";
+    return er || ("HTTP " + (httpStatus || ""));
+  }
+
+  function loadEntrances() {
+    hideOsFlatPopover();
+    hideOsFlatEventsPopover();
+    hideOsCameraModal();
+    if ($("#os_event_video_modal").length) {
+      $("#os_event_video_modal").modal("hide");
+    }
+    $("#os_body").html("<p>Загрузка…</p>");
+    apiFetch("GET", "/objectSenior/entrances", undefined).then(function (j) {
+      if (!j._httpOk) {
+        var er = firstErrorPayload(j) || firstErrorPayload(unwrap200(j));
+        $("#os_body").html("<p class=\"text-danger\">Входы: " + $("<div>").text(osEntranceOpenErrorText(er, j._httpStatus)).html() + "</p>");
+        return;
+      }
+      var u = unwrap200(j);
+      var list = u && u.entrances ? u.entrances : [];
+      if (!Array.isArray(list) || !list.length) {
+        $("#os_body").html(
+          "<h6 class=\"mb-2\">Входы</h6>" +
+          "<p class=\"small text-muted\">В доме нет входов или список пуст. Добавьте входы в админке (дом → входы).</p>"
+        );
+        return;
+      }
+      var h = "<h6 class=\"mb-2\">Входы</h6>" +
+        "<p class=\"small text-muted mb-3\">Нажмите «Открыть» для дистанционного открытия двери входа.</p>" +
+        "<div class=\"os-ent-grid\" id=\"os_ent_grid\"></div>";
+      $("#os_body").html(h);
+      list.forEach(function (ent) {
+        var eid = Number(ent.entranceId);
+        var title = ent.title ? String(ent.title) : ("Вход " + eid);
+        var camId = Number(ent.previewCameraId) || 0;
+        var $tile = $(
+          "<div class=\"os-ent-tile\" data-eid=\"" + eid + "\">" +
+          "<div class=\"os-ent-thumb\"><span class=\"os-ent-ph\">Загрузка…</span></div>" +
+          "<div class=\"os-ent-foot\">" +
+          "<div class=\"os-ent-title\">" + $("<div>").text(title).html() + "</div>" +
+          "<button type=\"button\" class=\"btn btn-sm btn-primary os-ent-open flex-shrink-0\">Открыть</button>" +
+          "</div></div>"
+        );
+        $tile.data("entObj", ent);
+        $("#os_ent_grid").append($tile);
+        if (camId > 0) {
+          apiFetch("GET", "/objectSenior/cameraPreview/" + encodeURIComponent(camId), undefined).then(function (pj) {
+            if (!pj._httpOk) {
+              $tile.find(".os-ent-ph").text("Нет превью");
+              return;
+            }
+            var pu = unwrap200(pj);
+            var pr = pu && pu.cameraPreview;
+            if (pr && pr.preview && pr.preview.base64) {
+              $tile.find(".os-ent-thumb").html(
+                "<img alt=\"\" src=\"data:" + pr.preview.contentType + ";base64," + pr.preview.base64 + "\"/>"
+              );
+            } else {
+              $tile.find(".os-ent-ph").text("Нет изображения");
+            }
+          });
+        } else {
+          $tile.find(".os-ent-ph").text("Нет превью");
+        }
+      });
+      $("#os_ent_grid").on("click", ".os-ent-open", function (e) {
+        e.stopPropagation();
+        var $btn = $(this);
+        if ($btn.prop("disabled")) return;
+        var eid = Number($btn.closest(".os-ent-tile").attr("data-eid"));
+        if (!eid) return;
+        var prevText = $btn.text();
+        $btn.prop("disabled", true).text("…");
+        apiFetch("POST", "/objectSenior/entranceOpen", { entranceId: eid }).then(function (rj) {
+          $btn.prop("disabled", false).text(prevText);
+          if (!rj._httpOk) {
+            var er = firstErrorPayload(rj) || firstErrorPayload(unwrap200(rj));
+            alert("Не удалось открыть: " + osEntranceOpenErrorText(er, rj._httpStatus));
+            return;
+          }
+          var uo = unwrap200(rj);
+          var op = uo && uo.operationResult ? uo.operationResult : null;
+          if (op && op.ok) {
+            alert("Вход открыт");
+            return;
+          }
+          alert("Не удалось открыть вход");
+        }).catch(function () {
+          $btn.prop("disabled", false).text(prevText);
+          alert("Ошибка сети");
+        });
+      });
+    });
+  }
+
+  function osEquipmentKindLabel(kind) {
+    return kind === "camera" ? "Камера" : "Панель";
+  }
+
+  function renderEquipmentHealth(pack) {
+    var summary = pack && pack.summary ? pack.summary : {};
+    var faults = pack && pack.faults ? pack.faults : [];
+    var camN = Number(summary.cameras) || 0;
+    var domN = Number(summary.domophones) || 0;
+    var summaryLine = "<p class=\"small text-muted mb-2\">Проверено: " + camN + " камер, " + domN + " панелей.</p>";
+    var html = "<h6 class=\"mb-2\">Оборудование</h6>" + summaryLine;
+    if (pack && pack.allOk) {
+      html += "<div class=\"alert alert-success py-2 mb-2\">Всё оборудование в сети</div>";
+    } else {
+      html += "<div class=\"alert alert-warning py-2 mb-2\">Обнаружены неисправности</div>" +
+        "<ul class=\"os-eq-fault-list mb-0\">";
+      faults.forEach(function (f) {
+        var kind = osEquipmentKindLabel(f.kind);
+        var name = f.name ? String(f.name) : ("#" + (f.id || ""));
+        var reason = f.reasonText ? String(f.reasonText) : String(f.reason || "");
+        html += "<li><strong>" + $("<div>").text(kind + ": " + name).html() + "</strong> — " +
+          $("<div>").text(reason).html() + "</li>";
+      });
+      html += "</ul>";
+    }
+    html += "<button type=\"button\" class=\"btn btn-sm btn-outline-primary mt-3\" id=\"os_eq_refresh\">Проверить снова</button>";
+    $("#os_body").html(html);
+    $("#os_eq_refresh").on("click", function () {
+      loadEquipment();
+    });
+  }
+
+  function loadEquipment() {
+    hideOsFlatPopover();
+    hideOsFlatEventsPopover();
+    hideOsCameraModal();
+    if ($("#os_event_video_modal").length) {
+      $("#os_event_video_modal").modal("hide");
+    }
+    $("#os_body").html(
+      "<h6 class=\"mb-2\">Оборудование</h6>" +
+      "<p class=\"text-muted mb-0\">Проверка оборудования…</p>"
+    );
+    apiFetch("GET", "/objectSenior/equipmentHealth", undefined).then(function (j) {
+      if (!j._httpOk) {
+        var er = firstErrorPayload(j) || firstErrorPayload(unwrap200(j));
+        $("#os_body").html(
+          "<h6 class=\"mb-2\">Оборудование</h6>" +
+          "<p class=\"text-danger\">" + $("<div>").text(er || ("HTTP " + j._httpStatus)).html() + "</p>" +
+          "<button type=\"button\" class=\"btn btn-sm btn-outline-primary mt-2\" id=\"os_eq_refresh\">Проверить снова</button>"
+        );
+        $("#os_eq_refresh").on("click", function () {
+          loadEquipment();
+        });
+        return;
+      }
+      var u = unwrap200(j);
+      renderEquipmentHealth(u);
+    }).catch(function () {
+      $("#os_body").html(
+        "<h6 class=\"mb-2\">Оборудование</h6>" +
+        "<p class=\"text-danger\">Ошибка сети</p>" +
+        "<button type=\"button\" class=\"btn btn-sm btn-outline-primary mt-2\" id=\"os_eq_refresh\">Проверить снова</button>"
+      );
+      $("#os_eq_refresh").on("click", function () {
+        loadEquipment();
+      });
+    });
+  }
+
+  function osEventsDatetimeLocalToUnix(v) {
+    if (v == null || String(v).trim() === "") return null;
+    var d = new Date(String(v));
+    if (isNaN(d.getTime())) return null;
+    return Math.floor(d.getTime() / 1000);
+  }
+  function osEventsBuildQuery() {
+    var qs = "?limit=" + OS_EVENTS_PAGE_LIMIT + "&offset=" + osEventsOffset;
+    var tsFrom = osEventsDatetimeLocalToUnix($("#os_ev_from").val());
+    var tsTo = osEventsDatetimeLocalToUnix($("#os_ev_to").val());
+    if (tsFrom != null) qs += "&since=" + tsFrom;
+    if (tsTo != null) qs += "&until=" + tsTo;
+    var search = $.trim($("#os_ev_search").val());
+    if (search) qs += "&search=" + encodeURIComponent(search);
+    return qs;
+  }
+  function osEventsEventsShellHtml() {
+    return (
+      "<div class=\"mb-2 small\">" +
+      "<div class=\"form-row\">" +
+      "<div class=\"col-md-4 mb-2 mb-md-0\"><label class=\"d-block mb-0 text-muted\">С (дата и время)</label>" +
+      "<input type=\"datetime-local\" class=\"form-control form-control-sm\" id=\"os_ev_from\" step=\"60\"/></div>" +
+      "<div class=\"col-md-4 mb-2 mb-md-0\"><label class=\"d-block mb-0 text-muted\">По</label>" +
+      "<input type=\"datetime-local\" class=\"form-control form-control-sm\" id=\"os_ev_to\" step=\"60\"/></div>" +
+      "<div class=\"col-md-4 mb-2 mb-md-0\"><label class=\"d-block mb-0 text-muted\">Поиск</label>" +
+      "<div class=\"input-group input-group-sm\">" +
+      "<input type=\"text\" class=\"form-control\" id=\"os_ev_search\" autocomplete=\"off\"/>" +
+      "<div class=\"input-group-append\"><button type=\"button\" class=\"btn btn-primary\" id=\"os_ev_search_btn\">Поиск</button></div>" +
+      "</div></div></div>" +
+      "<div class=\"d-flex flex-wrap align-items-center mt-1\">" +
+      "<button type=\"button\" class=\"btn btn-sm btn-primary mr-2\" id=\"os_ev_apply\">Показать</button>" +
+      "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary mr-2\" id=\"os_ev_prev\" disabled>Назад</button>" +
+      "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary mr-3\" id=\"os_ev_next\" disabled>Вперёд</button>" +
+      "<span class=\"text-muted\" id=\"os_ev_range_lbl\"></span></div>" +
+      "<p class=\"small text-muted mb-0 mt-2\">Период по умолчанию — последние сутки/недели задаёт сервер, если «С»/«По» пусты.</p></div>" +
+      "<div id=\"os_evlist\"></div>"
+    );
+  }
+  function osEventsUpdatePager(pack) {
+    var evs = (pack && pack.events) ? pack.events : [];
+    var hasNext = evs.length >= OS_EVENTS_PAGE_LIMIT;
+    $("#os_ev_prev").prop("disabled", osEventsOffset <= 0);
+    $("#os_ev_next").prop("disabled", !hasNext);
+    if (!evs.length) $("#os_ev_range_lbl").text("На этой странице нет записей");
+    else {
+      var t = "Позиции " + (osEventsOffset + 1) + " — " + (osEventsOffset + evs.length);
+      if (hasNext) t += " · дальше есть ещё";
+      $("#os_ev_range_lbl").text(t);
+    }
+  }
+
+  function inferOsOpenWay(ev) {
+    var n = parseInt(String(ev), 10);
+    if (n === 4) { return "app"; }
+    if (n === 3) { return "key"; }
+    if (n === 6) { return "code"; }
+    if (n === 1 || n === 2) { return "call"; }
+    if (n === 7) { return "gates"; }
+    if (n === 5) { return "face"; }
+    if (n === 9) { return "vehicle"; }
+    return "other";
+  }
+
+  var OS_OPEN_WAY_LABEL = {
+    app: "из приложения",
+    call: "по звонку",
+    key: "по ключу",
+    code: "по коду",
+    face: "по распознаванию лица",
+    gates: "по звонку (ворота)",
+    vehicle: "по автомобильному номеру",
+    other: "иное"
+  };
+
+  var OS_OPEN_DETAIL_LABEL = {
+    app: "Абонент",
+    call: "Номер",
+    key: "Ключ (RFID)",
+    code: "Код доступа",
+    gates: "Телефоны",
+    face: "Данные",
+    vehicle: "Госномер",
+    other: "Данные"
+  };
+
+  function formatOsOpenWayBlockHtml(e) {
+    var way = e.openWay ? String(e.openWay) : "";
+    var detail = e.openWayDetail != null && String(e.openWayDetail).trim() !== "" ? String(e.openWayDetail).trim() : "";
+    if (!way) {
+      way = inferOsOpenWay(e.event);
+    }
+    if (!detail) {
+      if (way === "key" && e.rfid != null && String(e.rfid).trim() !== "") {
+        detail = String(e.rfid).trim();
+      } else if (way === "code" && e.code != null && String(e.code).trim() !== "") {
+        detail = String(e.code).trim();
+      } else if (way === "app" && e.eventUserPhone != null && String(e.eventUserPhone).trim() !== "") {
+        detail = String(e.eventUserPhone).trim();
+      } else if ((way === "call" || way === "gates") && e.eventUserPhone != null && String(e.eventUserPhone).trim() !== "") {
+        detail = String(e.eventUserPhone).trim();
+      } else if (way === "vehicle" && e.vehicle != null && String(e.vehicle).trim() !== "") {
+        detail = String(e.vehicle).trim();
+      }
+    }
+    var wt = OS_OPEN_WAY_LABEL[way] || OS_OPEN_WAY_LABEL.other;
+    var h = "<div class=\"mt-1\"><strong>Способ открытия:</strong> " + $("<div>").text(wt).html() + "</div>";
+    if (detail) {
+      var lab = OS_OPEN_DETAIL_LABEL[way] || OS_OPEN_DETAIL_LABEL.other;
+      h += "<div class=\"small\">" + $("<div>").text(lab).html() + ": " + $("<div>").text(detail).html() + "</div>";
+    }
+    return h;
+  }
+
+  function renderOsEventsInto($root, pack) {
+    var evs = (pack && pack.events) ? pack.events : [];
+    var h = "";
+    for (var i = 0; i < evs.length; i++) {
+      var e = evs[i];
+      var uuid = (e.event_uuid || "").toString();
+      var addrLine = (e.addressLine || "").trim();
+      if (!addrLine) {
+        addrLine = ((e.eventUserPhone || "").trim() || "—");
+      }
+      var ow = formatOsOpenWayBlockHtml(e);
+      h += "<div class=\"ev-row d-flex align-items-center\" data-uuid=\"" + $("<div>").text(uuid).html() + "\">" +
+        "<div class=\"mr-2 os-prev\" style=\"min-width:120px;height:68px;background:#eee;border-radius:4px\"></div>" +
+        "<div class=\"flex-grow-1\"><div class=\"small text-muted\">" + (e.date ? new Date(e.date * 1000).toLocaleString() : "") + "</div>" +
+        "<div>" + $("<div>").text(addrLine).html() + "</div>" + ow +
+        "<button type=\"button\" class=\"btn btn-link btn-sm os-vid\">Видео</button></div></div>";
+    }
+    $root.html(h || "<p class=\"small text-muted\">Нет событий</p>");
+    $root.find(".os-vid").on("click", function () {
+      var row = $(this).closest(".ev-row");
+      var id = row.data("uuid");
+      apiFetch("GET", "/objectSenior/eventVideo/" + encodeURIComponent(id), undefined).then(function (vj) {
+        if (!vj._httpOk) { alert("Видео: " + (firstErrorPayload(vj) || vj._httpStatus)); return; }
+        var vu = unwrap200(vj);
+        var u = vu && vu.eventVideo && vu.eventVideo.url;
+        if (u) openOsEventVideoModalFromUrl(u);
+        else alert("Видео недоступно");
+      });
+    });
+    $root.find(".ev-row").each(function () {
+      var row = $(this);
+      var id = row.data("uuid");
+      if (!id) return;
+      apiFetch("GET", "/objectSenior/eventPreview/" + encodeURIComponent(id), undefined).then(function (pj) {
+        var pju = unwrap200(pj);
+        var pr = pju && pju.eventPreview;
+        if (pr && pr.preview && pr.preview.base64) {
+          row.find(".os-prev").html("<img class=\"ev-prev\" src=\"data:" + pr.preview.contentType + ";base64," + pr.preview.base64 + "\" alt=\"\"/>");
+        }
+      });
+    });
+  }
+  function osEventsApplyFilter() {
+    osEventsOffset = 0;
+    osEventsReload();
+  }
+
+  function bindOsEventsFormHandlers() {
+    $("#os_ev_apply, #os_ev_search_btn").off("click.osEvFilter").on("click.osEvFilter", function () {
+      osEventsApplyFilter();
+    });
+    $("#os_ev_search").off("keydown.osEvFilter").on("keydown.osEvFilter", function (e) {
+      if (e.key === "Enter" || e.keyCode === 13) {
+        e.preventDefault();
+        osEventsApplyFilter();
+      }
+    });
+  }
+
+  function osEventsReload() {
+    if (!$("#os_evlist").length) return;
+    $("#os_evlist").html("<p class=\"small text-muted mb-0\">Загрузка…</p>");
+    apiFetch("GET", "/objectSenior/events" + osEventsBuildQuery(), undefined).then(function (j2) {
+      if (!j2._httpOk) {
+        var er = firstErrorPayload(j2) || firstErrorPayload(unwrap200(j2));
+        $("#os_evlist").html("<p class=\"text-danger small\">" + $("<div>").text(er || ("HTTP " + j2._httpStatus)).html() + "</p>");
+        $("#os_ev_prev,#os_ev_next").prop("disabled", true);
+        $("#os_ev_range_lbl").text("");
+        return;
+      }
+      var u2 = unwrap200(j2);
+      var p2 = u2 && u2.events ? u2.events : null;
+      if (!p2 || !Array.isArray(p2.events)) {
+        $("#os_evlist").html("<p class=\"small text-muted\">Нет данных.</p>");
+        $("#os_ev_prev,#os_ev_next").prop("disabled", true);
+        $("#os_ev_range_lbl").text("");
+        return;
+      }
+      renderOsEventsInto($("#os_evlist"), p2);
+      osEventsUpdatePager(p2);
+    });
+  }
+
+  function loadEvents() {
+    hideOsCameraModal();
+    hideOsFlatPopover();
+    hideOsFlatEventsPopover();
+    if ($("#os_event_video_modal").length) { $("#os_event_video_modal").modal("hide"); }
+    $("#os_body").html("<p>Загрузка…</p>");
+    osEventsOffset = 0;
+    apiFetch("GET", "/objectSenior/events?limit=" + OS_EVENTS_PAGE_LIMIT + "&offset=0", undefined).then(function (j) {
       if (!j._httpOk) {
         var er = firstErrorPayload(j) || firstErrorPayload(unwrap200(j));
         $("#os_body").html("<p class=\"text-danger\">События: " + (er || ("HTTP " + j._httpStatus)) + "</p>");
@@ -238,65 +1230,29 @@
       }
       var u = unwrap200(j);
       var pack = u && u.events ? u.events : null;
-      if (!pack || !pack.events) {
+      if (!pack || !Array.isArray(pack.events)) {
         $("#os_body").html("<p>Нет данных (пустой список или нет прав на события).</p>");
         return;
       }
-      var html = "<div class=\"mb-2\"><input type=\"text\" class=\"form-control form-control-sm d-inline-block w-auto\" id=\"os_phone\" placeholder=\"Телефон для поиска\"/> <button class=\"btn btn-sm btn-secondary\" id=\"os_phgo\">Поиск</button></div><div id=\"os_evlist\"></div>";
-      $("#os_body").html(html);
-      function draw(data) {
-        var evs = data.events || [];
-        var h = "";
-        for (var i = 0; i < evs.length; i++) {
-          var e = evs[i];
-          var uuid = (e.event_uuid || "").toString();
-          var line = (e.addressLine || "") + " · " + (e.eventUserPhone || "");
-          h += "<div class=\"ev-row d-flex align-items-center\" data-uuid=\"" + $("<div>").text(uuid).html() + "\">" +
-            "<div class=\"mr-2 os-prev\" style=\"min-width:120px;height:68px;background:#eee;border-radius:4px\"></div>" +
-            "<div class=\"flex-grow-1\"><div class=\"small text-muted\">" + (e.date ? new Date(e.date * 1000).toLocaleString() : "") + "</div>" +
-            "<div>" + $("<div>").text(line).html() + "</div>" +
-            "<button type=\"button\" class=\"btn btn-link btn-sm os-vid\">Видео</button>" +
-            "</div></div>";
-        }
-        $("#os_evlist").html(h || "<p>Нет событий</p>");
-        $(".os-vid").on("click", function () {
-          var row = $(this).closest(".ev-row");
-          var id = row.data("uuid");
-          apiFetch("GET", "/objectSenior/eventVideo/" + encodeURIComponent(id), undefined).then(function (vj) {
-            var vu = unwrap200(vj);
-            var u = vu && vu.eventVideo && vu.eventVideo.url;
-            if (u) { window.open(u, "_blank"); }
-            else { alert("Видео недоступно"); }
-          });
-        });
-        $(".ev-row").each(function () {
-          var row = $(this);
-          var id = row.data("uuid");
-          if (!id) return;
-          apiFetch("GET", "/objectSenior/eventPreview/" + encodeURIComponent(id), undefined).then(function (pj) {
-            var pju = unwrap200(pj);
-            var pr = pju && pju.eventPreview;
-            if (pr && pr.preview && pr.preview.base64) {
-              row.find(".os-prev").html("<img class=\"ev-prev\" src=\"data:" + pr.preview.contentType + ";base64," + pr.preview.base64 + "\" alt=\"\"/>");
-            }
-          });
-        });
-      }
-      draw(pack);
-      $("#os_phgo").on("click", function () {
-        phone = $.trim($("#os_phone").val());
-        var q = phone ? ("?limit=80&phone=" + encodeURIComponent(phone)) : "?limit=80";
-        apiFetch("GET", "/objectSenior/events" + q, undefined).then(function (j2) {
-          var u2 = unwrap200(j2);
-          var p2 = u2 && u2.events ? u2.events : null;
-          if (p2) { draw(p2); }
-        });
+      $("#os_body").html(osEventsEventsShellHtml());
+      bindOsEventsFormHandlers();
+      $("#os_ev_prev").on("click", function () {
+        osEventsOffset = Math.max(0, osEventsOffset - OS_EVENTS_PAGE_LIMIT);
+        osEventsReload();
       });
+      $("#os_ev_next").on("click", function () {
+        osEventsOffset += OS_EVENTS_PAGE_LIMIT;
+        osEventsReload();
+      });
+      renderOsEventsInto($("#os_evlist"), pack);
+      osEventsUpdatePager(pack);
     });
   }
 
   var flatsCache = [];
   var houseSubscribersCache = [];
+  var houseEntrancesCache = [];
+  var osFlatPopoverFid = 0;
 
   function flatById(fid) {
     var n = Number(fid);
@@ -347,6 +1303,68 @@
     return r;
   }
 
+  function flatIsBlocked(f) {
+    if (!f) return false;
+    if (f.blocked) return true;
+    return !!(Number(f.manualBlock) || Number(f.adminBlock) || Number(f.autoBlock));
+  }
+
+  function flatManualBlocked(f) {
+    return !!(f && Number(f.manualBlock));
+  }
+
+  /** Класс подсветки номера: красный при блокировке, иначе зелёный при наличии жильцов. */
+  function flatNumHighlightClass(f, flatId) {
+    if (flatIsBlocked(f)) return "os-flat-blocked";
+    var nf = Number(flatId);
+    if (uniqSubs(subsForFlat(houseSubscribersCache, nf)).length > 0) return "os-flat-num";
+    return "";
+  }
+
+  function flatBlockButtonTitle(f) {
+    if (!f || flatManualBlocked(f)) return "";
+    if (!flatIsBlocked(f)) return "";
+    var parts = [];
+    if (Number(f.adminBlock)) parts.push("административная");
+    if (Number(f.autoBlock)) parts.push("автоматическая");
+    if (!parts.length) return "";
+    return "Также действует " + parts.join(" и ") + " блокировка — снять её может только администратор";
+  }
+
+  function renderOsFlatBlockButton(f) {
+    var manual = flatManualBlocked(f);
+    var next = manual ? 0 : 1;
+    var label = manual ? "Разблокировать" : "Заблокировать";
+    var btnCls = manual ? "btn-outline-danger" : "btn-outline-success";
+    var title = flatBlockButtonTitle(f);
+    var titleAttr = title ? (" title=\"" + $("<div>").text(title).html() + "\"") : "";
+    return "<button type=\"button\" class=\"btn btn-sm " + btnCls + " os-flat-block\" data-block=\"" + next + "\"" + titleAttr + ">" + label + "</button>";
+  }
+
+  function applyFlatBlockFields(f, pack) {
+    if (!f || !pack) return;
+    f.manualBlock = Number(pack.manualBlock) || 0;
+    f.adminBlock = Number(pack.adminBlock) || 0;
+    f.autoBlock = Number(pack.autoBlock) || 0;
+    f.blocked = !!pack.blocked;
+  }
+
+  function refreshOsFlatRow(fid) {
+    var f = flatById(fid);
+    if (!f) return;
+    var $tr = $("#os_flat_tbody tr.os-flat-main[data-fid=\"" + fid + "\"]");
+    if (!$tr.length) return;
+    var flatLabel = String(f.flat != null && f.flat !== "" ? f.flat : fid);
+    var flatNumClass = flatNumHighlightClass(f, fid);
+    $tr.find("td").eq(1).html("<strong" + (flatNumClass ? " class=\"" + flatNumClass + "\"" : "") + ">кв. " + $("<div>").text(flatLabel).html() + "</strong>");
+    var $act = $tr.find("td.os-flat-actions");
+    if ($act.length) {
+      var evBtn = $act.find(".os-flat-ev");
+      var evHtml = evBtn.length ? evBtn[0].outerHTML : "";
+      $act.html(renderOsFlatBlockButton(f) + (evHtml ? " " + evHtml : ""));
+    }
+  }
+
   /** Владелец квартиры: role 0 в связке flat–subscriber (как в мобильном клиенте). */
   function isFlatOwner(sub, flatId) {
     var nf = Number(flatId);
@@ -358,8 +1376,322 @@
     return Number(fl.role) === 0;
   }
 
-  function loadSubs() {
+  function hideOsFlatPopover() {
+    $("#os_flat_popover").hide();
+    osFlatPopoverFid = 0;
+    $("#os_flat_tbody tr.os-flat-main").removeClass("os-flat-sel").find(".os-chev").text("▸");
+  }
+
+  function hideOsFlatEventsPopover() {
+    $("#os_flat_ev_popover").hide();
+  }
+
+  function centerOsFixedPopover($el) {
+    $el.css({ left: 0, top: 0, visibility: "hidden", display: "block", position: "fixed" });
+    var w = $el.outerWidth();
+    var h = $el.outerHeight();
+    var pad = 8;
+    var ww = $(window).width();
+    var wh = $(window).height();
+    var x = Math.max(pad, (ww - w) / 2);
+    var y = Math.max(pad, (wh - h) / 2);
+    $el.css({ left: x, top: y, visibility: "visible" });
+  }
+
+  function positionOsFlatPopover() {
+    centerOsFixedPopover($("#os_flat_popover"));
+  }
+
+  function positionOsFlatEvPopover() {
+    centerOsFixedPopover($("#os_flat_ev_popover"));
+  }
+
+  /** Перетаскивание всплывающей панели за заголовок (мышь и touch). */
+  function initOsDraggablePopover($popover, $handle) {
+    var id = $popover.attr("id") || "os_pop";
+    var ns = ".osPopDrag." + id;
+    $handle.off(ns);
+
+    function onDragStart(clientX, clientY, e) {
+      if ($(e.target).closest(".close, button, a, input, select, textarea, label").length) {
+        return;
+      }
+      e.preventDefault();
+      var rect = $popover[0].getBoundingClientRect();
+      var offL = clientX - rect.left;
+      var offT = clientY - rect.top;
+      $popover.data("osDragged", true);
+      $handle.addClass("os-popover-dragging");
+
+      function onMove(mx, my) {
+        var ww = $(window).width();
+        var wh = $(window).height();
+        var w = $popover.outerWidth();
+        var h = $popover.outerHeight();
+        var pad = 8;
+        var x = mx - offL;
+        var y = my - offT;
+        x = Math.min(Math.max(pad, x), Math.max(pad, ww - w - pad));
+        y = Math.min(Math.max(pad, y), Math.max(pad, wh - h - pad));
+        $popover.css({ left: x, top: y, position: "fixed" });
+      }
+
+      function onEnd() {
+        $handle.removeClass("os-popover-dragging");
+        $(document).off("mousemove" + ns).off("mouseup" + ns);
+        $(document).off("touchmove" + ns).off("touchend" + ns + " touchcancel" + ns);
+      }
+
+      $(document).on("mousemove" + ns, function (ev) {
+        onMove(ev.clientX, ev.clientY);
+      });
+      $(document).on("mouseup" + ns, onEnd);
+      $(document).on("touchmove" + ns, function (ev) {
+        if (ev.touches && ev.touches[0]) {
+          onMove(ev.touches[0].clientX, ev.touches[0].clientY);
+        }
+        ev.preventDefault();
+      });
+      $(document).on("touchend" + ns + " touchcancel" + ns, onEnd);
+    }
+
+    $handle.on("mousedown" + ns, function (e) {
+      onDragStart(e.clientX, e.clientY, e);
+    });
+    $handle.on("touchstart" + ns, function (e) {
+      if (e.touches && e.touches[0]) {
+        onDragStart(e.touches[0].clientX, e.touches[0].clientY, e);
+      }
+    });
+  }
+
+  function ensureOsFlatEvPopover() {
+    if ($("#os_flat_ev_popover").length) {
+      return;
+    }
+    $("body").append(
+      "<div id=\"os_flat_ev_popover\" class=\"card shadow-lg border-0 bg-white\">" +
+      "<div class=\"d-flex align-items-center border-bottom px-2 py-1 os-popover-drag-handle\">" +
+      "<strong id=\"os_flat_ev_title\" class=\"flex-grow-1 small\">События</strong>" +
+      "<button type=\"button\" class=\"close ml-2\" id=\"os_flat_ev_x\" aria-label=\"Закрыть\"><span aria-hidden=\"true\">&times;</span></button></div>" +
+      "<div class=\"os-flat-ev-body p-2\"><div id=\"os_flat_ev_list\"></div></div></div>"
+    );
+    $("#os_flat_ev_x").on("click", function () {
+      hideOsFlatEventsPopover();
+    });
+    initOsDraggablePopover($("#os_flat_ev_popover"), $("#os_flat_ev_popover > .os-popover-drag-handle"));
+  }
+
+  function openOsFlatEventsPopover(fid) {
+    if (!me.can_view_events) {
+      return;
+    }
+    var nf = Number(fid);
+    hideOsFlatPopover();
+    ensureOsFlatEvPopover();
+    var fl = flatById(nf);
+    var flab = fl && fl.flat != null && String(fl.flat).trim() !== "" ? String(fl.flat).trim() : String(nf);
+    $("#os_flat_ev_title").text("События · кв. " + flab);
+    $("#os_flat_ev_list").html("<p class=\"small text-muted mb-0\">Загрузка…</p>");
+    $("#os_flat_ev_popover").data("osDragged", false).show();
+    positionOsFlatEvPopover();
+    apiFetch("GET", "/objectSenior/events?flatId=" + nf + "&limit=" + OS_EVENTS_PAGE_LIMIT + "&offset=0", undefined).then(function (j2) {
+      if (!j2._httpOk) {
+        var er = firstErrorPayload(j2) || firstErrorPayload(unwrap200(j2));
+        $("#os_flat_ev_list").html("<p class=\"text-danger small\">" + $("<div>").text(er || ("HTTP " + j2._httpStatus)).html() + "</p>");
+        if (!$("#os_flat_ev_popover").data("osDragged")) {
+          positionOsFlatEvPopover();
+        }
+        return;
+      }
+      var u2 = unwrap200(j2);
+      var p2 = u2 && u2.events ? u2.events : null;
+      if (!p2 || !Array.isArray(p2.events)) {
+        $("#os_flat_ev_list").html("<p class=\"small text-muted mb-0\">Нет данных.</p>");
+        if (!$("#os_flat_ev_popover").data("osDragged")) {
+          positionOsFlatEvPopover();
+        }
+        return;
+      }
+      renderOsEventsInto($("#os_flat_ev_list"), p2);
+      if (!$("#os_flat_ev_popover").data("osDragged")) {
+        positionOsFlatEvPopover();
+      }
+    });
+  }
+
+
+  function renderFlatCarsPanel(fid) {
+    var $b = $("#os_flat_cars_block");
+    if (!$b.length) {
+      return;
+    }
+    if (!me.can_manage_subscribers) {
+      $b.hide();
+      return;
+    }
+    $b.show();
+    var f = flatById(fid);
+    var raw = f && f.cars != null ? String(f.cars) : "";
+    $("#os_flat_cars_ta").val(raw);
+  }
+
+
+  function osEntranceChoiceLabel(ee) {
+    var t = (ee.entranceTitle && String(ee.entranceTitle).trim()) ? String(ee.entranceTitle).trim() : "";
+    var ty = (ee.entranceType && String(ee.entranceType).trim()) ? String(ee.entranceType).trim() : "";
+    if (t && ty) return t + " (" + ty + ")";
+    return t || ty || ("вход " + (ee.entranceId || ""));
+  }
+
+  function loadAccesses() {
+    hideOsCameraModal();
+    hideOsFlatPopover();
+    hideOsFlatEventsPopover();
+    if ($("#os_event_video_modal").length) { $("#os_event_video_modal").modal("hide"); }
     $("#os_body").html("<p>Загрузка…</p>");
+    apiFetch("GET", "/objectSenior/flats", undefined).then(function (fj) {
+      if (!fj._httpOk) {
+        var er0 = firstErrorPayload(fj) || firstErrorPayload(unwrap200(fj));
+        $("#os_body").html("<p class=\"text-danger\">Доступы: " + (er0 || ("HTTP " + fj._httpStatus)) + "</p>");
+        return;
+      }
+      var fu = unwrap200(fj);
+      flatsCache = (fu && fu.flats) ? fu.flats : [];
+      houseEntrancesCache = (fu && fu.houseEntrances) ? fu.houseEntrances : [];
+      var entrances = houseEntrancesCache || [];
+      if (!entrances.length) {
+        $("#os_body").html("<p class=\"text-muted\">В карточке дома нет входов. Добавьте входы в админке.</p>");
+        return;
+      }
+      var sorted = sortFlatsCopy(flatsCache);
+      if (!sorted.length) {
+        $("#os_body").html("<p class=\"text-muted\">Нет квартир в объекте (или нет в зоне видимости).</p>");
+        return;
+      }
+      var th = "<tr><th class=\"os-acc-corner text-muted small font-weight-normal\">Квартира \\ Вход</th>";
+      for (var hi = 0; hi < entrances.length; hi++) {
+        var ee = entrances[hi];
+        var lbl = osEntranceChoiceLabel(ee);
+        th += "<th class=\"text-center small os-acc-colhead py-2 align-bottom\" title=\"" + $("<div>").text(lbl).html() + "\">" +
+          "<span class=\"os-acc-head-wrap\">" + $("<div>").text(lbl).html() + "</span></th>";
+      }
+      th += "</tr>";
+      var tb = "";
+      sorted.forEach(function (f) {
+        var fid = Number(f.flatId);
+        var bound = {};
+        (f.entrances || []).forEach(function (x) {
+          var ei = Number(x.entranceId || 0);
+          if (ei > 0) { bound[ei] = true; }
+        });
+        var flatLabel = String(f.flat != null && f.flat !== "" ? f.flat : fid);
+        tb += "<tr><th class=\"text-nowrap bg-light os-acc-flatname\">кв. " + $("<div>").text(flatLabel).html() + "</th>";
+        for (var hj = 0; hj < entrances.length; hj++) {
+          var ex = entrances[hj];
+          var eid = Number(ex.entranceId || 0);
+          var on = bound[eid] ? " checked" : "";
+          tb += "<td class=\"text-center align-middle p-1\"><input type=\"checkbox\" class=\"os-acc-chk\" data-fid=\"" + fid + "\" data-eid=\"" + eid + "\"" + on + "/></td>";
+        }
+        tb += "</tr>";
+      });
+      $("#os_body").html(
+        "<h6 class=\"mb-2\">Доступы: квартиры и входы</h6>" +
+        "<p class=\"small text-muted mb-2\">Отметьте, через какие <strong>входы</strong> доступна каждая <strong>квартира</strong>. У каждой квартиры должен остаться хотя бы один вход.</p>" +
+        "<div class=\"table-responsive border rounded bg-white mb-2 os-acc-scroll\">" +
+        "<table class=\"table table-sm table-bordered mb-0 os-acc-matrix\">" +
+        "<thead class=\"thead-light\">" + th + "</thead><tbody>" + tb + "</tbody></table></div>" +
+        "<button type=\"button\" class=\"btn btn-primary btn-sm\" id=\"os_acc_save\">Сохранить</button>"
+      );
+      $("#os_acc_save").on("click", function () {
+        var sorted2 = sortFlatsCopy(flatsCache);
+        var problems = [];
+        sorted2.forEach(function (f) {
+          var fid = Number(f.flatId);
+          var n = $(".os-acc-chk[data-fid=\"" + fid + "\"]:checked").length;
+          if (!n) problems.push(String(f.flat != null && f.flat !== "" ? f.flat : fid));
+        });
+        if (problems.length) {
+          alert("Для каждой квартиры нужен хотя бы один отмеченный вход. Проверьте: кв. " + problems.join(", "));
+          return;
+        }
+        var idx = 0;
+        function saveNext() {
+          if (idx >= sorted2.length) { loadAccesses(); return; }
+          var f = sorted2[idx];
+          idx++;
+          var fid = Number(f.flatId);
+          var ids = [];
+          $(".os-acc-chk[data-fid=\"" + fid + "\"]:checked").each(function () { ids.push(Number($(this).data("eid"))); });
+          apiFetch("PUT", "/objectSenior/flatEntrances", { flatId: fid, entranceIds: ids }).then(function (rj) {
+            if (!rj._httpOk) {
+              var er = firstErrorPayload(rj) || firstErrorPayload(unwrap200(rj));
+              alert("Кв. " + (f.flat || fid) + ": " + (er || rj._httpStatus));
+              return;
+            }
+            saveNext();
+          }).catch(function () { alert("Кв. " + (f.flat || fid) + ": ошибка сети"); });
+        }
+        saveNext();
+      });
+    }).catch(function () { $("#os_body").html("<p class=\"text-danger\">Ошибка сети</p>"); });
+  }
+
+  function loadBroadcast() {
+    hideOsCameraModal();
+    hideOsFlatPopover();
+    hideOsFlatEventsPopover();
+    if ($("#os_event_video_modal").length) { $("#os_event_video_modal").modal("hide"); }
+    $("#os_body").html(
+      "<h6 class=\"mb-2\">Оповещение жильцам (мобильное приложение)</h6>" +
+      "<div class=\"card card-body mb-3\" style=\"max-width:640px\">" +
+      "<div class=\"form-group mb-2\"><label for=\"os_bc_title\">Заголовок</label>" +
+      "<input type=\"text\" class=\"form-control form-control-sm\" id=\"os_bc_title\" maxlength=\"512\"/></div>" +
+      "<div class=\"form-group mb-2\"><label for=\"os_bc_body\">Текст</label>" +
+      "<textarea class=\"form-control form-control-sm\" id=\"os_bc_body\" rows=\"6\" maxlength=\"32000\"></textarea></div>" +
+      "<div class=\"form-group mb-3\"><label for=\"os_bc_action\">Действие</label>" +
+      "<select class=\"form-control form-control-sm\" id=\"os_bc_action\">" +
+      "<option value=\"inbox\">Входящие</option><option value=\"money\">Беззвучное</option></select></div>" +
+      "<button type=\"button\" class=\"btn btn-primary btn-sm\" id=\"os_bc_send\">Отправить</button>" +
+      "<p class=\"small text-muted mt-2 mb-0\" id=\"os_bc_hint\"></p></div>"
+    );
+    $("#os_bc_send").on("click", function () {
+      var title = $.trim($("#os_bc_title").val());
+      var body = $.trim($("#os_bc_body").val());
+      var action = String($("#os_bc_action").val() || "inbox");
+      if (!title || !body) { alert("Укажите заголовок и текст."); return; }
+      $("#os_bc_send").prop("disabled", true);
+      $("#os_bc_hint").text("Отправка…");
+      apiFetch("POST", "/objectSenior/broadcast", { title: title, body: body, action: action }).then(function (rj) {
+        $("#os_bc_send").prop("disabled", false);
+        if (!rj._httpOk) {
+          var er = firstErrorPayload(rj) || firstErrorPayload(unwrap200(rj));
+          $("#os_bc_hint").text("");
+          alert("Не удалось: " + (er || rj._httpStatus));
+          return;
+        }
+        var u = unwrap200(rj);
+        var b = u && u.broadcast ? u.broadcast : null;
+        if (!b) { $("#os_bc_hint").text(""); alert("Пустой ответ."); return; }
+        $("#os_bc_hint").text("Абонентов: " + (b.recipients != null ? b.recipients : "—") +
+          ", записано: " + (b.deliveredSubscribers != null ? b.deliveredSubscribers : "—") +
+          ", сбой: " + (b.failedSubscribers != null ? b.failedSubscribers : "—"));
+      }).catch(function () {
+        $("#os_bc_send").prop("disabled", false);
+        $("#os_bc_hint").text("");
+        alert("Ошибка сети");
+      });
+    });
+  }
+
+  function loadSubs() {
+    hideOsCameraModal();
+    hideOsFlatEventsPopover();
+    if ($("#os_event_video_modal").length) { $("#os_event_video_modal").modal("hide"); }
+    hideOsFlatPopover();
+    $("#os_flat_popover").remove();
+    $("#os_body").html("<p>Загрузка…</p>");
+    $(document).off("keydown.osfp click.osfp");
     Promise.all([
       apiFetch("GET", "/objectSenior/flats", undefined),
       apiFetch("GET", "/objectSenior/subscribers", undefined),
@@ -373,20 +1705,72 @@
       }
       if (!sj0._httpOk) {
         var er2 = firstErrorPayload(sj0) || firstErrorPayload(unwrap200(sj0));
-        $("#os_body").html("<p class=\"text-danger\">Жильцы: " + (er2 || ("HTTP " + sj0._httpStatus)) + "</p>");
+        $("#os_body").html("<p class=\"text-danger\">Абоненты: " + (er2 || ("HTTP " + sj0._httpStatus)) + "</p>");
         return;
       }
       var fu = unwrap200(fj);
       var su = unwrap200(sj0);
       flatsCache = (fu && fu.flats) ? fu.flats : [];
+      houseEntrancesCache = (fu && fu.houseEntrances) ? fu.houseEntrances : [];
       houseSubscribersCache = (su && su.subscribers) ? su.subscribers : [];
+
+      var entHintHtml = "";
+      if (me.can_manage_entrance_access) {
+        entHintHtml =
+          "<div class=\"small text-muted mb-2\"><strong>Входы квартиры</strong> — отметьте подъезды/входы дома, через которые доступна эта квартира (одинаково для всех жильцов). Должен быть выбран хотя бы один.</div>" +
+          "<div id=\"os_ent_wrap\" class=\"mb-2 small border rounded p-2 bg-white\"></div>" +
+          "<button type=\"button\" class=\"btn btn-sm btn-primary mb-2\" id=\"os_flat_ent_save\">Сохранить входы</button>";
+      } else {
+        entHintHtml =
+          "<div class=\"small text-muted mb-2\">Входы, привязанные к квартире (только просмотр).</div>" +
+          "<div id=\"os_ent_wrap\" class=\"mb-2 small border rounded p-2 bg-light\"></div>";
+      }
+
+      var popInner =
+        "<div class=\"d-flex align-items-center border-bottom px-2 py-1 bg-white os-popover-drag-handle\">" +
+        "<strong id=\"os-work-pop-title\" class=\"flex-grow-1 small\">Квартира</strong>" +
+        "<button type=\"button\" class=\"close ml-2\" id=\"os_flat_popover_x\" aria-label=\"Закрыть\"><span aria-hidden=\"true\">&times;</span></button></div>" +
+        "<div class=\"os-work-pop-body p-2 bg-white\">" +
+        "<div id=\"os_sel_banner\" class=\"alert alert-light border small mb-2 py-1\">Откройте квартиру строкой в таблице</div>" +
+        "<input type=\"hidden\" id=\"os_flat\" value=\"\"/>" +
+        entHintHtml +
+        "<h6 class=\"small font-weight-bold mb-1 mt-2\">Подключенные жильцы</h6>" +
+        "<div id=\"os_sublist\" class=\"mb-2\"></div>" +
+        "<h6 class=\"small font-weight-bold mb-1\">Добавить жильца</h6>" +
+        "<input class=\"form-control form-control-sm mb-1\" id=\"os_mob\" placeholder=\"Телефон\"/>" +
+        "<input class=\"form-control form-control-sm mb-1\" id=\"os_sn\" placeholder=\"Имя\"/>" +
+        "<input class=\"form-control form-control-sm mb-1\" id=\"os_sp\" placeholder=\"Отчество\"/>" +
+        "<input class=\"form-control form-control-sm mb-1\" id=\"os_sl\" placeholder=\"Фамилия\"/>" +
+        "<button class=\"btn btn-success btn-sm mb-2\" id=\"os_addsub\">Добавить</button>" +
+        "<div id=\"os_flat_cars_block\" class=\"mb-2\" style=\"display:none\">" +
+        "<label class=\"small font-weight-bold d-block\">Госномера (по одному в строке)</label>" +
+        "<textarea class=\"form-control form-control-sm\" id=\"os_flat_cars_ta\" rows=\"4\" placeholder=\"А777AA77\"></textarea>" +
+        "<button type=\"button\" class=\"btn btn-sm btn-primary mt-1\" id=\"os_flat_cars_save\">Сохранить номера</button></div>" +
+        "</div>";
+
+      $("body").append("<div id=\"os_flat_popover\" class=\"shadow-lg border-0\">" + popInner + "</div>");
+      ensureOsFlatEvPopover();
+
+      $("#os_flat_popover_x").on("click", function () {
+        hideOsFlatPopover();
+      });
+      initOsDraggablePopover($("#os_flat_popover"), $("#os_flat_popover > .os-popover-drag-handle"));
+
+      $("#os_flat_popover").on("blur", "#os_mob", function () {
+        var v = $.trim($(this).val());
+        if (!v) return;
+        var n = normalizeOsPhone(v);
+        if (n) $(this).val(n);
+      });
 
       var sorted = sortFlatsCopy(flatsCache);
       var tbody = "";
+      var showEvCol = !!me.can_view_events;
+      var showBlockBtn = !!me.can_manage_subscribers;
+      var showActionsCol = showBlockBtn || showEvCol;
       sorted.forEach(function (f) {
         var fid = Number(f.flatId);
         var subList = uniqSubs(subsForFlat(houseSubscribersCache, fid));
-        var hasSubs = subList.length > 0;
         var ownerPhones = subList.filter(function (s) { return isFlatOwner(s, fid); }).map(function (s) {
           return String(s.mobile || "").trim();
         }).filter(Boolean);
@@ -394,95 +1778,164 @@
           ? $("<div>").text(ownerPhones.join(", ")).html()
           : "<span class=\"text-muted\">нет владельца</span>";
         var flatLabel = String(f.flat != null && f.flat !== "" ? f.flat : fid);
-        var flatNumClass = hasSubs ? "os-flat-num" : "";
-        tbody += "<tr class=\"os-flat-main\" data-fid=\"" + fid + "\" data-open=\"0\">" +
+        var flatNumClass = flatNumHighlightClass(f, fid);
+        var fioShort = "";
+        if (!subList.length) {
+          fioShort = "<span class=\"text-muted small\">—</span>";
+        } else {
+          var parts = subList.slice(0, 2).map(function (s) {
+            return $("<div>").text(String(s.subscriberFull || s.mobile || "—").trim()).html();
+          });
+          fioShort = "<span class=\"small\">" + parts.join(", ") + "</span>";
+          if (subList.length > 2) {
+            fioShort += " <span class=\"text-muted small\">+" + (subList.length - 2) + "</span>";
+          }
+        }
+        tbody += "<tr class=\"os-flat-main\" data-fid=\"" + fid + "\">" +
           "<td class=\"os-chev text-muted\">▸</td>" +
           "<td><strong" + (flatNumClass ? " class=\"" + flatNumClass + "\"" : "") + ">кв. " + $("<div>").text(flatLabel).html() + "</strong></td>" +
           "<td>" + phoneHtml + "</td>" +
-          "<td><button type=\"button\" class=\"btn btn-sm btn-outline-primary os-sel-flat\">Выбрать</button></td></tr>";
-        var fioHtml = "";
-        if (!subList.length) {
-          fioHtml = "<div class=\"text-muted small\">Нет привязанных жильцов</div>";
-        } else {
-          subList.forEach(function (s) {
-            var own = isFlatOwner(s, fid);
-            if (own) {
-              fioHtml += "<div class=\"os-fio-line\"><span class=\"text-monospace\">" + $("<div>").text(s.mobile || "").html() +
-                "</span> — " + $("<div>").text(s.subscriberFull || "—").html() + "</div>";
-            } else {
-              fioHtml += "<div class=\"os-fio-line\"><span class=\"text-muted small\">(жилец, не владелец)</span> " +
-                $("<div>").text(s.subscriberFull || "—").html() + "</div>";
-            }
-          });
+          "<td>" + fioShort + "</td>";
+        if (showActionsCol) {
+          var actHtml = "";
+          if (showBlockBtn) {
+            actHtml += renderOsFlatBlockButton(f);
+          }
+          if (showEvCol) {
+            actHtml += (actHtml ? " " : "") + "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary os-flat-ev\">События</button>";
+          }
+          tbody += "<td class=\"text-center os-flat-actions\">" + actHtml + "</td>";
         }
-        tbody += "<tr class=\"os-flat-detail d-none\" data-fid=\"" + fid + "\"><td colspan=\"4\">" + fioHtml + "</td></tr>";
+        tbody += "</tr>";
       });
 
-      var entHint = "";
-      if (me.can_manage_entrance_access) {
-        entHint = "<div class=\"small text-muted mb-2\">Подъезды при добавлении: <strong>ничего не отмечено</strong> — доступ со всех подъездов квартиры. Отметьте подъезды, если нужно <em>ограничить</em> вход только с выбранных.</div>" +
-          "<div id=\"os_ent_wrap\" class=\"mb-2 small border rounded p-2 bg-white\">Сначала выберите квартиру кнопкой «Выбрать»</div>";
-      } else {
-        entHint = "<div id=\"os_ent_wrap\" class=\"mb-2 small text-muted\">Ограничение по подъездам для этой учётной записи не включено.</div>";
+      var thRow = "<tr><th class=\"os-chev\"></th><th>Квартира</th><th>Телефон владельца</th><th>Жильцы</th>";
+      if (showActionsCol) {
+        thRow += "<th class=\"text-center\" style=\"width:10rem\">Действия</th>";
+      }
+      thRow += "</tr>";
+
+      var subsHint = "Нажмите строку квартиры — откроется панель: входы квартиры (общие для всех жильцов), список жильцов, госномера. ";
+      if (showBlockBtn) {
+        subsHint += "Квартиры с жильцами выделены зелёным, заблокированные — красным (блокировка важнее); кнопка «Заблокировать» / «Разблокировать» отключает или включает домофонию (ручная блокировка). ";
+      }
+      if (showEvCol) {
+        subsHint += "По кнопке «События» — журнал открытий по выбранной квартире.";
       }
 
       $("#os_body").html(
-        "<div class=\"row\">" +
-        "<div class=\"col-lg-7\">" +
-        "<h6 class=\"mb-2\">Квартиры и телефоны</h6>" +
-        "<p class=\"small text-muted mb-2\">Номер квартиры <span class=\"os-flat-num\">зелёным</span>, если есть жильцы. В колонке телефонов — только <strong>владелец</strong> (для звонков). Строка: раскрыть ФИО.</p>" +
+        "<h6 class=\"mb-2\">Квартиры</h6>" +
+        "<p class=\"small text-muted mb-2\">" + subsHint + "</p>" +
         "<div class=\"table-responsive border rounded bg-white\">" +
         "<table class=\"table table-sm table-hover os-flat-table mb-0\">" +
-        "<thead class=\"thead-light\"><tr><th class=\"os-chev\"></th><th>Квартира</th><th>Телефон владельца</th><th></th></tr></thead>" +
-        "<tbody id=\"os_flat_tbody\">" + tbody + "</tbody></table></div></div>" +
-        "<div class=\"col-lg-5 mt-3 mt-lg-0 pl-lg-4\" style=\"border-left:1px solid #dee2e6\" id=\"os_work_panel\">" +
-        "<div id=\"os_sel_banner\" class=\"alert alert-light border small mb-2\">Выберите квартиру кнопкой «Выбрать»</div>" +
-        "<input type=\"hidden\" id=\"os_flat\" value=\"\"/>" +
-        "<div id=\"os_sublist\" class=\"mb-3\"></div>" +
-        "<h6>Добавить жильца</h6>" +
-        "<input class=\"form-control mb-1\" id=\"os_mob\" placeholder=\"Телефон\"/>" +
-        "<input class=\"form-control mb-1\" id=\"os_sn\" placeholder=\"Имя\"/>" +
-        "<input class=\"form-control mb-1\" id=\"os_sp\" placeholder=\"Отчество\"/>" +
-        "<input class=\"form-control mb-1\" id=\"os_sl\" placeholder=\"Фамилия\"/>" +
-        entHint +
-        "<button class=\"btn btn-success btn-sm\" id=\"os_addsub\">Добавить</button>" +
-        "</div></div>"
+        "<thead class=\"thead-light\">" + thRow + "</thead>" +
+        "<tbody id=\"os_flat_tbody\">" + tbody + "</tbody></table></div>"
       );
+
+      $(document).on("keydown.osfp", function (e) {
+        if (e.key === "Escape") {
+          hideOsFlatPopover();
+          hideOsFlatEventsPopover();
+        }
+      });
+      $(document).on("click.osfp", function (e) {
+        if ($(e.target).closest("#os_flat_popover, #os_flat_ev_popover, .os-flat-table").length) {
+          return;
+        }
+        hideOsFlatPopover();
+        hideOsFlatEventsPopover();
+      });
 
       var selectedFlatId = 0;
 
       function setSelectedFlat(fid) {
         selectedFlatId = Number(fid);
         $("#os_flat").val(selectedFlatId || "");
-        $(".os-flat-main").removeClass("os-flat-sel");
-        $(".os-flat-main[data-fid=\"" + selectedFlatId + "\"]").addClass("os-flat-sel");
         var fl = flatById(selectedFlatId);
         var label = fl ? ("кв. " + (fl.flat || selectedFlatId)) : String(selectedFlatId);
-        $("#os_sel_banner").html("Выбрана <strong>" + $("<div>").text(label).html() + "</strong> — список ниже. Владелец в квартире один: при назначении другого прежний снимается автоматически.");
+        $("#os_sel_banner").html("Выбрана <strong>" + $("<div>").text(label).html() + "</strong>. Владелец в квартире один: при назначении другого прежний снимается автоматически.");
         updEnt();
         loadFlatSubscribers(selectedFlatId);
+        renderFlatCarsPanel(selectedFlatId);
+      }
+
+      function openWorkPanelAt(fid) {
+        hideOsFlatEventsPopover();
+        var n = Number(fid);
+        if (osFlatPopoverFid === n && $("#os_flat_popover").is(":visible")) {
+          hideOsFlatPopover();
+          return;
+        }
+        osFlatPopoverFid = n;
+        $("#os_flat_popover").data("osDragged", false).show();
+        var fl = flatById(n);
+        var flab = fl && fl.flat != null && String(fl.flat).trim() !== "" ? String(fl.flat).trim() : String(n);
+        $("#os-work-pop-title").text("Кв. " + flab);
+        $("#os_flat_tbody tr.os-flat-main").removeClass("os-flat-sel").find(".os-chev").text("▸");
+        var $tr = $("#os_flat_tbody tr.os-flat-main[data-fid=\"" + n + "\"]");
+        $tr.addClass("os-flat-sel").find(".os-chev").text("▾");
+        setSelectedFlat(n);
+        positionOsFlatPopover();
       }
 
       function updEnt() {
-        if (!me.can_manage_entrance_access) {
-          return;
-        }
         var fid = Number(selectedFlatId);
-        var h = "";
         if (!fid) {
-          $("#os_ent_wrap").html("Сначала выберите квартиру кнопкой «Выбрать»");
+          $("#os_ent_wrap").html("<span class=\"text-muted\">Сначала откройте квартиру строкой в таблице</span>");
           return;
         }
         var flat = flatById(fid);
-        if (flat && flat.entrances && flat.entrances.length) {
-          flat.entrances.forEach(function (e) {
-            var eid = Number(e.entranceId);
-            var ap = (e.apartment != null && String(e.apartment).trim() !== "") ? String(e.apartment).trim() : "";
-            var lbl = ap ? ("№ в табло: " + ap) : ("подъезд id " + eid);
-            h += "<label class=\"d-block mb-1\"><input type=\"checkbox\" class=\"os_ent\" value=\"" + eid + "\"/> " + $("<div>").text(lbl).html() + "</label>";
+        var entrances = houseEntrancesCache || [];
+        if (me.can_manage_entrance_access) {
+          if (!$("#os_flat_ent_save").length) {
+            return;
+          }
+          if (!entrances.length) {
+            $("#os_ent_wrap").html("<span class=\"text-muted\">В карточке дома нет входов. Добавьте их в админке.</span>");
+            $("#os_flat_ent_save").prop("disabled", true);
+            return;
+          }
+          $("#os_flat_ent_save").prop("disabled", false);
+          var bound = {};
+          (flat && flat.entrances ? flat.entrances : []).forEach(function (x) {
+            var ei = Number(x.entranceId || 0);
+            if (ei > 0) {
+              bound[ei] = true;
+            }
           });
+          var h = "";
+          entrances.forEach(function (ee) {
+            var eid = Number(ee.entranceId || 0);
+            if (!eid) {
+              return;
+            }
+            var lbl = osEntranceChoiceLabel(ee);
+            var on = bound[eid] ? " checked" : "";
+            h += "<label class=\"d-block mb-1\"><input type=\"checkbox\" class=\"os_flat_ent_chk\" data-eid=\"" + eid + "\"" + on + "/> " + $("<div>").text(lbl).html() + "</label>";
+          });
+          $("#os_ent_wrap").html(h || "<span class=\"text-muted\">Нет входов</span>");
+          return;
         }
-        $("#os_ent_wrap").html(h || "<span class=\"text-muted\">Для квартиры не заведены подъезды в карточке дома</span>");
+        var parts = [];
+        (flat && flat.entrances ? flat.entrances : []).forEach(function (e) {
+          var eid = Number(e.entranceId || 0);
+          if (!eid) {
+            return;
+          }
+          var meta = null;
+          for (var ii = 0; ii < entrances.length; ii++) {
+            if (Number(entrances[ii].entranceId) === eid) {
+              meta = entrances[ii];
+              break;
+            }
+          }
+          parts.push(meta ? osEntranceChoiceLabel(meta) : ("вход " + eid));
+        });
+        $("#os_ent_wrap").html(
+          parts.length
+            ? ("<span class=\"text-muted\">Входы:</span> " + $("<div>").text(parts.join("; ")).html())
+            : "<span class=\"text-muted\">К квартире не привязаны входы</span>"
+        );
       }
 
       function loadFlatSubscribers(fid) {
@@ -490,7 +1943,7 @@
           $("#os_sublist").html("");
           return;
         }
-        $("#os_sublist").html("<p class=\"small text-muted\">Загрузка…</p>");
+        $("#os_sublist").html("<p class=\"small text-muted mb-0\">Загрузка…</p>");
         apiFetch("GET", "/objectSenior/subscribers?flatId=" + fid, undefined).then(function (sj) {
           if (!sj._httpOk) {
             $("#os_sublist").html("<p class=\"text-danger small\">Ошибка загрузки</p>");
@@ -503,38 +1956,21 @@
       }
 
       function drawSubTable(fid, list) {
-        var flat = flatById(fid);
-        var entrances = (flat && flat.entrances) ? flat.entrances : [];
-        var t = "<table class=\"table table-sm\"><thead><tr><th>Телефон</th><th>ФИО</th><th class=\"text-center\">Владелец</th>";
-        if (me.can_manage_entrance_access && entrances.length) {
-          t += "<th>Подъезды</th>";
-        }
-        t += "<th></th></tr></thead><tbody>";
+        var t = "<table class=\"table table-sm\"><thead><tr><th>Телефон</th><th>ФИО</th><th class=\"text-center\">Владелец</th><th></th></tr></thead><tbody>";
         list.forEach(function (s) {
           var sid = Number(s.subscriberId);
           var own = !!s.flatOwner;
           t += "<tr><td class=\"text-monospace\">" + $("<div>").text(s.mobile || "").html() + "</td><td>" + $("<div>").text(s.subscriberFull || "").html() + "</td>" +
-            "<td class=\"text-center\"><label class=\"mb-0 small\"><input type=\"checkbox\" class=\"os_own\" data-fid=\"" + fid + "\" data-sid=\"" + sid + "\" " + (own ? "checked" : "") + "/> владелец</label></td>";
-          if (me.can_manage_entrance_access && entrances.length) {
-            t += "<td style=\"min-width:9rem\" class=\"os-ent-cell\" data-fid=\"" + fid + "\" data-sid=\"" + sid + "\">";
-            var bound = Array.isArray(s.boundEntranceIds) ? s.boundEntranceIds.map(Number) : [];
-            var allMode = !!s.entranceAccessAll;
-            entrances.forEach(function (e) {
-              var eid = Number(e.entranceId);
-              var ap = (e.apartment != null && String(e.apartment).trim() !== "") ? String(e.apartment).trim() : "";
-              var lbl = ap ? ap : String(eid);
-              var checked = allMode ? false : bound.indexOf(eid) !== -1;
-              t += "<label class=\"d-block small mb-0\"><input type=\"checkbox\" class=\"os_ent_row\" data-eid=\"" + eid + "\" " + (checked ? "checked" : "") + "/> " +
-                $("<div>").text(lbl).html() + "</label>";
-            });
-            t += "<button type=\"button\" class=\"btn btn-link btn-sm p-0 os_save_ent\" data-fid=\"" + fid + "\" data-sid=\"" + sid + "\">Сохранить</button></td>";
-          }
-          t += "<td><button class=\"btn btn-link btn-sm os_del\" data-sid=\"" + sid + "\" data-fid=\"" + fid + "\">Удалить</button></td></tr>";
+            "<td class=\"text-center\"><label class=\"mb-0 small\"><input type=\"checkbox\" class=\"os_own\" data-fid=\"" + fid + "\" data-sid=\"" + sid + "\" " + (own ? "checked" : "") + "/> владелец</label></td>" +
+            "<td><button class=\"btn btn-link btn-sm os_del\" data-sid=\"" + sid + "\" data-fid=\"" + fid + "\">Удалить</button></td></tr>";
         });
         t += "</tbody></table>";
         $("#os_sublist").html(list.length ? t : "<p class=\"text-muted mb-0\">Пусто</p>");
+        if ($("#os_flat_popover").is(":visible") && !$("#os_flat_popover").data("osDragged")) {
+          positionOsFlatPopover();
+        }
 
-        $(".os_own").on("change", function () {
+        $("#os_sublist").off("change", ".os_own").on("change", ".os_own", function () {
           var $cb = $(this);
           var want = $cb.prop("checked");
           var ff = Number($cb.data("fid"));
@@ -549,77 +1985,162 @@
             loadSubs();
           });
         });
-        $(".os_del").on("click", function () {
+        $("#os_sublist").off("click", ".os_del").on("click", ".os_del", function () {
           var sid = $(this).data("sid");
           var ff = $(this).data("fid");
           if (!confirm("Удалить жильца из квартиры?")) return;
-          apiFetch("DELETE", "/objectSenior/subscriber", { flatId: ff, subscriberId: sid }).then(function () {
+          apiFetch("DELETE", "/objectSenior/subscriber", { flatId: ff, subscriberId: sid }).then(function (rj) {
+            if (!rj._httpOk) {
+              var er = firstErrorPayload(rj) || firstErrorPayload(unwrap200(rj));
+              alert("Не удалось удалить: " + (er || rj._httpStatus));
+              return;
+            }
             loadSubs();
           });
         });
 
-        $(".os_save_ent").on("click", function () {
-          var ff = Number($(this).data("fid"));
-          var sid = Number($(this).data("sid"));
-          var cell = $(".os-ent-cell[data-fid=\"" + ff + "\"][data-sid=\"" + sid + "\"]");
-          var eids = [];
-          cell.find(".os_ent_row:checked").each(function () {
-            eids.push(parseInt(String($(this).data("eid")), 10));
+      }
+
+      $("#os_flat_tbody").on("click", ".os-flat-ev", function (e) {
+        e.stopPropagation();
+        var fid = Number($(this).closest("tr").attr("data-fid"));
+        openOsFlatEventsPopover(fid);
+      });
+
+      $("#os_flat_tbody").on("click", ".os-flat-block", function (e) {
+        e.stopPropagation();
+        var $btn = $(this);
+        if ($btn.prop("disabled")) return;
+        var fid = Number($btn.closest("tr").attr("data-fid"));
+        var manualBlock = Number($btn.attr("data-block"));
+        if (manualBlock !== 0 && manualBlock !== 1) return;
+        $btn.prop("disabled", true);
+        apiFetch("PUT", "/objectSenior/flatBlock", { flatId: fid, manualBlock: manualBlock }).then(function (rj) {
+          $btn.prop("disabled", false);
+          if (!rj._httpOk) {
+            var er = firstErrorPayload(rj) || firstErrorPayload(unwrap200(rj));
+            alert("Не удалось изменить блокировку: " + (er || rj._httpStatus));
+            return;
+          }
+          var u = unwrap200(rj);
+          var op = u && u.operationResult ? u.operationResult : null;
+          if (!op) {
+            loadSubs();
+            return;
+          }
+          var fl = flatById(fid);
+          if (fl) {
+            applyFlatBlockFields(fl, op);
+          }
+          refreshOsFlatRow(fid);
+        }).catch(function () {
+          $btn.prop("disabled", false);
+          alert("Ошибка сети");
+        });
+      });
+
+      $("#os_flat_tbody").on("click", ".os-flat-main", function (e) {
+        if ($(e.target).closest(".os-flat-ev, .os-flat-block").length) {
+          return;
+        }
+        var fid = Number($(this).attr("data-fid"));
+        openWorkPanelAt(fid);
+      });
+
+      if (me.can_manage_entrance_access) {
+        $("#os_flat_ent_save").on("click", function () {
+          var ff = Number(selectedFlatId);
+          if (!ff) {
+            alert("Сначала откройте квартиру в таблице");
+            return;
+          }
+          var ids = [];
+          $("#os_ent_wrap .os_flat_ent_chk:checked").each(function () {
+            ids.push(Number($(this).data("eid")));
           });
-          apiFetch("PUT", "/objectSenior/subscriberEntrances", { flatId: ff, subscriberId: sid, entranceIds: eids }).then(function (rj) {
+          if (!ids.length) {
+            alert("Выберите хотя бы один вход для квартиры.");
+            return;
+          }
+          apiFetch("PUT", "/objectSenior/flatEntrances", { flatId: ff, entranceIds: ids }).then(function (rj) {
             if (!rj._httpOk) {
               var er = firstErrorPayload(rj) || firstErrorPayload(unwrap200(rj));
-              alert("Ошибка: " + (er || rj._httpStatus));
+              alert("Не удалось сохранить входы: " + (er || rj._httpStatus));
               return;
             }
-            loadFlatSubscribers(ff);
+            apiFetch("GET", "/objectSenior/flats", undefined).then(function (fj2) {
+              if (!fj2._httpOk) {
+                loadSubs();
+                return;
+              }
+              var fu2 = unwrap200(fj2);
+              if (fu2 && fu2.flats) {
+                flatsCache = fu2.flats;
+              }
+              if (fu2 && fu2.houseEntrances) {
+                houseEntrancesCache = fu2.houseEntrances;
+              }
+              updEnt();
+              alert("Входы квартиры сохранены");
+            }).catch(function () {
+              loadSubs();
+            });
           });
         });
       }
 
-      $("#os_flat_tbody").on("click", ".os-sel-flat", function (e) {
-        e.stopPropagation();
-        var fid = Number($(this).closest("tr").attr("data-fid"));
-        setSelectedFlat(fid);
-      });
-
-      $("#os_flat_tbody").on("click", ".os-flat-main", function (e) {
-        if ($(e.target).closest(".os-sel-flat").length) return;
-        var $tr = $(this);
-        var fid = Number($tr.attr("data-fid"));
-        var open = $tr.attr("data-open") === "1";
-        var det = $(".os-flat-detail[data-fid=\"" + fid + "\"]");
-        if (open) {
-          $tr.attr("data-open", "0");
-          $tr.find(".os-chev").text("▸");
-          det.addClass("d-none");
-        } else {
-          $tr.attr("data-open", "1");
-          $tr.find(".os-chev").text("▾");
-          det.removeClass("d-none");
+      $("#os_flat_cars_save").on("click", function () {
+        var fid = Number($("#os_flat").val());
+        if (!fid) {
+          alert("Сначала откройте квартиру в таблице");
+          return;
         }
+        var raw = $("#os_flat_cars_ta").val();
+        var carsNorm = normalizeOsCarsText(raw != null ? String(raw) : "");
+        if (!carsNorm.ok) {
+          alert("Некорректный госномер в строке " + carsNorm.line + ". Используйте латинские буквы и цифры (например A777AA77).");
+          return;
+        }
+        $("#os_flat_cars_ta").val(carsNorm.text);
+        apiFetch("PUT", "/objectSenior/flatCars", { flatId: fid, cars: carsNorm.text }).then(function (rj) {
+          if (!rj._httpOk) {
+            var er = firstErrorPayload(rj) || firstErrorPayload(unwrap200(rj));
+            alert("Не удалось сохранить номера: " + (er || rj._httpStatus));
+            return;
+          }
+          var u = unwrap200(rj);
+          var op = u && u.operationResult ? u.operationResult : null;
+          var carsOut = op && op.cars != null ? op.cars : null;
+          if (carsOut != null) {
+            var fl = flatById(fid);
+            if (fl) {
+              fl.cars = carsOut;
+            }
+          }
+          renderFlatCarsPanel(fid);
+          alert("Госномера сохранены");
+        });
       });
 
       $("#os_addsub").on("click", function () {
         var fid = Number($("#os_flat").val());
         if (!fid) {
-          alert("Сначала нажмите «Выбрать» у нужной квартиры");
+          alert("Сначала откройте квартиру строкой в таблице");
           return;
         }
+        var mob = normalizeOsPhone($("#os_mob").val());
+        if (!mob) {
+          alert("Укажите корректный номер телефона (11 цифр, формат 7XXXXXXXXXX).");
+          return;
+        }
+        $("#os_mob").val(mob);
         var body = {
           flatId: fid,
-          mobile: $.trim($("#os_mob").val()),
+          mobile: mob,
           subscriberName: $.trim($("#os_sn").val()),
           subscriberPatronymic: $.trim($("#os_sp").val()),
           subscriberLast: $.trim($("#os_sl").val()),
         };
-        var eids = [];
-        $(".os_ent:checked").each(function () {
-          eids.push(parseInt(String($(this).val()), 10));
-        });
-        if (eids.length) {
-          body.entranceIds = eids;
-        }
         apiFetch("POST", "/objectSenior/subscriber", body).then(function (rj) {
           if (!rj._httpOk) {
             var er = firstErrorPayload(rj) || firstErrorPayload(unwrap200(rj));
@@ -635,6 +2156,10 @@
   }
 
   function loadPw() {
+    hideOsCameraModal();
+    hideOsFlatPopover();
+    hideOsFlatEventsPopover();
+    if ($("#os_event_video_modal").length) { $("#os_event_video_modal").modal("hide"); }
     $("#os_body").html(
       "<div class=\"card card-body\" style=\"max-width:400px\">" +
       "<div class=\"form-group\"><label>Старый пароль</label><input type=\"password\" class=\"form-control\" id=\"os_o\"/></div>" +

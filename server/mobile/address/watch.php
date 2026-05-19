@@ -31,6 +31,21 @@
         response(422);
     }
 
-    $households->watch($device["deviceId"], $flat_id, $postdata["eventType"], $postdata["eventDetail"], $postdata["comments"]);
+    $eventType = (string) @$postdata["eventType"];
+    $eventDetail = trim((string) @$postdata["eventDetail"]);
+    $comments = (string) @$postdata["comments"];
 
-    response();
+    $watcherId = $households->watch($device["deviceId"], $flat_id, $eventType, $eventDetail, $comments);
+    if (!$watcherId) {
+        $watchers = $households->watchers($device["deviceId"], $flat_id) ?: [];
+        foreach ($watchers as $watcher) {
+            if ((string)$watcher["eventType"] === $eventType && (string)$watcher["eventDetail"] === $eventDetail) {
+                $watcherId = (int)$watcher["houseWatcherId"];
+                break;
+            }
+        }
+    }
+
+    response(200, [
+        "watcherId" => $watcherId ? (int)$watcherId : null,
+    ]);
