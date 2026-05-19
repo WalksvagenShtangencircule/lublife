@@ -221,6 +221,16 @@
       border-radius: 999px;
       background: rgba(25, 135, 84, 0.10);
     }
+    .os-flat-blocked { color: #dc3545; font-weight: 800; }
+    .os-flat-blocked {
+      display: inline-block;
+      padding: 0.08rem 0.35rem;
+      margin-left: -0.35rem;
+      border-radius: 999px;
+      background: rgba(220, 53, 69, 0.10);
+    }
+    .os-flat-actions { white-space: nowrap; }
+    .os-flat-actions .btn + .btn { margin-left: 0.25rem; }
     .alert-light {
       background: var(--wp-accent-soft) !important;
       border: 2px solid rgba(46, 63, 124, 0.12) !important;
@@ -239,6 +249,14 @@
     .os-cam-tile .os-cam-thumb { height: 120px; background: #111; display: flex; align-items: center; justify-content: center; color: #9aa3b2; font-size: 0.8rem; }
     .os-cam-tile .os-cam-thumb img { width: 100%; height: 100%; object-fit: cover; }
     .os-cam-meta { padding: 0.55rem 0.65rem; font-size: 0.85rem; font-weight: 700; }
+    .os-ent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.85rem; }
+    .os-ent-tile { border: 2px solid var(--wp-border); border-radius: var(--wp-radius-sm); overflow: hidden; background: var(--wp-surface); box-shadow: var(--wp-shadow); display: flex; flex-direction: column; }
+    .os-ent-tile .os-ent-thumb { height: 120px; background: #111; display: flex; align-items: center; justify-content: center; color: #9aa3b2; font-size: 0.8rem; flex-shrink: 0; }
+    .os-ent-tile .os-ent-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .os-ent-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.55rem 0.65rem; }
+    .os-ent-title { font-size: 0.85rem; font-weight: 700; flex: 1; min-width: 0; word-break: break-word; }
+    .os-eq-fault-list { margin: 0; padding-left: 1.25rem; }
+    .os-eq-fault-list li { margin-bottom: 0.35rem; }
     body.modal-open .modal-backdrop { z-index: 1075 !important; }
     #os_flat_popover { position: fixed; z-index: 1060; width: min(600px, calc(100vw - 16px)); max-height: min(90vh, 720px); overflow: hidden; display: none; }
     #os_flat_popover .os-work-pop-body { max-height: min(calc(90vh - 52px), 640px); overflow-y: auto; }
@@ -520,7 +538,9 @@
     }
     var tabs = "<ul class=\"nav nav-tabs mb-3\">" +
       (me.can_view_events ? ("<li class=\"nav-item\"><a class=\"" + tabCls(activeEv) + "\" data-t=\"ev\" href=\"#\">События</a></li>") : "") +
-      "<li class=\"nav-item\"><a class=\"nav-link\" data-t=\"ca\" href=\"#\">Видеонаблюдение</a></li>" +
+      "<li class=\"nav-item\"><a class=\"nav-link\" data-t=\"ca\" href=\"#\">Камеры</a></li>" +
+      "<li class=\"nav-item\"><a class=\"nav-link\" data-t=\"en\" href=\"#\">Входы</a></li>" +
+      "<li class=\"nav-item\"><a class=\"nav-link\" data-t=\"eq\" href=\"#\">Оборудование</a></li>" +
       (me.can_manage_subscribers ? ("<li class=\"nav-item\"><a class=\"" + tabCls(activeSu) + "\" data-t=\"su\" href=\"#\">Квартиры</a></li>") : "") +
       (me.can_manage_subscribers ? ("<li class=\"nav-item\"><a class=\"nav-link\" data-t=\"br\" href=\"#\">Оповещение</a></li>") : "") +
       (me.can_manage_entrance_access ? ("<li class=\"nav-item\"><a class=\"" + tabCls(activeAc) + "\" data-t=\"ac\" href=\"#\">Доступы</a></li>") : "") +
@@ -566,6 +586,8 @@
       var t = $(this).data("t");
       if (t === "ev") { loadEvents(); }
       else if (t === "ca") { loadCams(); }
+      else if (t === "en") { loadEntrances(); }
+      else if (t === "eq") { loadEquipment(); }
       else if (t === "su") { loadSubs(); }
       else if (t === "br") { loadBroadcast(); }
       else if (t === "ac") { loadAccesses(); }
@@ -754,19 +776,19 @@
     apiFetch("GET", "/objectSenior/cameras", undefined).then(function (j) {
       if (!j._httpOk) {
         var er = firstErrorPayload(j) || firstErrorPayload(unwrap200(j));
-        $("#os_body").html("<p class=\"text-danger\">Видеонаблюдение: " + $("<div>").text(er || ("HTTP " + j._httpStatus)).html() + "</p>");
+        $("#os_body").html("<p class=\"text-danger\">Камеры: " + $("<div>").text(er || ("HTTP " + j._httpStatus)).html() + "</p>");
         return;
       }
       var u = unwrap200(j);
       var list = u && u.cameras ? u.cameras : [];
       if (!Array.isArray(list) || !list.length) {
         $("#os_body").html(
-          "<h6 class=\"mb-2\">Видеонаблюдение</h6>" +
+          "<h6 class=\"mb-2\">Камеры</h6>" +
           "<p class=\"small text-muted\">К объекту не привязаны камеры или список пуст. Добавьте камеру в админке (дом → камеры).</p>"
         );
         return;
       }
-      var h = "<h6 class=\"mb-2\">Видеонаблюдение</h6>" +
+      var h = "<h6 class=\"mb-2\">Камеры</h6>" +
         "<p class=\"small text-muted mb-3\">Нажмите на превью — откроется эфир и выбор интервала для фрагмента архива.</p>" +
         "<div class=\"os-cam-grid\" id=\"os_cam_grid\"></div>";
       $("#os_body").html(h);
@@ -809,6 +831,174 @@
         if (c) {
           openOsCameraModal(c);
         }
+      });
+    });
+  }
+
+  function osEntranceOpenErrorText(er, httpStatus) {
+    if (er === "domophoneUnavailable") return "Домофон недоступен";
+    if (er === "notFound" || er === "badRequest") return "Вход не найден";
+    if (er === "accessDenied") return "Нет доступа";
+    return er || ("HTTP " + (httpStatus || ""));
+  }
+
+  function loadEntrances() {
+    hideOsFlatPopover();
+    hideOsFlatEventsPopover();
+    hideOsCameraModal();
+    if ($("#os_event_video_modal").length) {
+      $("#os_event_video_modal").modal("hide");
+    }
+    $("#os_body").html("<p>Загрузка…</p>");
+    apiFetch("GET", "/objectSenior/entrances", undefined).then(function (j) {
+      if (!j._httpOk) {
+        var er = firstErrorPayload(j) || firstErrorPayload(unwrap200(j));
+        $("#os_body").html("<p class=\"text-danger\">Входы: " + $("<div>").text(osEntranceOpenErrorText(er, j._httpStatus)).html() + "</p>");
+        return;
+      }
+      var u = unwrap200(j);
+      var list = u && u.entrances ? u.entrances : [];
+      if (!Array.isArray(list) || !list.length) {
+        $("#os_body").html(
+          "<h6 class=\"mb-2\">Входы</h6>" +
+          "<p class=\"small text-muted\">В доме нет входов или список пуст. Добавьте входы в админке (дом → входы).</p>"
+        );
+        return;
+      }
+      var h = "<h6 class=\"mb-2\">Входы</h6>" +
+        "<p class=\"small text-muted mb-3\">Нажмите «Открыть» для дистанционного открытия двери входа.</p>" +
+        "<div class=\"os-ent-grid\" id=\"os_ent_grid\"></div>";
+      $("#os_body").html(h);
+      list.forEach(function (ent) {
+        var eid = Number(ent.entranceId);
+        var title = ent.title ? String(ent.title) : ("Вход " + eid);
+        var camId = Number(ent.previewCameraId) || 0;
+        var $tile = $(
+          "<div class=\"os-ent-tile\" data-eid=\"" + eid + "\">" +
+          "<div class=\"os-ent-thumb\"><span class=\"os-ent-ph\">Загрузка…</span></div>" +
+          "<div class=\"os-ent-foot\">" +
+          "<div class=\"os-ent-title\">" + $("<div>").text(title).html() + "</div>" +
+          "<button type=\"button\" class=\"btn btn-sm btn-primary os-ent-open flex-shrink-0\">Открыть</button>" +
+          "</div></div>"
+        );
+        $tile.data("entObj", ent);
+        $("#os_ent_grid").append($tile);
+        if (camId > 0) {
+          apiFetch("GET", "/objectSenior/cameraPreview/" + encodeURIComponent(camId), undefined).then(function (pj) {
+            if (!pj._httpOk) {
+              $tile.find(".os-ent-ph").text("Нет превью");
+              return;
+            }
+            var pu = unwrap200(pj);
+            var pr = pu && pu.cameraPreview;
+            if (pr && pr.preview && pr.preview.base64) {
+              $tile.find(".os-ent-thumb").html(
+                "<img alt=\"\" src=\"data:" + pr.preview.contentType + ";base64," + pr.preview.base64 + "\"/>"
+              );
+            } else {
+              $tile.find(".os-ent-ph").text("Нет изображения");
+            }
+          });
+        } else {
+          $tile.find(".os-ent-ph").text("Нет превью");
+        }
+      });
+      $("#os_ent_grid").on("click", ".os-ent-open", function (e) {
+        e.stopPropagation();
+        var $btn = $(this);
+        if ($btn.prop("disabled")) return;
+        var eid = Number($btn.closest(".os-ent-tile").attr("data-eid"));
+        if (!eid) return;
+        var prevText = $btn.text();
+        $btn.prop("disabled", true).text("…");
+        apiFetch("POST", "/objectSenior/entranceOpen", { entranceId: eid }).then(function (rj) {
+          $btn.prop("disabled", false).text(prevText);
+          if (!rj._httpOk) {
+            var er = firstErrorPayload(rj) || firstErrorPayload(unwrap200(rj));
+            alert("Не удалось открыть: " + osEntranceOpenErrorText(er, rj._httpStatus));
+            return;
+          }
+          var uo = unwrap200(rj);
+          var op = uo && uo.operationResult ? uo.operationResult : null;
+          if (op && op.ok) {
+            alert("Вход открыт");
+            return;
+          }
+          alert("Не удалось открыть вход");
+        }).catch(function () {
+          $btn.prop("disabled", false).text(prevText);
+          alert("Ошибка сети");
+        });
+      });
+    });
+  }
+
+  function osEquipmentKindLabel(kind) {
+    return kind === "camera" ? "Камера" : "Панель";
+  }
+
+  function renderEquipmentHealth(pack) {
+    var summary = pack && pack.summary ? pack.summary : {};
+    var faults = pack && pack.faults ? pack.faults : [];
+    var camN = Number(summary.cameras) || 0;
+    var domN = Number(summary.domophones) || 0;
+    var summaryLine = "<p class=\"small text-muted mb-2\">Проверено: " + camN + " камер, " + domN + " панелей.</p>";
+    var html = "<h6 class=\"mb-2\">Оборудование</h6>" + summaryLine;
+    if (pack && pack.allOk) {
+      html += "<div class=\"alert alert-success py-2 mb-2\">Всё оборудование в сети</div>";
+    } else {
+      html += "<div class=\"alert alert-warning py-2 mb-2\">Обнаружены неисправности</div>" +
+        "<ul class=\"os-eq-fault-list mb-0\">";
+      faults.forEach(function (f) {
+        var kind = osEquipmentKindLabel(f.kind);
+        var name = f.name ? String(f.name) : ("#" + (f.id || ""));
+        var reason = f.reasonText ? String(f.reasonText) : String(f.reason || "");
+        html += "<li><strong>" + $("<div>").text(kind + ": " + name).html() + "</strong> — " +
+          $("<div>").text(reason).html() + "</li>";
+      });
+      html += "</ul>";
+    }
+    html += "<button type=\"button\" class=\"btn btn-sm btn-outline-primary mt-3\" id=\"os_eq_refresh\">Проверить снова</button>";
+    $("#os_body").html(html);
+    $("#os_eq_refresh").on("click", function () {
+      loadEquipment();
+    });
+  }
+
+  function loadEquipment() {
+    hideOsFlatPopover();
+    hideOsFlatEventsPopover();
+    hideOsCameraModal();
+    if ($("#os_event_video_modal").length) {
+      $("#os_event_video_modal").modal("hide");
+    }
+    $("#os_body").html(
+      "<h6 class=\"mb-2\">Оборудование</h6>" +
+      "<p class=\"text-muted mb-0\">Проверка оборудования…</p>"
+    );
+    apiFetch("GET", "/objectSenior/equipmentHealth", undefined).then(function (j) {
+      if (!j._httpOk) {
+        var er = firstErrorPayload(j) || firstErrorPayload(unwrap200(j));
+        $("#os_body").html(
+          "<h6 class=\"mb-2\">Оборудование</h6>" +
+          "<p class=\"text-danger\">" + $("<div>").text(er || ("HTTP " + j._httpStatus)).html() + "</p>" +
+          "<button type=\"button\" class=\"btn btn-sm btn-outline-primary mt-2\" id=\"os_eq_refresh\">Проверить снова</button>"
+        );
+        $("#os_eq_refresh").on("click", function () {
+          loadEquipment();
+        });
+        return;
+      }
+      var u = unwrap200(j);
+      renderEquipmentHealth(u);
+    }).catch(function () {
+      $("#os_body").html(
+        "<h6 class=\"mb-2\">Оборудование</h6>" +
+        "<p class=\"text-danger\">Ошибка сети</p>" +
+        "<button type=\"button\" class=\"btn btn-sm btn-outline-primary mt-2\" id=\"os_eq_refresh\">Проверить снова</button>"
+      );
+      $("#os_eq_refresh").on("click", function () {
+        loadEquipment();
       });
     });
   }
@@ -1075,6 +1265,68 @@
       }
     });
     return r;
+  }
+
+  function flatIsBlocked(f) {
+    if (!f) return false;
+    if (f.blocked) return true;
+    return !!(Number(f.manualBlock) || Number(f.adminBlock) || Number(f.autoBlock));
+  }
+
+  function flatManualBlocked(f) {
+    return !!(f && Number(f.manualBlock));
+  }
+
+  /** Класс подсветки номера: красный при блокировке, иначе зелёный при наличии жильцов. */
+  function flatNumHighlightClass(f, flatId) {
+    if (flatIsBlocked(f)) return "os-flat-blocked";
+    var nf = Number(flatId);
+    if (uniqSubs(subsForFlat(houseSubscribersCache, nf)).length > 0) return "os-flat-num";
+    return "";
+  }
+
+  function flatBlockButtonTitle(f) {
+    if (!f || flatManualBlocked(f)) return "";
+    if (!flatIsBlocked(f)) return "";
+    var parts = [];
+    if (Number(f.adminBlock)) parts.push("административная");
+    if (Number(f.autoBlock)) parts.push("автоматическая");
+    if (!parts.length) return "";
+    return "Также действует " + parts.join(" и ") + " блокировка — снять её может только администратор";
+  }
+
+  function renderOsFlatBlockButton(f) {
+    var manual = flatManualBlocked(f);
+    var next = manual ? 0 : 1;
+    var label = manual ? "Разблокировать" : "Заблокировать";
+    var btnCls = manual ? "btn-outline-danger" : "btn-outline-success";
+    var title = flatBlockButtonTitle(f);
+    var titleAttr = title ? (" title=\"" + $("<div>").text(title).html() + "\"") : "";
+    return "<button type=\"button\" class=\"btn btn-sm " + btnCls + " os-flat-block\" data-block=\"" + next + "\"" + titleAttr + ">" + label + "</button>";
+  }
+
+  function applyFlatBlockFields(f, pack) {
+    if (!f || !pack) return;
+    f.manualBlock = Number(pack.manualBlock) || 0;
+    f.adminBlock = Number(pack.adminBlock) || 0;
+    f.autoBlock = Number(pack.autoBlock) || 0;
+    f.blocked = !!pack.blocked;
+  }
+
+  function refreshOsFlatRow(fid) {
+    var f = flatById(fid);
+    if (!f) return;
+    var $tr = $("#os_flat_tbody tr.os-flat-main[data-fid=\"" + fid + "\"]");
+    if (!$tr.length) return;
+    var flatLabel = String(f.flat != null && f.flat !== "" ? f.flat : fid);
+    var flatNumClass = flatNumHighlightClass(f, fid);
+    $tr.find("td").eq(1).html("<strong" + (flatNumClass ? " class=\"" + flatNumClass + "\"" : "") + ">кв. " + $("<div>").text(flatLabel).html() + "</strong>");
+    var $act = $tr.find("td.os-flat-actions");
+    if ($act.length) {
+      var evBtn = $act.find(".os-flat-ev");
+      var evHtml = evBtn.length ? evBtn[0].outerHTML : "";
+      $act.html(renderOsFlatBlockButton(f) + (evHtml ? " " + evHtml : ""));
+    }
   }
 
   /** Владелец квартиры: role 0 в связке flat–subscriber (как в мобильном клиенте). */
@@ -1416,10 +1668,11 @@
       var sorted = sortFlatsCopy(flatsCache);
       var tbody = "";
       var showEvCol = !!me.can_view_events;
+      var showBlockBtn = !!me.can_manage_subscribers;
+      var showActionsCol = showBlockBtn || showEvCol;
       sorted.forEach(function (f) {
         var fid = Number(f.flatId);
         var subList = uniqSubs(subsForFlat(houseSubscribersCache, fid));
-        var hasSubs = subList.length > 0;
         var ownerPhones = subList.filter(function (s) { return isFlatOwner(s, fid); }).map(function (s) {
           return String(s.mobile || "").trim();
         }).filter(Boolean);
@@ -1427,7 +1680,7 @@
           ? $("<div>").text(ownerPhones.join(", ")).html()
           : "<span class=\"text-muted\">нет владельца</span>";
         var flatLabel = String(f.flat != null && f.flat !== "" ? f.flat : fid);
-        var flatNumClass = hasSubs ? "os-flat-num" : "";
+        var flatNumClass = flatNumHighlightClass(f, fid);
         var fioShort = "";
         if (!subList.length) {
           fioShort = "<span class=\"text-muted small\">—</span>";
@@ -1445,22 +1698,36 @@
           "<td><strong" + (flatNumClass ? " class=\"" + flatNumClass + "\"" : "") + ">кв. " + $("<div>").text(flatLabel).html() + "</strong></td>" +
           "<td>" + phoneHtml + "</td>" +
           "<td>" + fioShort + "</td>";
-        if (showEvCol) {
-          tbody += "<td class=\"text-center\"><button type=\"button\" class=\"btn btn-sm btn-outline-secondary os-flat-ev\">События</button></td>";
+        if (showActionsCol) {
+          var actHtml = "";
+          if (showBlockBtn) {
+            actHtml += renderOsFlatBlockButton(f);
+          }
+          if (showEvCol) {
+            actHtml += (actHtml ? " " : "") + "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary os-flat-ev\">События</button>";
+          }
+          tbody += "<td class=\"text-center os-flat-actions\">" + actHtml + "</td>";
         }
         tbody += "</tr>";
       });
 
       var thRow = "<tr><th class=\"os-chev\"></th><th>Квартира</th><th>Телефон владельца</th><th>Жильцы</th>";
-      if (showEvCol) {
-        thRow += "<th class=\"text-center\" style=\"width:6.5rem\">События</th>";
+      if (showActionsCol) {
+        thRow += "<th class=\"text-center\" style=\"width:10rem\">Действия</th>";
       }
       thRow += "</tr>";
 
+      var subsHint = "Нажмите строку квартиры — откроется панель: входы квартиры (общие для всех жильцов), список жильцов, госномера. ";
+      if (showBlockBtn) {
+        subsHint += "Квартиры с жильцами выделены зелёным, заблокированные — красным (блокировка важнее); кнопка «Заблокировать» / «Разблокировать» отключает или включает домофонию (ручная блокировка). ";
+      }
+      if (showEvCol) {
+        subsHint += "По кнопке «События» — журнал открытий по выбранной квартире.";
+      }
+
       $("#os_body").html(
         "<h6 class=\"mb-2\">Квартиры</h6>" +
-        "<p class=\"small text-muted mb-2\">Нажмите строку квартиры — откроется панель: входы квартиры (общие для всех жильцов), список жильцов, госномера. " +
-        (showEvCol ? "По кнопке «События» — журнал открытий по выбранной квартире." : "") + "</p>" +
+        "<p class=\"small text-muted mb-2\">" + subsHint + "</p>" +
         "<div class=\"table-responsive border rounded bg-white\">" +
         "<table class=\"table table-sm table-hover os-flat-table mb-0\">" +
         "<thead class=\"thead-light\">" + thRow + "</thead>" +
@@ -1639,8 +1906,40 @@
         openOsFlatEventsPopover(fid, e.clientX, e.clientY);
       });
 
+      $("#os_flat_tbody").on("click", ".os-flat-block", function (e) {
+        e.stopPropagation();
+        var $btn = $(this);
+        if ($btn.prop("disabled")) return;
+        var fid = Number($btn.closest("tr").attr("data-fid"));
+        var manualBlock = Number($btn.attr("data-block"));
+        if (manualBlock !== 0 && manualBlock !== 1) return;
+        $btn.prop("disabled", true);
+        apiFetch("PUT", "/objectSenior/flatBlock", { flatId: fid, manualBlock: manualBlock }).then(function (rj) {
+          $btn.prop("disabled", false);
+          if (!rj._httpOk) {
+            var er = firstErrorPayload(rj) || firstErrorPayload(unwrap200(rj));
+            alert("Не удалось изменить блокировку: " + (er || rj._httpStatus));
+            return;
+          }
+          var u = unwrap200(rj);
+          var op = u && u.operationResult ? u.operationResult : null;
+          if (!op) {
+            loadSubs();
+            return;
+          }
+          var fl = flatById(fid);
+          if (fl) {
+            applyFlatBlockFields(fl, op);
+          }
+          refreshOsFlatRow(fid);
+        }).catch(function () {
+          $btn.prop("disabled", false);
+          alert("Ошибка сети");
+        });
+      });
+
       $("#os_flat_tbody").on("click", ".os-flat-main", function (e) {
-        if ($(e.target).closest(".os-flat-ev").length) {
+        if ($(e.target).closest(".os-flat-ev, .os-flat-block").length) {
           return;
         }
         var fid = Number($(this).attr("data-fid"));

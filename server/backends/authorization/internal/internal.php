@@ -226,6 +226,7 @@
                     [ "objectSenior", "flats", "GET" ],
                     [ "objectSenior", "flatEntrances", "PUT" ],
                     [ "objectSenior", "flatCars", "PUT" ],
+                    [ "objectSenior", "flatBlock", "PUT" ],
                     [ "objectSenior", "subscriber", "POST" ],
                     [ "objectSenior", "subscriber", "DELETE" ],
                     [ "objectSenior", "subscriberEntrances", "PUT" ],
@@ -235,6 +236,9 @@
                     [ "objectSenior", "cameras", "GET" ],
                     [ "objectSenior", "cameraPreview", "GET" ],
                     [ "objectSenior", "cameraFragment", "GET" ],
+                    [ "objectSenior", "entrances", "GET" ],
+                    [ "objectSenior", "entranceOpen", "POST" ],
+                    [ "objectSenior", "equipmentHealth", "GET" ],
                     [ "objectSeniorAuth", "password", "PUT" ],
                 ];
                 foreach ($rules as $r) {

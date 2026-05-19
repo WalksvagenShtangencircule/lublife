@@ -56,28 +56,41 @@ namespace api\objectSenior {
                     continue;
                 }
                 $entrances = [];
+                $manualBlock = 0;
+                $adminBlock = 0;
+                $autoBlock = 0;
                 if ($households) {
                     $flat = $households->getFlat($fid);
-                    if ($flat && !empty($flat["entrances"])) {
-                        foreach ($flat["entrances"] as $e) {
-                            $entrances[] = [
-                                "entranceId" => (int)($e["entranceId"] ?? 0),
-                                "apartment" => (string)($e["apartment"] ?? ""),
-                                "domophoneId" => (int)($e["domophoneId"] ?? 0),
-                                "entranceTitle" => (string)($e["entranceTitle"] ?? ""),
-                                "entranceType" => (string)($e["entranceType"] ?? ""),
-                                "domophoneName" => (string)($e["domophoneName"] ?? ""),
-                                "apartmentLevels" => (string)($e["apartmentLevels"] ?? ""),
-                            ];
+                    if ($flat) {
+                        $manualBlock = (int)($flat["manualBlock"] ?? 0);
+                        $adminBlock = (int)($flat["adminBlock"] ?? 0);
+                        $autoBlock = (int)($flat["autoBlock"] ?? 0);
+                        if (!empty($flat["entrances"])) {
+                            foreach ($flat["entrances"] as $e) {
+                                $entrances[] = [
+                                    "entranceId" => (int)($e["entranceId"] ?? 0),
+                                    "apartment" => (string)($e["apartment"] ?? ""),
+                                    "domophoneId" => (int)($e["domophoneId"] ?? 0),
+                                    "entranceTitle" => (string)($e["entranceTitle"] ?? ""),
+                                    "entranceType" => (string)($e["entranceType"] ?? ""),
+                                    "domophoneName" => (string)($e["domophoneName"] ?? ""),
+                                    "apartmentLevels" => (string)($e["apartmentLevels"] ?? ""),
+                                ];
+                            }
                         }
                     }
                 }
+                $blocked = ($manualBlock > 0 || $adminBlock > 0 || $autoBlock > 0);
                 $out[] = [
                     "flatId" => $fid,
                     "flat" => (string)($r["flat"] ?? ""),
                     "floor" => (string)($r["floor"] ?? ""),
                     "cars" => isset($r["cars"]) && $r["cars"] !== null && $r["cars"] !== "" ? (string)$r["cars"] : null,
                     "entrances" => $entrances,
+                    "manualBlock" => $manualBlock,
+                    "adminBlock" => $adminBlock,
+                    "autoBlock" => $autoBlock,
+                    "blocked" => $blocked,
                 ];
             }
 
