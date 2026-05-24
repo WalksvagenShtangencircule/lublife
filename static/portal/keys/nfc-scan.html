@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сканирование NFC</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 16px; background: #f4f6f8; color: #1a1a1a; }
+        .card { max-width: 480px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+        h1 { font-size: 1.1rem; margin: 0 0 12px; }
+        .muted { color: #666; font-size: 0.88rem; line-height: 1.45; }
+        .status { margin-top: 16px; padding: 12px; border-radius: 8px; background: #e3f2fd; font-size: 0.9rem; }
+        .status.err { background: #ffebee; color: #b71c1c; }
+        .status.ok { background: #e8f5e9; color: #1b5e20; }
+        .rfid { font-family: monospace; font-weight: 600; word-break: break-all; margin-top: 8px; }
+        button { margin-top: 10px; padding: 12px 16px; border: none; border-radius: 8px; background: #1565c0; color: #fff; font-size: 0.95rem; width: 100%; cursor: pointer; }
+        .copy-link { background: #546e7a; }
+        .manual-open { display: none; margin-top: 10px; font-size: 0.83rem; color: #555; line-height: 1.4; background: #f2f5f7; border-radius: 8px; padding: 10px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Сканирование ключа NFC</h1>
+        <p class="muted">Поднесите метку к задней крышке телефона.</p>
+        <div id="status" class="status">Ожидание метки...</div>
+        <button type="button" id="copyLinkBtn" class="copy-link" style="display:none;">Скопировать ссылку</button>
+        <div id="manualOpen" class="manual-open">Если открыто не в Chrome: скопируйте ссылку и откройте ее вручную в Google Chrome.</div>
+        <button type="button" id="retryBtn" style="display:none;">Сканировать снова</button>
+    </div>
+
+    <script src="keys-common.js"></script>
+    <script>
+        (function () {
+            var params;
+            try { params = new URL(document.location.href).searchParams; }
+            catch (e) { params = new URLSearchParams(); }
+
+            var flatId = parseInt(params.get("flatId") || "0", 10);
+            var comment = (params.get("comment") || "").trim();
+            var token = params.get("token") || "";
+            if (typeof bearerToken === "function" && bearerToken()) { token = bearerToken(); }
+
+            var statusEl = document.getElementById("status");
+            var retryBtn = document.getElementById("retryBtn");
+            var copyLinkBtn = document.getElementById("copyLinkBtn");
+            var manualOpen = document.getElementById("manualOpen");
+
+            function isLikelyChromeBrowser() {
+                var ua = (navigator.userAgent || "").toLowerCase();
+                if (ua.indexOf("yabrowser") >= 0 || ua.indexOf("yandex") >= 0) return false;
+                return ua.indexOf("chrome") >= 0;
+            }
+
+            function showManualOpen() {
+                copyLinkBtn.style.display = "block";
+                manualOpen.style.display = "block";
+            }
+
+            function setStatus(text, kind) {
+                statusEl.textContent = text;
+                statusEl.className = "status" + (kind ? " " + kind : "");
+            }
+
+            function copyCurrentLink() {
+                var link = window.location.href.split("#")[0];
+                function copied() { setStatus("Ссылка скопирована. Откройте Chrome и вставьте ее в адресную строку.", ""); }
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(link).then(copied).catch(function () {
+                        setStatus("Не удалось скопировать автоматически. Скопируйте ссылку вручную из адресной строки.", "err");
+                    });
+                    return;
+                }
+                setStatus("Автокопирование недоступно. Скопируйте ссылку вручную из адресной строки.", "err");
+            }
+
+            function errLabel(code) {
+                var m = { not_in_catalog: "нет в каталоге", duplicate: "уже привязан", invalid_rfid: "неверный RFID", add_failed: "ошибка записи", comments_too_long: "комментарий слишком длинный" };
+                return m[code] || code;
+            }
+
+            function keysFetch(path, body) {
+                if (!token) return Promise.reject(new Error("Нет токена. Откройте страницу из приложения."));
+                return fetch(path, {
+                    method: "POST",
+                    headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json", "Accept": "application/json" },
+                    body: JSON.stringify(body || {})
+                }).then(function (res) { return res.json().then(function (j) { return { httpStatus: res.status, json: j }; }); });
+            }
+
+            function addKey(rfId) {
+                setStatus("Добавление ключа...");
+                return keysFetch("/mobile/keys/batchAdd", { flatId: flatId, keys: [{ rfId: rfId, comments: comment }] }).then(function (r) {
+                    var j = r.json;
+                    if (j.code !== 200 || !j.data || !j.data.results || !j.data.results[0]) throw new Error(j.message || "Ошибка сервера");
+                    var row = j.data.results[0];
+                    if (!row.ok) throw new Error(errLabel(row.error || "ошибка"));
+                    statusEl.className = "status ok";
+                    statusEl.innerHTML = "Готово. Ключ <span class=\"rfid\">" + rfId + "</span> добавлен. Вернитесь в приложение и нажмите «Обновить».";
+                    retryBtn.style.display = "none";
+                });
+            }
+
+            function runScan() {
+                if (!flatId) { setStatus("Не указана квартира (flatId).", "err"); return; }
+                if (!isWebNfcAvailable()) { setStatus("Web NFC недоступен. Откройте эту страницу в Chrome на Android.", "err"); showManualOpen(); return; }
+
+                setStatus("Приложите метку к телефону...");
+                retryBtn.style.display = "none";
+
+                var reader = new NDEFReader();
+                var finished = false;
+                var timer = setTimeout(function () {
+                    if (!finished) {
+                        finished = true;
+                        setStatus("Метка не обнаружена за 15 секунд. Попробуйте снова.", "err");
+                        retryBtn.style.display = "block";
+                    }
+                }, 15000);
+
+                reader.onreading = function (event) {
+                    if (finished) return;
+                    finished = true;
+                    clearTimeout(timer);
+                    var rf = normalizeRfidFromNfcSerial(event.serialNumber);
+                    if (!rf) { setStatus("Неверный формат метки.", "err"); retryBtn.style.display = "block"; return; }
+                    addKey(rf).catch(function (e) { setStatus(e.message || "Ошибка", "err"); retryBtn.style.display = "block"; });
+                };
+
+                reader.onerror = function () {
+                    if (finished) return;
+                    finished = true;
+                    clearTimeout(timer);
+                    setStatus("Не удалось прочитать метку.", "err");
+                    retryBtn.style.display = "block";
+                };
+
+                reader.scan().catch(function (e) {
+                    if (finished) return;
+                    finished = true;
+                    clearTimeout(timer);
+                    var msg = (e && e.message) ? e.message : String(e);
+                    if (msg.indexOf("denied") >= 0 || msg.indexOf("permission") >= 0) msg = "Разрешите NFC для Chrome в настройках телефона.";
+                    setStatus(msg, "err");
+                    retryBtn.style.display = "block";
+                });
+            }
+
+            retryBtn.addEventListener("click", runScan);
+            copyLinkBtn.addEventListener("click", copyCurrentLink);
+
+            if (!token) setStatus("Нет токена. Запустите сканирование из приложения.", "err");
+            else if (!flatId) setStatus("Не указана квартира.", "err");
+            else if (!isLikelyChromeBrowser()) { setStatus("Открыто не в Google Chrome. Для NFC нужен Chrome.", "err"); showManualOpen(); }
+            else runScan();
+        })();
+    </script>
+</body>
+</html>

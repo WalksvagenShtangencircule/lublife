@@ -34,6 +34,13 @@
         .code-watch { margin-top: 10px; padding: 10px; border: 1px solid #e6ebef; border-radius: 10px; background: #fafbfd; }
         .code-watch-title { margin: 0; font-size: 0.9rem; font-weight: 600; }
         .code-watch-value { margin-top: 4px; font-size: 0.82rem; color: #666; word-break: break-all; }
+        .btn-row { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        .btn-link {
+            display: inline-block;
+            text-decoration: none;
+            text-align: center;
+        }
+        .hint-nfc { margin-top: 8px; font-size: 0.8rem; color: #666; line-height: 1.4; }
     </style>
 </head>
 <body>
@@ -70,9 +77,11 @@
                     <input type="text" id="commentIn" maxlength="128" autocomplete="off">
                 </div>
             </div>
-            <div style="margin-top:10px;">
+            <div class="btn-row">
                 <button type="button" id="addBtn">Добавить</button>
+                <a id="nfcScanBtn" class="secondary btn-link" href="#" target="_blank" rel="noopener noreferrer" style="display:none;">Сканировать NFC</a>
             </div>
+            <p id="nfcHint" class="hint-nfc" style="display:none;">После сканирования вернитесь сюда и нажмите «Обновить».</p>
             <p id="addErr" class="err"></p>
         </div>
     </div>
@@ -122,6 +131,7 @@
                         sel.appendChild(opt);
                     });
                     document.getElementById("addCard").style.display = "block";
+                    refreshNfcOpenLinks();
                     return loadKeys(true);
                 }).finally(function () {
                     postLoadingFinished();
@@ -386,6 +396,48 @@
             document.getElementById("reload").addEventListener("click", function () { loadKeys(false); });
             document.getElementById("flatSel").addEventListener("change", function () { loadKeys(false); });
 
+            function refreshNfcOpenLinks() {
+                var flatId = currentFlatId();
+                var nfcLink = document.getElementById("nfcScanBtn");
+                if (!Number.isFinite(flatId) || flatId <= 0) {
+                    if (nfcLink) {
+                        nfcLink.href = "#";
+                    }
+                    return false;
+                }
+                var com = (document.getElementById("commentIn").value || "").trim();
+                return applyNfcScanLinks(
+                    flatId,
+                    com,
+                    nfcLink,
+                    null,
+                    null
+                );
+            }
+
+            function initNfcScanUi() {
+                var nfcBtn = document.getElementById("nfcScanBtn");
+                var nfcHint = document.getElementById("nfcHint");
+                if (!_keysIsAndroid) {
+                    return;
+                }
+                nfcBtn.style.display = "inline-block";
+                nfcHint.style.display = "block";
+
+                nfcBtn.addEventListener("click", function (e) {
+                    var errEl = document.getElementById("addErr");
+                    errEl.textContent = "";
+                    if (!refreshNfcOpenLinks()) {
+                        e.preventDefault();
+                        errEl.textContent = "Сначала выберите квартиру";
+                    }
+                });
+                document.getElementById("flatSel").addEventListener("change", function () {
+                    refreshNfcOpenLinks();
+                });
+                refreshNfcOpenLinks();
+            }
+
             document.getElementById("addBtn").addEventListener("click", function () {
                 var errEl = document.getElementById("addErr");
                 errEl.textContent = "";
@@ -422,6 +474,7 @@
             });
 
             document.addEventListener("DOMContentLoaded", function () {
+                initNfcScanUi();
                 postLoadingStarted();
                 loadFlats().catch(function (e) {
                     document.getElementById("gate").style.display = "block";
