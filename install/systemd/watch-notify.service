@@ -6,7 +6,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=/opt/rbt/server
-ExecStart=/usr/bin/php /opt/rbt/server/cli.php households --watch-notify-worker --poll=2 --batch=50
+ExecStart=/usr/bin/php /opt/rbt/server/cli.php households --watch-notify-worker --poll=0.5 --batch=50
 RestartSec=5
 Restart=always
 User=rbt

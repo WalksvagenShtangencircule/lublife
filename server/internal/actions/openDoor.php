@@ -74,11 +74,16 @@
             // Add door open data
             $plogDoorOpen = $plog->addDoorOpenData($date, $ip, $subId, $event, $door, $detail);
 
+            // Мгновенный push (как на cityhome); очередь — для inbox и повторов
+            $households->paranoidEvent($ip, $subId, $door, "rfId", $detail, $plogDoorOpen);
+
             response(201, ["id" => $plogDoorOpen]);
 
         case $events['OPEN_BY_CODE']:
             // Add door open data
             $plogDoorOpen = $plog->addDoorOpenData($date, $ip, $subId, $event, $door, $detail);
+
+            $households->paranoidEvent($ip, $subId, $door, "code", $detail, $plogDoorOpen);
 
             response(201, ["id" => $plogDoorOpen]);
 

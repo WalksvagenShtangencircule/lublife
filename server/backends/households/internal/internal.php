@@ -3043,87 +3043,92 @@
                         continue;
                     }
 
-                    $entrances = $this->getEntrances("domophone", [
-                        "ip" => $row["ip"],
-                        "subId" => $row["subId"],
-                        "output" => (int)$row["door"],
-                    ]);
+                    $entrances = [];
+                    if (trim((string)($row["ip"] ?? "")) !== "") {
+                        $domophones = $this->getDomophones("ip", $row["ip"]) ?: [];
+                        foreach ($domophones as $domophone) {
+                            $found = $this->getEntrances("domophoneId", [
+                                "domophoneId" => (int)$domophone["domophoneId"],
+                                "output" => (int)$row["door"],
+                            ]);
+                            if ($found) {
+                                $entrances = array_merge($entrances, $found);
+                            }
+                        }
+                    } elseif (trim((string)($row["subId"] ?? "")) !== "") {
+                        $entrances = $this->getEntrances("domophone", [
+                            "ip" => $row["ip"],
+                            "subId" => $row["subId"],
+                            "output" => (int)$row["door"],
+                        ]) ?: [];
+                    }
                     if (!$entrances) {
                         $this->scheduleWatchNotificationRetry($watchNotificationId, $attemptCount, "entrance not found");
                         $metrics["retried"]++;
                         continue;
                     }
 
-                    $entrance = $entrances[0];
-                    $watchers = $this->db->get(
-                        "select
-                            w.house_watcher_id,
-                            w.subscriber_device_id,
-                            w.house_flat_id,
-                            w.comments,
-                            f.address_house_id,
-                            d.house_subscriber_id,
-                            d.platform,
-                            d.push_token,
-                            d.push_token_type,
-                            d.ua
-                         from houses_watchers w
-                         left join houses_flats f on f.house_flat_id = w.house_flat_id
-                         left join houses_subscribers_devices d on d.subscriber_device_id = w.subscriber_device_id
-                         where
-                            w.event_type = :event_type and
-                            w.event_detail = :event_detail and
-                            w.house_flat_id in (
-                                select house_flat_id from houses_entrances_flats where house_entrance_id = :house_entrance_id
-                            ) and
-                            coalesce(d.push_disable, 0) = 0 and
-                            coalesce(d.push_token, '') <> ''",
-                        [
-                            "event_type" => (string)$eventType,
-                            "event_detail" => $eventDetail,
-                            "house_entrance_id" => (int)$entrance["entranceId"],
-                        ],
-                        [
-                            "house_watcher_id" => "watcherId",
-                            "subscriber_device_id" => "deviceId",
-                            "house_flat_id" => "flatId",
-                            "comments" => "comments",
-                            "address_house_id" => "houseId",
-                            "house_subscriber_id" => "subscriberId",
-                            "platform" => "platform",
-                            "push_token" => "pushToken",
-                            "push_token_type" => "tokenType",
-                            "ua" => "ua",
-                        ]
-                    ) ?: [];
+                    $uniqueByDevice = [];
+                    foreach ($entrances as $entrance) {
+                        $watchers = $this->db->get(
+                            "select
+                                w.house_watcher_id,
+                                w.subscriber_device_id,
+                                w.house_flat_id,
+                                w.comments,
+                                f.address_house_id,
+                                d.house_subscriber_id,
+                                d.platform,
+                                d.push_token,
+                                d.push_token_type,
+                                d.ua
+                             from houses_watchers w
+                             left join houses_flats f on f.house_flat_id = w.house_flat_id
+                             left join houses_subscribers_devices d on d.subscriber_device_id = w.subscriber_device_id
+                             where
+                                w.event_type = :event_type and
+                                w.event_detail = :event_detail and
+                                w.house_flat_id in (
+                                    select house_flat_id from houses_entrances_flats where house_entrance_id = :house_entrance_id
+                                ) and
+                                coalesce(d.push_disable, 0) = 0 and
+                                coalesce(d.push_token, '') <> ''",
+                            [
+                                "event_type" => (string)$eventType,
+                                "event_detail" => $eventDetail,
+                                "house_entrance_id" => (int)$entrance["entranceId"],
+                            ],
+                            [
+                                "house_watcher_id" => "watcherId",
+                                "subscriber_device_id" => "deviceId",
+                                "house_flat_id" => "flatId",
+                                "comments" => "comments",
+                                "address_house_id" => "houseId",
+                                "house_subscriber_id" => "subscriberId",
+                                "platform" => "platform",
+                                "push_token" => "pushToken",
+                                "push_token_type" => "tokenType",
+                                "ua" => "ua",
+                            ]
+                        ) ?: [];
 
-                    if (!count($watchers)) {
+                        foreach ($watchers as $watcher) {
+                            $deviceId = (int)$watcher["deviceId"];
+                            if (!$deviceId || isset($uniqueByDevice[$deviceId])) {
+                                continue;
+                            }
+                            $watcher["_entrance"] = $entrance;
+                            $uniqueByDevice[$deviceId] = $watcher;
+                        }
+                    }
+
+                    if (!count($uniqueByDevice)) {
                         $this->markWatchNotificationDone($watchNotificationId);
                         continue;
                     }
 
-                    $uniqueByDevice = [];
-                    foreach ($watchers as $watcher) {
-                        $deviceId = (int)$watcher["deviceId"];
-                        if (!$deviceId || isset($uniqueByDevice[$deviceId])) {
-                            continue;
-                        }
-                        $uniqueByDevice[$deviceId] = $watcher;
-                    }
-
                     foreach ($uniqueByDevice as $deviceId => $watcher) {
-                        $alreadySent = (int)$this->db->get(
-                            "select count(*) from houses_watch_notifications_deliveries where watch_notification_id = :watch_notification_id and subscriber_device_id = :subscriber_device_id",
-                            [
-                                "watch_notification_id" => $watchNotificationId,
-                                "subscriber_device_id" => $deviceId,
-                            ],
-                            [],
-                            [ "fieldlify", "silent" ]
-                        );
-                        if ($alreadySent) {
-                            continue;
-                        }
+                        $entrance = $watcher["_entrance"];
 
                         $house = $addresses->getHouse($watcher["houseId"]);
                         $ua = (string)($watcher["ua"] ?? "");
@@ -3190,6 +3195,19 @@
                                     [ "silent" ]
                                 );
                             }
+                        }
+
+                        $alreadySent = (int)$this->db->get(
+                            "select count(*) from houses_watch_notifications_deliveries where watch_notification_id = :watch_notification_id and subscriber_device_id = :subscriber_device_id",
+                            [
+                                "watch_notification_id" => $watchNotificationId,
+                                "subscriber_device_id" => $deviceId,
+                            ],
+                            [],
+                            [ "fieldlify", "silent" ]
+                        );
+                        if ($alreadySent) {
+                            continue;
                         }
 
                         $sent = $isdn->push([
@@ -4160,138 +4178,199 @@
              */
 
             function paranoidEvent() {
-                // TODO: paranoidEvent (pushes)
-
-                // [minimal (?) delay]
-                // rfId (rfId) from event (internal/actions/openDoor)
-                // app (mobile) from mobile (mobile/addresses/openDoor)
-                // face (flatId) from frs (internal/frs/callback)
-                // code (code) from event (internal/actions/openDoor)
-
-                // or (better?) [2-3 min delay]
-                // all from backends/plog/processEvents
+                $plogDoorOpenId = null;
+                $by = null;
+                $detail = null;
+                $entrances = [];
 
                 if (func_num_args() == 3) {
-                    $entranceId = func_get_arg(0);
+                    $entrance = $this->getEntrance(func_get_arg(0));
                     $by = func_get_arg(1);
                     $detail = func_get_arg(2);
-                    $entrance = $this->getEntrance($entranceId);
-                } else
-                if (func_num_args() == 5) {
-                    $entrances = $this->getEntrances("domophone", [
-                        "ip" => func_get_arg(0),
-                        "subId" => func_get_arg(1),
-                        "output" => func_get_arg(2),
-                    ]);
-
-                    if ($entrances) {
-                        $entrance = $entrances[0];
-                    } else {
-                        return false;
+                    if ($entrance) {
+                        $entrances = [ $entrance ];
                     }
+                } elseif (func_num_args() >= 5) {
+                    $ip = func_get_arg(0);
+                    $subId = func_get_arg(1);
+                    $door = (int)func_get_arg(2);
                     $by = func_get_arg(3);
                     $detail = func_get_arg(4);
+                    if (func_num_args() >= 6) {
+                        $plogDoorOpenId = (int)func_get_arg(5);
+                    }
+
+                    if (trim((string)$ip) !== "") {
+                        foreach ($this->getDomophones("ip", $ip) ?: [] as $domophone) {
+                            $found = $this->getEntrances("domophoneId", [
+                                "domophoneId" => (int)$domophone["domophoneId"],
+                                "output" => $door,
+                            ]);
+                            if ($found) {
+                                $entrances = array_merge($entrances, $found);
+                            }
+                        }
+                    } elseif (trim((string)$subId) !== "") {
+                        $entrances = $this->getEntrances("domophone", [
+                            "ip" => $ip,
+                            "subId" => $subId,
+                            "output" => $door,
+                        ]) ?: [];
+                    }
+                } else {
+                    return false;
                 }
 
                 $addresses = loadBackend("addresses");
                 $isdn = loadBackend("isdn");
 
-                if (!$entrance || !$addresses || !$isdn) {
+                if (!$entrances || !$addresses || !$isdn) {
                     return false;
                 }
 
-                $paranoids = false;
+                $eventType = ($by === "code") ? "6" : "3";
+                $uniqueParanoids = [];
 
-                switch ($by) {
-                    case "rfId":
-                        $paranoids = $this->db->get("
-                            select * from (
-                                select
-                                    houses_flats.address_house_id,
-                                    houses_subscribers_devices.platform,
-                                    houses_subscribers_devices.push_token,
-                                    houses_subscribers_devices.push_token_type,
-                                    houses_subscribers_devices.ua,
-                                    houses_watchers.comments
-                                from
-                                    houses_watchers
-                                left join
-                                    houses_flats on houses_flats.house_flat_id = houses_watchers.house_flat_id
-                                left join
-                                    houses_subscribers_devices on houses_subscribers_devices.subscriber_device_id = houses_watchers.subscriber_device_id
-                                where
-                                    event_type = '3' and
-                                    event_detail = :rfid and
-                                    houses_watchers.house_flat_id in (
-                                        select house_flat_id from houses_entrances_flats where house_entrance_id = :house_entrance_id
-                                    )
-                            ) as t
-                            group by
-                                address_house_id, platform, push_token, push_token_type, ua, comments
-                        ", [
-                            "rfid" => $detail,
-                            "house_entrance_id" => $entrance["entranceId"]
-                        ], [
+                foreach ($entrances as $entrance) {
+                    $paranoids = $this->db->get(
+                        "select * from (
+                            select
+                                houses_watchers.subscriber_device_id,
+                                houses_flats.address_house_id,
+                                houses_subscribers_devices.platform,
+                                houses_subscribers_devices.push_token,
+                                houses_subscribers_devices.push_token_type,
+                                houses_subscribers_devices.ua,
+                                houses_watchers.comments
+                            from
+                                houses_watchers
+                            left join
+                                houses_flats on houses_flats.house_flat_id = houses_watchers.house_flat_id
+                            left join
+                                houses_subscribers_devices on houses_subscribers_devices.subscriber_device_id = houses_watchers.subscriber_device_id
+                            where
+                                event_type = :event_type and
+                                event_detail = :event_detail and
+                                coalesce(houses_subscribers_devices.push_disable, 0) = 0 and
+                                coalesce(houses_subscribers_devices.push_token, '') <> '' and
+                                houses_watchers.house_flat_id in (
+                                    select house_flat_id from houses_entrances_flats where house_entrance_id = :house_entrance_id
+                                )
+                        ) as t
+                        group by
+                            subscriber_device_id, address_house_id, platform, push_token, push_token_type, ua, comments",
+                        [
+                            "event_type" => $eventType,
+                            "event_detail" => $detail,
+                            "house_entrance_id" => (int)$entrance["entranceId"],
+                        ],
+                        [
+                            "subscriber_device_id" => "deviceId",
                             "address_house_id" => "houseId",
                             "platform" => "platform",
                             "push_token" => "pushToken",
                             "push_token_type" => "tokenType",
                             "ua" => "ua",
                             "comments" => "comments",
-                        ]);
+                        ]
+                    ) ?: [];
 
-                        break;
-                }
-
-                if ($paranoids) {
                     foreach ($paranoids as $paranoid) {
-                        $house = $addresses->getHouse($paranoid["houseId"]);
-
-                        $ua = $paranoid["ua"];
-                        $l = explode(",", $ua);
-                        if ($l && count($l) > 1) {
-                            $l = $l[0];
-                        } else {
-                            $l = false;
+                        $deviceId = (int)($paranoid["deviceId"] ?? 0);
+                        if (!$deviceId || isset($uniqueParanoids[$deviceId])) {
+                            continue;
                         }
-
-                        $cameras = $this->getCameras("id", $entrance["cameraId"]);
-
-                        $hash = md5(GUIDv4());
-
-                        if ($cameras && $cameras[0]) {
-                            $camerasBackend = loadBackend('cameras');
-                            $cameraId = $cameras[0]['cameraId'];
-
-                            $memfs = loadBackend("memfs");
-
-                            if ($memfs) {
-                                $memfs->putFile("shot_" . $hash, $camerasBackend->getSnapshot($cameraId));
-                            } else {
-                                $this->redis->setex("shot_" . $hash, 15 * 60, $camerasBackend->getSnapshot($cameraId));
-                            }
-
-                            $this->redis->setex("live_" . $hash, 3 * 60, $cameraId);
-                        }
-
-                        if (!$isdn->push([
-                            "token" => $paranoid["pushToken"],
-                            "type" => ((int)$paranoid["platform"] === 1) ? 0 : $paranoid["tokenType"], // force FCM for Apple for text messages
-                            "timestamp" => time(),
-                            "ttl" => 90,
-                            "platform" => [ "android", "ios", "web" ][(int)$paranoid["platform"]],
-                            "title" => i18nL($l, "mobile.paranoidTitleRf"),
-                            "msg" => i18nL($l, "mobile.paranoidMsgRf", $house["houseFull"], $entrance["callerId"], $paranoid["comments"] ?: $detail),
-                            "houseId" => $paranoid["houseId"],
-                            "hash" => $hash,
-                            "sound" => "default",
-                            "pushAction" => @$this->config["backends"]["households"]["event_push_action"] ?: "paranoid",
-                        ])) {
-                            setLastError("pushCantBeSent");
-                            return false;
-                        }
+                        $paranoid["_entrance"] = $entrance;
+                        $uniqueParanoids[$deviceId] = $paranoid;
                     }
                 }
+
+                if (!count($uniqueParanoids)) {
+                    return false;
+                }
+
+                foreach ($uniqueParanoids as $deviceId => $paranoid) {
+                    $entrance = $paranoid["_entrance"];
+                    $house = $addresses->getHouse($paranoid["houseId"]);
+
+                    $ua = $paranoid["ua"];
+                    $l = explode(",", $ua);
+                    if ($l && count($l) > 1) {
+                        $l = $l[0];
+                    } else {
+                        $l = false;
+                    }
+
+                    $cameras = $this->getCameras("id", $entrance["cameraId"]);
+                    $hash = md5(GUIDv4());
+
+                    if ($cameras && $cameras[0]) {
+                        $camerasBackend = loadBackend('cameras');
+                        $cameraId = $cameras[0]['cameraId'];
+                        $memfs = loadBackend("memfs");
+
+                        if ($memfs) {
+                            $memfs->putFile("shot_" . $hash, $camerasBackend->getSnapshot($cameraId));
+                        } else {
+                            $this->redis->setex("shot_" . $hash, 15 * 60, $camerasBackend->getSnapshot($cameraId));
+                        }
+
+                        $this->redis->setex("live_" . $hash, 3 * 60, $cameraId);
+                    }
+
+                    $isCode = ($by === "code");
+                    $pushResult = $isdn->push([
+                        "token" => $paranoid["pushToken"],
+                        "type" => ((int)$paranoid["platform"] === 1) ? 0 : $paranoid["tokenType"],
+                        "timestamp" => time(),
+                        "ttl" => 90,
+                        "platform" => [ "android", "ios", "web" ][(int)$paranoid["platform"]],
+                        "title" => i18nL($l, $isCode ? "mobile.paranoidTitleCode" : "mobile.paranoidTitleRf"),
+                        "msg" => i18nL($l, $isCode ? "mobile.paranoidMsgCode" : "mobile.paranoidMsgRf", $house["houseFull"], $entrance["callerId"], $paranoid["comments"] ?: $detail),
+                        "houseId" => $paranoid["houseId"],
+                        "hash" => $hash,
+                        "sound" => "default",
+                        "pushAction" => @$this->config["backends"]["households"]["event_push_action"] ?: "paranoid",
+                    ]);
+
+                    if (!$pushResult) {
+                        setLastError("pushCantBeSent");
+                        return false;
+                    }
+
+                    if ($plogDoorOpenId > 0) {
+                        $this->recordWatchParanoidDelivery($plogDoorOpenId, $deviceId);
+                    }
+                }
+
+                return true;
+            }
+
+            private function recordWatchParanoidDelivery($plogDoorOpenId, $subscriberDeviceId) {
+                $watchNotificationId = (int)$this->db->get(
+                    "select watch_notification_id from houses_watch_notifications where plog_door_open_id = :plog_door_open_id limit 1",
+                    [
+                        "plog_door_open_id" => (int)$plogDoorOpenId,
+                    ],
+                    [],
+                    [ "fieldlify", "silent" ]
+                );
+
+                if (!$watchNotificationId) {
+                    return false;
+                }
+
+                return $this->db->insert(
+                    "insert into houses_watch_notifications_deliveries (watch_notification_id, subscriber_device_id, sent_at)
+                     values (:watch_notification_id, :subscriber_device_id, :sent_at)
+                     on conflict do nothing",
+                    [
+                        "watch_notification_id" => $watchNotificationId,
+                        "subscriber_device_id" => (int)$subscriberDeviceId,
+                        "sent_at" => time(),
+                    ],
+                    [ "silent" ]
+                );
             }
 
             /**
