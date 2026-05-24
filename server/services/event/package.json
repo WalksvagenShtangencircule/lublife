@@ -40,7 +40,10 @@
         "debug:ufanet": "NODE_ENV=debug nodemon index.js ufanet",
         "debug:brovotech": "NODE_ENV=debug nodemon index.js brovotech",
         "debug:iflow": "NODE_ENV=debug nodemon index.js iflow",
-        "debug:basip": "NODE_ENV=debug nodemon index.js basip"
+        "debug:basip": "NODE_ENV=debug nodemon index.js basip",
+        "start:soyuz": "node index.js soyuz",
+        "dev:soyuz": "nodemon index.js soyuz",
+        "debug:soyuz": "NODE_ENV=debug nodemon index.js soyuz"
     },
     "keywords": [],
     "author": "",

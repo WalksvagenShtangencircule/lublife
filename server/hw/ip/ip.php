@@ -42,6 +42,11 @@ abstract class ip extends hw
     protected ?string $softwareVersion = null;
 
     /**
+     * Target API password to apply after autoconfiguration (first-time setup).
+     */
+    protected ?string $pendingTargetPassword = null;
+
+    /**
      * Construct a new instance of the IP device.
      *
      * @param string $url IP device URL.
@@ -58,16 +63,27 @@ abstract class ip extends hw
         parent::__construct($url);
         $this->initializeProperties();
 
-        $this->password = $firstTime ? ($this->defaultPassword ?? $password) : $password;
-
-        if (!$this->ping()) {
-            throw new Exception("Device at $this->url is unavailable");
-        }
-
         if ($firstTime) {
-            $this->prepare();
-            $this->setAdminPassword($password);
+            $targetPassword = $password;
+            $this->password = $this->defaultPassword ?? $targetPassword;
+
+            if (!$this->ping()) {
+                $this->password = $targetPassword;
+                if (!$this->ping()) {
+                    throw new Exception("Device at $this->url is unavailable (проверьте VPN, порт API :8081, режим OpenAPI и пароль: при первичной настройке — заводской из модели, затем credentials из RBT)");
+                }
+            } else {
+                $this->prepare();
+                if ($targetPassword !== $this->password) {
+                    $this->pendingTargetPassword = $targetPassword;
+                }
+            }
+        } else {
             $this->password = $password;
+
+            if (!$this->ping()) {
+                throw new Exception("Device at $this->url is unavailable (проверьте VPN, порт API :8081, режим OpenAPI и пароль: при первичной настройке — заводской из модели, затем credentials из RBT)");
+            }
         }
     }
 
@@ -191,4 +207,38 @@ abstract class ip extends hw
      * @return void
      */
     abstract public function setAdminPassword(string $password): void;
+
+    /**
+     * Apply deferred API password change and reboot if required (end of first-time autoconfig).
+     */
+    public function finalizeFirstTimeSetup(): void
+    {
+        if ($this->pendingTargetPassword === null) {
+            return;
+        }
+
+        $target = $this->pendingTargetPassword;
+        $this->pendingTargetPassword = null;
+
+        echo 'Setting API password... ';
+        $this->setAdminPassword($target);
+        $this->password = $target;
+        echo 'Done!' . PHP_EOL;
+
+        if ($this->requiresRebootAfterPasswordChange()) {
+            echo 'Rebooting device after password change... ';
+            $this->reboot();
+            echo 'Done! Waiting for device...' . PHP_EOL;
+            $this->wait();
+            echo 'Device is back online.' . PHP_EOL;
+        }
+    }
+
+    /**
+     * Some vendors (e.g. LCcam/Soyuz) require reboot after API password change.
+     */
+    protected function requiresRebootAfterPasswordChange(): bool
+    {
+        return false;
+    }
 }

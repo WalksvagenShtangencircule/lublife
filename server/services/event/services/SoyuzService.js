@@ -34,8 +34,8 @@ class SoyuzService extends SyslogService {
         if (msg.includes("EVENT: Calling to ")) {
             const match = msg.match(/^EVENT: Calling to (\d+)(?: house (\d+))? flat/);
             if (match) {
-                const house = match[2] === undefined ? 0 : match[1]; // house prefix or 0
-                const flat = house > 0 ? match[2] : match[1]; // flat number from first or second position
+                const house = match[2] === undefined ? 0 : match[1];
+                const flat = house > 0 ? match[2] : match[1];
 
                 (this.gateRabbits)[host] = {
                     ip: host,
@@ -53,25 +53,57 @@ class SoyuzService extends SyslogService {
             }
         }
 
-        // Opening a door by RFID key
+        // LCcam / OpenAPI: "EVENT: The door 0 was opened using a key ..."
+        // LCcam: "The door 0 was opened using a key 00000075596D74 (1968794996)" — без префикса EVENT:
+        const openedByKey = msg.match(
+            /(?:EVENT: )?The door (\d+) was opened using a key ([A-Fa-f0-9]+)(?:\s+\(\d+\))?/,
+        );
+        if (openedByKey) {
+            await API.openDoor({
+                date: date,
+                ip: host,
+                door: parseInt(openedByKey[1], 10),
+                detail: openedByKey[2],
+                by: "rfid",
+            });
+        }
+
+        // LCcam / OpenAPI: "EVENT: The door 0 was opened using a code ..."
+        const openedByCode = msg.match(
+            /(?:EVENT: )?The door (\d+) was opened using a code (\d+)(?:\s+\(\d+\))?/,
+        );
+        if (openedByCode) {
+            await API.openDoor({
+                date: date,
+                ip: host,
+                door: parseInt(openedByCode[1], 10),
+                detail: openedByCode[2],
+                by: "code",
+            });
+        }
+
+        // Legacy / alternate firmware strings
         if (msg.includes("EVENT: Opening door by RFID")) {
             const match = msg.match(/^EVENT: Opening door by RFID ([A-Fa-f0-9]{14})/);
             if (match) {
-              await API.openDoor({ date: date, ip: host, door: 0, detail: match[1], by: "rfid" });
+                await API.openDoor({ date: date, ip: host, door: 0, detail: match[1], by: "rfid" });
             }
         }
 
-        // Opening a door by personal code
         if (msg.includes("EVENT: Opening door by CODE")) {
             const match = msg.match(/^EVENT: Opening door by CODE (\d+)/);
             if (match) {
-              await API.openDoor({ date: date, ip: host, door: 0, detail: match[1], by: "code" });
+                await API.openDoor({ date: date, ip: host, door: 0, detail: match[1], by: "code" });
             }
         }
 
-        // Opening a door by button pressed
         if (msg.includes("EVENT: Opening door by BUTTON")) {
             await API.openDoor({ date: date, ip: host, door: 0, detail: "main", by: "button" });
+        }
+
+        // Opened from mobile app / API (LCcam journal)
+        if (msg.includes("opened through Web") || msg.includes("opened via Web")) {
+            await API.openDoor({ date: date, ip: host, door: 0, detail: "app", by: "api" });
         }
 
         // All calls are done

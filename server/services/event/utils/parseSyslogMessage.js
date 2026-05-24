@@ -1,4 +1,4 @@
-import { SERVICE_BROVOTECH, SERVICE_UFANET } from '../constants.js';
+import { SERVICE_BROVOTECH, SERVICE_SOYUZ, SERVICE_UFANET } from '../constants.js';
 import { getTimestamp } from './index.js';
 
 const parseSyslogMessage = (str, unit) => {
@@ -41,8 +41,12 @@ const parseSyslogMessage = (str, unit) => {
     // Basip
     const regexBasip = /<(?<priority>\d{1,3})>\s*(?<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|\+\d{2}:\d{2}))\s+(?<hostname>\S+)\s+(?<app>\S+)\s+(?<message>.*)$/;
 
+    // LCcam (Soyuz): <pri>May 21 07:05:24 skdsingle[878]: Door has been OPEN
+    const regexSoyuzLccam = /<(?<priority>\d{1,3})>(?<timestamp>\w+\s+\d{1,2}\s\d{2}:\d{2}:\d{2})\s+(?:(?<hostname>\S+)\s+)?(?<app>[\w.-]+)\[(?<pid>\d+)\]:\s(?<message>.*)$/;
+
     const partsIETF = regexIETF.exec(str);
     const partsBSD = regexBSB.exec(str);
+    const partsSoyuzLccam = (unit === SERVICE_SOYUZ) ? regexSoyuzLccam.exec(str) : null;
     // const partsSokolPlus = regexSokolPlus.exec(str);
     const partsRubetek = regexRubetek.exec(str);
     const partsBasip = regexBasip.exec(str);
@@ -103,6 +107,17 @@ const parseSyslogMessage = (str, unit) => {
             timestamp: getTimestamp(new Date(timestamp)),
             hostname,
             app,
+            message,
+        };
+    } else if (partsSoyuzLccam) {
+        const [, priority, timestamp, hostname, app, pid, message] = partsSoyuzLccam;
+
+        return {
+            format: 'SoyuzLccam',
+            priority: Number(priority),
+            hostname: hostname ?? null,
+            app,
+            pid,
             message,
         };
     }

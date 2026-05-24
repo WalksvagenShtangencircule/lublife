@@ -111,5 +111,10 @@
     "ufanet": [
         "goke-i2c"
     ],
-    "brovotech": []
+    "brovotech": [],
+    "soyuz": [
+        "Timeout get any data from venc",
+        "NOTE: Current frame is NULL",
+        "majestic["
+    ]
 }

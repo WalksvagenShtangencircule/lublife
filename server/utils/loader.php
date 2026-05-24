@@ -92,6 +92,12 @@
             $className = "hw\\ip\\$type\\$vendor\\$class";
         }
 
+        $modelDefaultPassword = $data['defaultPassword'] ?? null;
+
+        if ($vendor === 'soyuz' && is_string($modelDefaultPassword) && $modelDefaultPassword !== '') {
+            return new $className($url, $password, $firstTime, $modelDefaultPassword);
+        }
+
         return new $className($url, $password, $firstTime);
     }
 

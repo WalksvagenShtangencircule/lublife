@@ -21,6 +21,7 @@ function autoconfigure_device(string $deviceType, int $deviceId, bool $firstTime
         case 'domophone':
             $householdsBackend = loadBackend('households');
             $deviceData = getDeviceData($householdsBackend, 'getDomophone', 'domophone', $deviceId);
+            $firstTime = $firstTime || !empty($deviceData['first_time']);
 
             $device = loadDevice(
                 'domophone',
@@ -33,6 +34,11 @@ function autoconfigure_device(string $deviceType, int $deviceId, bool $firstTime
             $dbConfigCollector = new DomophoneDbConfigCollector($config, $deviceData, $householdsBackend, $device);
             $configurator = new SmartConfigurator($device, $dbConfigCollector);
             $configurator->makeConfiguration();
+
+            if ($firstTime) {
+                $device->finalizeFirstTimeSetup();
+            }
+
             $householdsBackend->autoconfigDone($deviceId);
             break;
 

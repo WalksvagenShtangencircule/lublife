@@ -13,6 +13,15 @@ class soyuz extends camera
 
     use \hw\ip\common\soyuz\soyuz;
 
+    public function __construct(string $url, string $password, bool $firstTime = false, ?string $modelDefaultPassword = null)
+    {
+        if (is_string($modelDefaultPassword) && $modelDefaultPassword !== '') {
+            $this->defaultPassword = $modelDefaultPassword;
+        }
+
+        parent::__construct($url, $password, $firstTime);
+    }
+
     public function configureMotionDetection(array $detectionZones): void
     {
         $pixelZone = isset($detectionZones[0])

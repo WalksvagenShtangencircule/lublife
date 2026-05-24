@@ -12,6 +12,15 @@ abstract class soyuz extends domophone
 
     use \hw\ip\common\soyuz\soyuz;
 
+    public function __construct(string $url, string $password, bool $firstTime = false, ?string $modelDefaultPassword = null)
+    {
+        if (is_string($modelDefaultPassword) && $modelDefaultPassword !== '') {
+            $this->defaultPassword = $modelDefaultPassword;
+        }
+
+        parent::__construct($url, $password, $firstTime);
+    }
+
     protected const CMS_PARAMS = [
         'KM100-7.1' => ['ELTIS', 100, 10, 10],
         'FACTORIAL 8x8' => ['FACTORIAL', 64, 8, 8],
@@ -59,7 +68,7 @@ abstract class soyuz extends domophone
             ],
         ];
 
-        $this->apiCall('/v2/panelCode' . $endpoint, $method, $payload);
+        $this->apiCall('/v2/panelcode' . $endpoint, $method, $payload);
 
         $this->apartments[] = $apartment;
 
@@ -144,11 +153,11 @@ abstract class soyuz extends domophone
     public function deleteApartment(int $apartment = 0): void
     {
         if ($apartment === 0) {
-            $this->apiCall('/v2/panelCode', 'DELETE');
-            $this->apiCall('/v2/openCode', 'DELETE');
+            $this->apiCall('/v2/panelcode', 'DELETE');
+            $this->apiCall('/v2/opencode', 'DELETE');
             $this->apartments = [];
         } else {
-            $this->apiCall("/v2/panelCode/$apartment", 'DELETE');
+            $this->apiCall("/v2/panelcode/$apartment", 'DELETE');
             $this->deleteOpenCode($apartment);
             $this->apartments = array_diff($this->apartments, [$apartment]);
         }
@@ -171,7 +180,10 @@ abstract class soyuz extends domophone
 
     public function openLock(int $lockNumber = 0): void
     {
-        $this->apiCall('/v2/relay/open', 'GET', [], 3);
+        $resource = $lockNumber === 0
+            ? '/v2/relay/open'
+            : "/v2/relay/$lockNumber/open";
+        $this->apiCall($resource, 'GET', [], 3);
     }
 
     public function prepare(): void
@@ -272,6 +284,7 @@ abstract class soyuz extends domophone
             ];
         }
 
+
         return $dbConfig;
     }
 
@@ -285,7 +298,7 @@ abstract class soyuz extends domophone
      */
     protected function addOpenCode(int $code, int $apartment): void
     {
-        $this->apiCall('/v2/openCode', 'POST', [
+        $this->apiCall('/v2/opencode', 'POST', [
             'code' => (string)$code,
             'panelCode' => $apartment
         ]);
@@ -309,7 +322,7 @@ abstract class soyuz extends domophone
      */
     protected function deleteOpenCode(int $apartment): void
     {
-        $this->apiCall("/v2/openCode/$apartment", 'DELETE');
+        $this->apiCall("/v2/opencode/$apartment", 'DELETE');
     }
 
     /**
@@ -397,7 +410,7 @@ abstract class soyuz extends domophone
             return [];
         }
 
-        $openCodes = array_column($this->apiCall('/v2/openCode')['result'], 'code', 'panelCode');
+        $openCodes = array_column($this->apiCall('/v2/opencode')['result'], 'code', 'panelCode');
         $apartments = [];
 
         foreach ($rawApartments as $apartment) {
@@ -518,7 +531,7 @@ abstract class soyuz extends domophone
      */
     protected function getRawApartments(): array
     {
-        $ret = $this->apiCall('/v2/panelCode');
+        $ret = $this->apiCall('/v2/panelcode');
         if($ret){ 
 	    return $ret['result'];
 	} else { 

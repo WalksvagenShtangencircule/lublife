@@ -2,6 +2,7 @@
     "title": "SOYUZ S3",
     "vendor": "SOYUZ",
     "model": "S3",
+    "defaultPassword": "123456",
     "class": "soyuzs3",
     "eventServer": "soyuz",
     "outputs": 1,

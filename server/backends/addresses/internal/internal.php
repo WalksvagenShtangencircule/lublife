@@ -948,17 +948,15 @@
                 if ($house) {
                     $house = json_decode($house, true);
 
-                    $region_uuid = @$house["data"]["region_fias_id"] ?: $house["data"]["region_uuid"];
-                    $area_uuid = @$house["data"]["area_fias_id"] ?: $house["data"]["area_uuid"];
-                    $city_uuid = @$house["data"]["city_fias_id"] ?: $house["data"]["city_uuid"];
-                    $settlement_uuid = @$house["data"]["settlement_fias_id"] ?: $house["data"]["settlement_uuid"];
-                    $street_uuid = @$house["data"]["street_fias_id"] ?: $house["data"]["street_uuid"];
+                    $region_uuid = $house["data"]["region_fias_id"] ?? $house["data"]["region_uuid"] ?? null;
+                    $area_uuid = $house["data"]["area_fias_id"] ?? $house["data"]["area_uuid"] ?? null;
+                    $city_uuid = $house["data"]["city_fias_id"] ?? $house["data"]["city_uuid"] ?? null;
+                    $settlement_uuid = $house["data"]["settlement_fias_id"] ?? $house["data"]["settlement_uuid"] ?? null;
+                    $street_uuid = $house["data"]["street_fias_id"] ?? $house["data"]["street_uuid"] ?? null;
 
-                    $house_uuid = @$house["data"]["house_fias_id"] ?: $house["data"]["house_uuid"];
+                    $house_uuid = $house["data"]["house_fias_id"] ?? $house["data"]["house_uuid"] ?? null;
 
-                    if ($area_uuid === $city_uuid) {
-                        $city_uuid = null;
-                    }
+                    // area и city с одним FIAS (напр. «г Люберцы») — город создаётся внутри района, не отбрасываем city_uuid
 
                     $regionId = null;
 
