@@ -151,6 +151,11 @@ server/hw/**/models/*_backup.json
 !static/portal/keys/
 !static/portal/keys/**
 
+# Авторизация по исходящему звонку (мобильное приложение)
+!asterisk/custom/mobile_auth.lua
+!asterisk/trunks/auth_call.conf
+!server/backends/isdn/custom/custom.php
+
 # Артефакты миграции и бандлы (не коммитить)
 server/db/migration/*.json
 server/db/migration/*.tar.gz
