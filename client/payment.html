@@ -155,7 +155,7 @@
                 }
 
                 document.getElementById("loader").textContent = "Поиск договоров...";
-                var contracts = await getContractsForFlats(token, flats);
+                var contracts = getContractsForFlats(flats);
                 if (contracts.length === 0) {
                     showNoContracts();
                     return;
@@ -188,36 +188,21 @@
             return data.data || [];
         }
 
-        async function getContractsForFlats(token, flats) {
+        function getContractsForFlats(flats) {
             var contracts = [];
             for (var i = 0; i < flats.length; i++) {
                 var flat = flats[i];
-                try {
-                    var contract = await getContractForFlat(token, flat.flatId);
-                    if (contract && contract.indexOf("error:") !== 0 && contract.length > 0) {
-                        contracts.push({
-                            flatId: flat.flatId,
-                            contractName: contract,
-                            address: flat.address,
-                            flatNumber: flat.flatNumber
-                        });
-                    }
-                } catch (e) {
-                    console.log("flatId " + flat.flatId + ": " + e.message);
+                var contract = flat.contractName != null ? String(flat.contractName).trim() : "";
+                if (contract && contract.indexOf("error:") !== 0) {
+                    contracts.push({
+                        flatId: flat.flatId,
+                        contractName: contract,
+                        address: flat.address,
+                        flatNumber: flat.flatNumber
+                    });
                 }
             }
             return contracts;
-        }
-
-        async function getContractForFlat(token, flatId) {
-            var response = await fetch("/api/contract/getContract?flatId=" + flatId, {
-                method: "GET",
-                headers: { "Authorization": "Bearer " + token }
-            });
-            if (!response.ok) {
-                throw new Error("Ошибка API: " + response.status);
-            }
-            return await response.text();
         }
 
         /**

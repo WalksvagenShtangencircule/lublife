@@ -77,7 +77,10 @@
         $f['contractOwner'] = 'f';
         // $f['contractOwner'] = (int)$flat['role']==0?'t':'f';
 
-        // $f['contractName'] = '-';
+        $contract = trim((string)(@$h_flat['contract'] ?: ''));
+        if ($contract !== '' && stripos($contract, 'error:') !== 0) {
+            $f['contractName'] = $contract;
+        }
         // $f['clientId'] = '0';
 
         $subscribers = $households->getSubscribers('flatId', $f['flatId'], [ "withoutHouses" ]);
