@@ -549,9 +549,43 @@ body.dark-mode .hr-text-pointer::after {
   font-weight: 600 !important;
 }
 
+.content-wrapper .card .table tbody tr.text-success td {
+  color: #1a7f37 !important;
+  font-weight: 700 !important;
+}
+
+.content-wrapper .card .table tbody tr.text-danger td {
+  color: #c92a2a !important;
+  font-weight: 700 !important;
+}
+
+body.dark-mode .content-wrapper .card .table tbody tr.text-success td {
+  color: #5cd675 !important;
+}
+
+body.dark-mode .content-wrapper .card .table tbody tr.text-danger td {
+  color: #ff6b6b !important;
+}
+
 .content-wrapper .card .table.table-hover tbody tr:hover td {
   background-color: var(--wp-accent-soft) !important;
   color: var(--wp-text) !important;
+}
+
+.content-wrapper .card .table.table-hover tbody tr.text-success:hover td {
+  color: #1a7f37 !important;
+}
+
+.content-wrapper .card .table.table-hover tbody tr.text-danger:hover td {
+  color: #c92a2a !important;
+}
+
+body.dark-mode .content-wrapper .card .table.table-hover tbody tr.text-success:hover td {
+  color: #5cd675 !important;
+}
+
+body.dark-mode .content-wrapper .card .table.table-hover tbody tr.text-danger:hover td {
+  color: #ff6b6b !important;
 }
 
 /* Чипы: редактирование (розово-фиолетовый) и меню (бирюза к акценту) */
