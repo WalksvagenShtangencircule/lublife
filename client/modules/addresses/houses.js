@@ -93,15 +93,24 @@
         return out.length ? out : fallback.map(id => ({ id: id, def: reg[id] }));
     },
 
-    /** Класс строки таблицы квартир: блокировка — красный, активные абоненты за месяц — зелёный. */
+    /** Класс подсветки квартиры в таблице дома (строка и ячейки). */
     flatsTableRowClass: function (flat) {
-        if (parseInt(flat.manualBlock) || parseInt(flat.autoBlock) || parseInt(flat.adminBlock)) {
-            return "text-danger";
+        if (parseInt(flat.manualBlock, 10) || parseInt(flat.autoBlock, 10) || parseInt(flat.adminBlock, 10)) {
+            return "rbt-flat-row-blocked";
         }
-        if (parseInt(flat.subscribersActiveMonth)) {
-            return "text-success";
+        if (parseInt(flat.subscribersActiveMonth, 10) === 1) {
+            return "rbt-flat-row-active";
         }
         return "";
+    },
+
+    flatsTableCell: function (flat, cell) {
+        let rowClass = modules.addresses.houses.flatsTableRowClass(flat);
+        if (!rowClass) {
+            return cell;
+        }
+        cell.class = (cell.class ? cell.class + " " : "") + rowClass;
+        return cell;
     },
 
     houseMagic: function () {
@@ -3517,7 +3526,7 @@
                         rows.push({
                             uid: modules.addresses.houses.meta.flats[i].flatId,
                             class: modules.addresses.houses.flatsTableRowClass(modules.addresses.houses.meta.flats[i]),
-                            cols: plan.map(p => p.def.cell(modules.addresses.houses.meta.flats[i])),
+                            cols: plan.map(p => modules.addresses.houses.flatsTableCell(modules.addresses.houses.meta.flats[i], p.def.cell(modules.addresses.houses.meta.flats[i]))),
                             dropDown: {
                                 items: [
                                     {

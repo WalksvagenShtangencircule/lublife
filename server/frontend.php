@@ -440,7 +440,7 @@
     if (file_exists(__DIR__ . "/api/$api/$method.php")) {
         if ($backends["authorization"]->allow($params)) {
             /* Матрица прав не должна жить в FRONT-кэше: смена групп не меняет URL/_md5 */
-            $skipFrontCache = ($api === "authorization" && $method === "available") || strcasecmp((string)$api, "objectSenior") === 0 || strcasecmp((string)$api, "objectSeniorAuth") === 0 || strcasecmp((string)$api, "objectSeniors") === 0 || !empty($params["_objectSenior"]);
+            $skipFrontCache = ($api === "authorization" && $method === "available") || ($api === "houses" && $method === "house") || strcasecmp((string)$api, "objectSenior") === 0 || strcasecmp((string)$api, "objectSeniorAuth") === 0 || strcasecmp((string)$api, "objectSeniors") === 0 || !empty($params["_objectSenior"]);
 
             $cache = false;
             if ($params["_request_method"] === "GET" && !$skipFrontCache && $authUid > 0) {

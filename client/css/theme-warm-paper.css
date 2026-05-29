@@ -584,6 +584,43 @@ body.dark-mode .content-wrapper .card .table.table-hover tbody tr.text-success:h
   color: #5cd675 !important;
 }
 
+
+.content-wrapper .card .table tbody tr.rbt-flat-row-active td,
+.rbt-content-split #mainForm .table tbody tr.rbt-flat-row-active td,
+.rbt-content-split #mainForm .table tbody td.rbt-flat-row-active {
+  color: #1a7f37 !important;
+  font-weight: 700 !important;
+}
+
+.content-wrapper .card .table tbody tr.rbt-flat-row-blocked td,
+.rbt-content-split #mainForm .table tbody tr.rbt-flat-row-blocked td,
+.rbt-content-split #mainForm .table tbody td.rbt-flat-row-blocked {
+  color: #c92a2a !important;
+  font-weight: 700 !important;
+}
+
+body.dark-mode .content-wrapper .card .table tbody tr.rbt-flat-row-active td,
+body.dark-mode .rbt-content-split #mainForm .table tbody tr.rbt-flat-row-active td,
+body.dark-mode .rbt-content-split #mainForm .table tbody td.rbt-flat-row-active {
+  color: #5cd675 !important;
+}
+
+body.dark-mode .content-wrapper .card .table tbody tr.rbt-flat-row-blocked td,
+body.dark-mode .rbt-content-split #mainForm .table tbody tr.rbt-flat-row-blocked td,
+body.dark-mode .rbt-content-split #mainForm .table tbody td.rbt-flat-row-blocked {
+  color: #ff6b6b !important;
+}
+
+.content-wrapper .card .table.table-hover tbody tr.rbt-flat-row-active:hover td,
+.rbt-content-split #mainForm .table.table-hover tbody tr.rbt-flat-row-active:hover td {
+  color: #1a7f37 !important;
+}
+
+.content-wrapper .card .table.table-hover tbody tr.rbt-flat-row-blocked:hover td,
+.rbt-content-split #mainForm .table.table-hover tbody tr.rbt-flat-row-blocked:hover td {
+  color: #c92a2a !important;
+}
+
 body.dark-mode .content-wrapper .card .table.table-hover tbody tr.text-danger:hover td {
   color: #ff6b6b !important;
 }
