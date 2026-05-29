@@ -17,6 +17,7 @@
      * Элемент: строка "flatId" или { "id": "flatId", "visible": true }. При отсутствии секции — как в штате RBT: #, этаж, квартира, договор.
      * Доступные id: flatId, floor, flat, contract, login, openCode, plog, sipEnabled, cmsEnabled, cars, subscribersLimit, autoOpen
      * (данные уже приходят из GET houses/house без дополнительных запросов).
+     * subscribersActiveMonth — флаг с бэкенда: абоненты квартиры активны за 30 дней (last_seen устройств); строка подсвечивается зелёным.
      */
     _flatsTableColumnRegistry: {
         flatId: {
@@ -90,6 +91,17 @@
             out.push({ id: id, def: reg[id] });
         }
         return out.length ? out : fallback.map(id => ({ id: id, def: reg[id] }));
+    },
+
+    /** Класс строки таблицы квартир: блокировка — красный, активные абоненты за месяц — зелёный. */
+    flatsTableRowClass: function (flat) {
+        if (parseInt(flat.manualBlock) || parseInt(flat.autoBlock) || parseInt(flat.adminBlock)) {
+            return "text-danger";
+        }
+        if (parseInt(flat.subscribersActiveMonth)) {
+            return "text-success";
+        }
+        return "";
     },
 
     houseMagic: function () {
@@ -3504,7 +3516,7 @@
                     for (let i in modules.addresses.houses.meta.flats) {
                         rows.push({
                             uid: modules.addresses.houses.meta.flats[i].flatId,
-                            class: (parseInt(modules.addresses.houses.meta.flats[i].manualBlock) || parseInt(modules.addresses.houses.meta.flats[i].autoBlock) || parseInt(modules.addresses.houses.meta.flats[i].adminBlock)) ? "text-secondary" : "",
+                            class: modules.addresses.houses.flatsTableRowClass(modules.addresses.houses.meta.flats[i]),
                             cols: plan.map(p => p.def.cell(modules.addresses.houses.meta.flats[i])),
                             dropDown: {
                                 items: [

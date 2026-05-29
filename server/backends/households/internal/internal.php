@@ -389,10 +389,56 @@
                     foreach ($flats as $flat) {
                         $_flats[] = $this->getFlat($flat["house_flat_id"]);
                     }
+                    if ($by === "houseId" && $_flats) {
+                        $this->enrichFlatsWithSubscriberActivity($_flats, (int)$params);
+                    }
                     return $_flats;
                 } else {
                     return [];
                 }
+            }
+
+            /**
+             * Квартиры с хотя бы одним абонентом, устройство которого было активно за последние 30 дней (last_seen).
+             * Один запрос на дом — без N+1 при загрузке списка квартир.
+             *
+             * @return int[] house_flat_id
+             */
+            private function getFlatIdsWithSubscriberActivityForHouse(int $houseId, int $since): array {
+                if ($houseId <= 0) {
+                    return [];
+                }
+                $rows = $this->db->get("
+                    select distinct hf.house_flat_id
+                    from houses_flats hf
+                    inner join houses_flats_subscribers hfs on hfs.house_flat_id = hf.house_flat_id
+                    inner join houses_subscribers_devices d on d.house_subscriber_id = hfs.house_subscriber_id
+                    where hf.address_house_id = :address_house_id
+                    and d.last_seen >= :since
+                ", [
+                    "address_house_id" => $houseId,
+                    "since" => $since,
+                ]);
+                if (!$rows) {
+                    return [];
+                }
+                $ids = [];
+                foreach ($rows as $row) {
+                    $ids[] = (int)$row["house_flat_id"];
+                }
+                return $ids;
+            }
+
+            /**
+             * @param array[] $flats массив квартир из getFlat()
+             */
+            private function enrichFlatsWithSubscriberActivity(array &$flats, int $houseId): void {
+                $since = strtotime("-30 days");
+                $active = array_flip($this->getFlatIdsWithSubscriberActivityForHouse($houseId, $since));
+                foreach ($flats as &$flat) {
+                    $flat["subscribersActiveMonth"] = isset($active[(int)$flat["flatId"]]) ? 1 : 0;
+                }
+                unset($flat);
             }
 
             /**
