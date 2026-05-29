@@ -42,7 +42,7 @@
         },
         openCode: {
             title: () => i18n("addresses.openCode"),
-            cell: flat => ({ data: (flat.openCode !== undefined && flat.openCode !== null && String(flat.openCode) !== "") ? flat.openCode : "-", nowrap: true }),
+            cell: flat => ({ data: modules.addresses.houses.formatOpenCodeDisplay(flat.openCode), nowrap: true }),
         },
         plog: {
             title: () => i18n("addresses.plog"),
@@ -71,6 +71,15 @@
             title: () => i18n("addresses.autoOpen"),
             cell: flat => ({ data: flat.autoOpen ? flat.autoOpen : "-", nowrap: true }),
         },
+    },
+
+    /** Код открытия для таблицы: пусто и 00000 — «отсутствует» (прочерк). */
+    formatOpenCodeDisplay: function (openCode) {
+        let s = openCode !== undefined && openCode !== null ? String(openCode).trim() : "";
+        if (!s || s === "00000") {
+            return "-";
+        }
+        return s;
     },
 
     getFlatsTableColumnPlan: function () {
