@@ -14,7 +14,7 @@
 
     /**
      * Колонки таблицы «Квартиры» на карточке дома. Настройка: config.json → addresses.houseFlatsTable.columns
-     * Элемент: строка "flatId" или { "id": "flatId", "visible": true }. При отсутствии секции — как в штате RBT: #, этаж, квартира, договор.
+     * Элемент: строка "flat" или { "id": "flat", "visible": true }. По умолчанию: квартира, код открытия, договор.
      * Доступные id: flatId, floor, flat, contract, login, openCode, plog, sipEnabled, cmsEnabled, cars, subscribersLimit, autoOpen
      * (данные уже приходят из GET houses/house без дополнительных запросов).
      * subscribersActiveMonth — флаг с бэкенда: абоненты квартиры активны за 30 дней (last_seen устройств); строка подсвечивается зелёным.
@@ -76,7 +76,7 @@
     getFlatsTableColumnPlan: function () {
         let reg = modules.addresses.houses._flatsTableColumnRegistry;
         let cfg = config.addresses && config.addresses.houseFlatsTable && config.addresses.houseFlatsTable.columns;
-        let fallback = [ "flatId", "floor", "flat", "contract" ];
+        let fallback = [ "flat", "openCode", "contract" ];
         if (!Array.isArray(cfg) || cfg.length === 0) {
             return fallback.map(id => ({ id: id, def: reg[id] }));
         }

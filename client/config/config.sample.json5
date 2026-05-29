@@ -20,6 +20,7 @@
         "tt",
         "diagnostics",
         "tools",
+        "keyHarvestMonitor",
         "vendorKeys",
         "asterisk",
         "cs",
@@ -90,7 +91,7 @@
     // Колонки таблицы квартир на карточке дома (см. houses.js / getFlatsTableColumnPlan)
     "addresses": {
         "houseFlatsTable": {
-            "columns": [ "floor", "flat", "contract", "openCode" ],
+            "columns": [ "flat", "openCode", "contract" ],
         },
     },
 

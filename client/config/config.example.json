@@ -67,10 +67,9 @@
     "addresses": {
         "houseFlatsTable": {
             "columns": [
-                "floor",
                 "flat",
-                "contract",
-                "openCode"
+                "openCode",
+                "contract"
             ]
         }
     },
